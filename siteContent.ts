@@ -420,16 +420,16 @@ export const INITIAL_SITE_CONTENT = {
     "passwordLabel": "# The password for the MySQL database connection.",
     "server": "localhost",
     "port": "3306",
-    "databaseName": "u833687569_Wowfilewala",
-    "databaseUsername": "u833687569_Wowfilewala",
+    "databaseName": "u833687569_wowfilewala909",
+    "databaseUsername": "u833687569_wowfilewala909",
     "databasePassword": "2WBVSwFhmSzyc7@"
   },
   "adminHostingraPage": {
     "title": "Hostinger & MySQL Database Hub",
-    "description": "Connected Hostinger MySQL Database (u833687569_Wowfilewala) and ready-to-deploy live packages.",
+    "description": "Connected Hostinger MySQL Database (u833687569_wowfilewala909) and ready-to-deploy live packages.",
     "usernameLabel": "Database Name & Username",
     "passwordLabel": "MySQL Password",
-    "hostingraUsername": "u833687569_Wowfilewala",
+    "hostingraUsername": "u833687569_wowfilewala909",
     "hostingraPassword": "2WBVSwFhmSzyc7@",
     "databaseHost": "145.79.209.34",
     "databasePort": "3306"

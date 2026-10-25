@@ -18,8 +18,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 // Hostinger MySQL Database Credentials
 $dbHost = 'localhost';
-$dbName = 'u833687569_Wowfilewala';
-$dbUser = 'u833687569_Wowfilewala';
+$dbName = 'u833687569_wowfilewala909';
+$dbUser = 'u833687569_wowfilewala909';
 $dbPass = '2WBVSwFhmSzyc7@';
 $dataFile = __DIR__ . '/cloud-data.json';
 

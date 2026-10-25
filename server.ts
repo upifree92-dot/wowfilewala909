@@ -108,9 +108,9 @@ async function startServer() {
       const conn = await mysql.createConnection({
         host,
         port: 3306,
-        user: 'u833687569_Wowfilewala',
+        user: 'u833687569_wowfilewala909',
         password: '2WBVSwFhmSzyc7@',
-        database: 'u833687569_Wowfilewala',
+        database: 'u833687569_wowfilewala909',
         connectTimeout: 5000,
       });
       const [rows] = await conn.query('SHOW TABLES;');
@@ -118,8 +118,8 @@ async function startServer() {
       res.json({
         success: true,
         host,
-        database: 'u833687569_Wowfilewala',
-        user: 'u833687569_Wowfilewala',
+        database: 'u833687569_wowfilewala909',
+        user: 'u833687569_wowfilewala909',
         message: 'Hostinger MySQL Database se connection 100% SUCCESSFUL & LIVE hai!',
         tables: rows,
       });

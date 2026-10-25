@@ -1,13 +1,13 @@
 <?php
 /**
  * Hostinger MySQL Database Connection Helper
- * Database: u833687569_Wowfilewala
- * User: u833687569_Wowfilewala
+ * Database: u833687569_wowfilewala909
+ * User: u833687569_wowfilewala909
  */
 
 $DB_HOST = 'localhost';
-$DB_NAME = 'u833687569_Wowfilewala';
-$DB_USER = 'u833687569_Wowfilewala';
+$DB_NAME = 'u833687569_wowfilewala909';
+$DB_USER = 'u833687569_wowfilewala909';
 $DB_PASS = '2WBVSwFhmSzyc7@';
 
 function getDB() {
