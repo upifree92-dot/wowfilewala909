@@ -180,6 +180,16 @@ async function startServer() {
     }
   });
 
+  app.post('/api/update-order-status', async (req, res) => {
+    try {
+      const { orderId, status } = req.body;
+      await pool.query('UPDATE order_history SET status = ? WHERE order_id = ?', [status, orderId]);
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
   app.post('/api/admin-reset-hwid', async (req, res) => {
     try {
       const { userId } = req.body;
