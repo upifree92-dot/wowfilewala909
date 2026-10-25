@@ -118,13 +118,14 @@ async function startServer() {
     const host = (req.query.host as string) || process.env.DB_HOST;
     try {
       const [rows] = await pool.query('SHOW TABLES;');
+      const filteredTables = (rows as any[]).filter((row: any) => Object.values(row)[0] !== 'information_schema');
       res.json({
         success: true,
         host,
         database: process.env.DB_NAME,
         user: process.env.DB_USER,
         message: 'Hostinger MySQL Database se connection 100% SUCCESSFUL & LIVE hai!',
-        tables: rows,
+        tables: filteredTables,
       });
     } catch (err: any) {
       res.json({
