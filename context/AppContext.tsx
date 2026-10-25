@@ -3030,6 +3030,16 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
             syncTransaction(userToNotify.id, userToNotify.email, newTransaction);
             
+            // Persist wallet update to Supabase
+            saveRegisteredUser({
+                id: userToNotify.id,
+                email: userToNotify.email,
+                mobile_number: userToNotify.mobileNumber,
+                name: userToNotify.profile.name,
+                bio: userToNotify.profile.bio,
+                wallet_balance: updatedUser.wallet.balance
+            }).catch(err => console.warn('Failed to persist wallet refund to Supabase:', err));
+
             // Broadcast real-time wallet update if Supabase is enabled
             if (!isSandboxMode) {
                 supabase.channel('public:site_settings').send({
