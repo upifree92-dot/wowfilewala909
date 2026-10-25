@@ -27,7 +27,7 @@ const ActivationForm: React.FC<ActivationFormProps> = ({ category }) => {
         setFormData(initialFormData);
         setQuantity(config.quantityRange.min);
         setAgreedToTerms(false);
-    }, [category, initialFormData, config.quantityRange.min]);
+    }, [category.id, initialFormData, config.quantityRange.min]);
     
     const totalPrice = useMemo(() => {
         return quantity * config.pricePerUnit;
