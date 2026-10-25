@@ -193,11 +193,11 @@ const AdminOrdersPage = () => {
                                          <td className="p-3 py-4">
                                             <StatusBadge status={order.status} />
                                         </td>
-                                        <td className="p-3 py-4 flex flex-wrap gap-2">
+                                        <td className="p-3 py-4 flex flex-col gap-1.5 min-w-[100px]">
                                             <input 
                                                 type="text" 
                                                 placeholder="Reply..."
-                                                className="w-24 text-[10px] p-1 mb-1 rounded border border-slate-700 bg-slate-900 text-slate-200"
+                                                className="w-full text-[10px] p-1.5 rounded border border-slate-700 bg-slate-900 text-slate-200"
                                                 onChange={(e) => {
                                                     setOrderComments(prev => ({ ...prev, [order.id]: e.target.value }));
                                                 }}
