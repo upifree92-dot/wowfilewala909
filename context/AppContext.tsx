@@ -2888,7 +2888,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
                     return {
                         ...un,
                         status: 'approved',
-                        title: `Order #${un.orderId} Approved`,
+                        title: `Order #${un.orderId} Success`,
                         read: false,
                         adminReply: un.adminReply || "Done",
                         timestamp: new Date().toISOString(),
@@ -2918,7 +2918,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         });
 
         playOrderApprovedSound();
-        setNotification('Order approved and user has been notified.');
+        setNotification('Order success and user has been notified.');
     };
 
     const processActivationOrder = (notificationId: string) => {
@@ -3187,7 +3187,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           if (existing) {
             existing.status = an.status || existing.status;
             if (an.status === 'approved') {
-              existing.title = `Order #${an.orderId} Approved`;
+              existing.title = `Order #${an.orderId} Success`;
             } else if (an.status === 'processing') {
               existing.title = `Order #${an.orderId} Processing`;
             } else if (an.status === 'rejected') {
@@ -3202,7 +3202,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             const reconstructed: UserNotification = {
               id: `user-notif-${an.orderId}`,
               title: an.status === 'approved' 
-                ? `Order #${an.orderId} Approved` 
+                ? `Order #${an.orderId} Success` 
                 : an.status === 'processing' 
                 ? `Order #${an.orderId} Processing`
                 : an.status === 'rejected'
