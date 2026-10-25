@@ -71,7 +71,14 @@ const AdminOrdersPage = () => {
             rejected: 'bg-rose-500/10 text-rose-400 border-rose-500/20',
             info: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
         };
-        return <span className={`${baseClasses} ${styles[status || 'info']}`}>{status}</span>;
+        const labelMap: { [key: string]: string } = {
+            approved: 'Success',
+            pending: 'Pending',
+            processing: 'Processing',
+            rejected: 'Rejected',
+            info: 'Info'
+        };
+        return <span className={`${baseClasses} ${styles[status || 'info']}`}>{labelMap[status || ''] || status}</span>;
     };
 
     const handleRejectSubmit = (e: React.FormEvent) => {
@@ -120,7 +127,7 @@ const AdminOrdersPage = () => {
                 <FilterButton value="all" label="All" />
                 <FilterButton value="pending" label="Pending" />
                 <FilterButton value="processing" label="Processing" />
-                <FilterButton value="approved" label="Approved" />
+                <FilterButton value="approved" label="Success" />
                 <FilterButton value="rejected" label="Rejected" />
             </div>
             
@@ -189,7 +196,7 @@ const AdminOrdersPage = () => {
                                                 <button onClick={() => processActivationOrder(order.id)} className="px-3 py-1.5 text-[10px] font-bold rounded-lg bg-orange-500/10 text-orange-400 border border-orange-500/20 hover:bg-orange-500/20 transition-all">Process</button>
                                             )}
                                             {order.status === 'processing' && (
-                                                <button onClick={() => approveActivationOrder(order.id)} className="px-3 py-1.5 text-[10px] font-bold rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20 transition-all">Approve</button>
+                                                <button onClick={() => approveActivationOrder(order.id)} className="px-3 py-1.5 text-[10px] font-bold rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20 transition-all">Success</button>
                                             )}
                                             {order.status !== 'rejected' && order.status !== 'approved' && (
                                                 <button onClick={() => setRejectingOrder(order)} className="px-3 py-1.5 text-[10px] font-bold rounded-lg bg-rose-500/10 text-rose-400 border border-rose-500/20 hover:bg-rose-500/20 transition-all">Reject</button>
