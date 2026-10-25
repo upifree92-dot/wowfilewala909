@@ -183,7 +183,6 @@ const AdminOrdersPage = () => {
                                          <td className="p-3 py-4">
                                             <StatusBadge status={order.status} />
                                         </td>
-                                );
                                     </tr>
                                 );
                             })}
