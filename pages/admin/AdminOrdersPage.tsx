@@ -8,6 +8,7 @@ const AdminOrdersPage = () => {
     const { getAllOrders, approveActivationOrder, processActivationOrder, rejectActivationOrder, deleteAdminNotification, clearAdminNotifications, getAllUsers, user: currentUser, isAdmin } = useAppContext();
     const [filter, setFilter] = useState<'all' | 'pending' | 'processing' | 'approved' | 'rejected'>('all');
     const [searchQuery, setSearchQuery] = useState('');
+    const [orderComments, setOrderComments] = useState<Record<string, string>>({});
     
     // Custom modal states for rejection
     const [rejectingOrder, setRejectingOrder] = useState<AdminNotification | null>(null);
@@ -193,11 +194,19 @@ const AdminOrdersPage = () => {
                                             <StatusBadge status={order.status} />
                                         </td>
                                         <td className="p-3 py-4 flex flex-wrap gap-2">
+                                            <input 
+                                                type="text" 
+                                                placeholder="Add a note/reply..."
+                                                className="w-full text-xs p-2 mb-2 rounded border border-slate-700 bg-slate-900 text-slate-200"
+                                                onChange={(e) => {
+                                                    setOrderComments(prev => ({ ...prev, [order.id]: e.target.value }));
+                                                }}
+                                            />
                                             {order.status === 'pending' && (
-                                                <button onClick={() => processActivationOrder(order.id)} className="px-3 py-1.5 text-[10px] font-bold rounded-lg bg-orange-500/10 text-orange-400 border border-orange-500/20 hover:bg-orange-500/20 transition-all">Process</button>
+                                                <button onClick={() => processActivationOrder(order.id, orderComments[order.id] || '')} className="px-3 py-1.5 text-[10px] font-bold rounded-lg bg-orange-500/10 text-orange-400 border border-orange-500/20 hover:bg-orange-500/20 transition-all">Process</button>
                                             )}
                                             {order.status === 'processing' && (
-                                                <button onClick={() => approveActivationOrder(order.id)} className="px-3 py-1.5 text-[10px] font-bold rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20 transition-all">Success</button>
+                                                <button onClick={() => approveActivationOrder(order.id, orderComments[order.id] || '')} className="px-3 py-1.5 text-[10px] font-bold rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20 transition-all">Success</button>
                                             )}
                                             {order.status !== 'rejected' && order.status !== 'approved' && (
                                                 <button onClick={() => { console.log("Reject button clicked for:", order.id); setRejectingOrder(order); }} className="px-3 py-1.5 text-[10px] font-bold rounded-lg bg-rose-500/10 text-rose-400 border border-rose-500/20 hover:bg-rose-500/20 transition-all">Reject</button>

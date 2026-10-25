@@ -98,8 +98,8 @@ interface AppContextType {
 
   // Activation Order & Notifications
   placeActivationOrder: (category: Category, orderDetails: any) => void;
-  approveActivationOrder: (notificationId: string) => void;
-  processActivationOrder: (notificationId: string) => void;
+  approveActivationOrder: (notificationId: string, replyMessage: string) => void;
+  processActivationOrder: (notificationId: string, replyMessage: string) => void;
   rejectActivationOrder: (notificationId: string, reason: string) => void;
   adminReplyToNotification: (notificationId: string, replyMessage: string) => void;
   deleteAdminNotification: (notificationId: string) => void;
@@ -2868,13 +2868,13 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         setNotification(siteContent.activationForm.orderSuccessMessage || 'Order placed!', 'success');
     };
     
-    const approveActivationOrder = (notificationId: string) => {
+    const approveActivationOrder = (notificationId: string, replyMessage: string) => {
         if (!isAdmin) return;
         
         const notification = adminNotifications.find(n => n.id === notificationId);
         if (!notification || !notification.userId || !notification.orderId) return;
 
-        const updatedAdminNotifications = adminNotifications.map(n => (n.id === notificationId || n.orderId === notification.orderId) ? { ...n, status: 'approved' as const, read: true, adminReply: n.adminReply || "Done" } : n);
+        const updatedAdminNotifications = adminNotifications.map(n => (n.id === notificationId || n.orderId === notification.orderId) ? { ...n, status: 'approved' as const, read: true, adminReply: replyMessage || "Order Approved" } : n);
         setAdminNotifications(updatedAdminNotifications);
         setLocalStorage('adminNotifications', updatedAdminNotifications);
         
@@ -2888,7 +2888,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
                         status: 'approved',
                         title: `Order #${un.orderId} Success`,
                         read: false,
-                        adminReply: un.adminReply || "Done",
+                        adminReply: replyMessage || "Order Approved",
                         timestamp: new Date().toISOString(),
                         expiresAt: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
                     };
@@ -2920,13 +2920,13 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         setNotification('Order success and user has been notified.');
     };
 
-    const processActivationOrder = (notificationId: string) => {
+    const processActivationOrder = (notificationId: string, replyMessage: string) => {
         if (!isAdmin) return;
 
         const notification = adminNotifications.find(n => n.id === notificationId);
         if (!notification || !notification.userId || !notification.orderId) return;
 
-        const updatedAdminNotifications = adminNotifications.map(n => (n.id === notificationId || n.orderId === notification.orderId) ? { ...n, status: 'processing' as const, read: true } : n);
+        const updatedAdminNotifications = adminNotifications.map(n => (n.id === notificationId || n.orderId === notification.orderId) ? { ...n, status: 'processing' as const, read: true, adminReply: replyMessage || "Order Processing" } : n);
         setAdminNotifications(updatedAdminNotifications);
         setLocalStorage('adminNotifications', updatedAdminNotifications);
         
@@ -2940,6 +2940,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
                         status: 'processing',
                         title: `Order #${un.orderId} Processing`,
                         read: false,
+                        adminReply: replyMessage || "Order Processing",
                         timestamp: new Date().toISOString(),
                     };
                 }
