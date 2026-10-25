@@ -2432,7 +2432,14 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       console.warn('Failed to sync reset HWID to Supabase (non-blocking):', err);
     });
 
-    setAllUsers(prev => ({ ...prev, [userId]: updatedUser }));
+    const updatedUsersMap = { ...allUsers, [userId]: updatedUser };
+    setAllUsers(updatedUsersMap);
+    setLocalStorage('users', updatedUsersMap);
+    
+    pushServerSync({ users: Object.values(updatedUsersMap) }, true).catch(err => {
+        console.warn('Failed to sync updated HWID reset to server:', err);
+    });
+
     setNotification(`Hardware ID (HWID) reset successful for ${userToUpdate.email || 'user'}.`);
   };
 
@@ -3042,16 +3049,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
             syncTransaction(userToNotify.id, userToNotify.email, newTransaction);
             
-            // Persist wallet update to Supabase
-            saveRegisteredUser({
-                id: userToNotify.id,
-                email: userToNotify.email,
-                mobile_number: userToNotify.mobileNumber,
-                name: userToNotify.profile.name,
-                bio: userToNotify.profile.bio,
-                wallet_balance: updatedUser.wallet.balance
-            }).catch(err => console.warn('Failed to persist wallet refund to Supabase:', err));
-
             // Broadcast real-time wallet update if Supabase is enabled
             if (!isSandboxMode) {
                 supabase.channel('public:site_settings').send({
