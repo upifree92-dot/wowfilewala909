@@ -3023,6 +3023,16 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             setAllUsers(newAllUsers);
             setLocalStorage('users', newAllUsers);
             
+            // Persist the refund to the database immediately
+            saveRegisteredUser({
+                id: updatedUser.id,
+                email: updatedUser.email,
+                mobile_number: updatedUser.mobileNumber,
+                name: updatedUser.profile.name,
+                bio: updatedUser.profile.bio,
+                wallet_balance: updatedUser.wallet.balance
+            }).catch(err => console.warn('Persistence error:', err));
+
             if(user && user.id === userToNotify.id) {
                 setUser(updatedUser);
                 setLocalStorage('currentUser', updatedUser);
