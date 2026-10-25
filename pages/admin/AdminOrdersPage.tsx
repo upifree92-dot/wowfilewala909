@@ -139,7 +139,7 @@ const AdminOrdersPage = () => {
                                 <th className="p-3 pb-4">User</th>
                                 <th className="p-3 pb-4">Order Details</th>
                                 <th className="p-3 pb-4">Status</th>
-                                <th className="p-3 pb-4 text-right">Actions</th>
+
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-800/40">
@@ -184,39 +184,7 @@ const AdminOrdersPage = () => {
                                          <td className="p-3 py-4">
                                             <StatusBadge status={order.status} />
                                         </td>
-                                        <td className="p-3 py-4 text-right">
-                                        <div className="flex justify-end gap-2">
-                                            {order.status === 'pending' && (
-                                                <>
-                                                    <button onClick={() => processActivationOrder(order.id)} className="px-3 py-1.5 text-xs font-bold text-orange-400 bg-orange-500/10 hover:bg-orange-500 hover:text-white border border-orange-500/20 rounded-xl transition-all duration-200 shadow-sm shadow-orange-500/5">
-                                                        Process
-                                                     </button>
-                                                    <button onClick={() => approveActivationOrder(order.id)} className="px-3 py-1.5 text-xs font-bold text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500 hover:text-white border border-emerald-500/20 rounded-xl transition-all duration-200 shadow-sm shadow-emerald-500/5">
-                                                        Approve
-                                                    </button>
-                                                    <button onClick={() => {
-                                                        setRejectingOrder(order);
-                                                        setRejectionReason('');
-                                                    }} className="px-3 py-1.5 text-xs font-bold text-rose-400 bg-rose-500/10 hover:bg-rose-500 hover:text-white border border-rose-500/20 rounded-xl transition-all duration-200 shadow-sm shadow-rose-500/5">
-                                                        Reject
-                                                    </button>
-                                                </>
-                                            )}
-                                            {order.status === 'processing' && (
-                                                <>
-                                                    <button onClick={() => approveActivationOrder(order.id)} className="px-3.5 py-1.5 text-xs font-bold text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500 hover:text-white border border-emerald-500/20 rounded-xl transition-all duration-200 shadow-sm shadow-emerald-500/5">
-                                                        Complete & Approve
-                                                    </button>
-                                                    <button onClick={() => {
-                                                        setRejectingOrder(order);
-                                                        setRejectionReason('');
-                                                    }} className="px-3.5 py-1.5 text-xs font-bold text-rose-400 bg-rose-500/10 hover:bg-rose-500 hover:text-white border border-rose-500/20 rounded-xl transition-all duration-200 shadow-sm shadow-rose-500/5">
-                                                        Reject
-                                                    </button>
-                                                </>
-                                            )}
-                                        </div>
-                                        </td>
+                                );
                                     </tr>
                                 );
                             })}
