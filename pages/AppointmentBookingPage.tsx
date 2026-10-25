@@ -1,6 +1,6 @@
 import React, { useState, FormEvent } from 'react';
 import { useAppContext } from '../context/AppContext';
-import { saveAppointment } from '../lib/supabase';
+import { saveAppointment } from '../lib/db';
 import BackButton from '../components/BackButton';
 import { 
   User, 

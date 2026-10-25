@@ -4,6 +4,19 @@ import path from 'path';
 import { execSync } from 'child_process';
 import { fileURLToPath } from 'url';
 import { createServer as createViteServer } from 'vite';
+import dotenv from 'dotenv';
+import mysql from 'mysql2/promise';
+
+dotenv.config();
+
+const pool = mysql.createPool({
+  host: process.env.DB_HOST,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  database: process.env.DB_NAME,
+  waitForConnections: true,
+  connectionLimit: 10,
+});
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -102,24 +115,14 @@ async function startServer() {
 
   // API Route: Real-time test of Hostinger MySQL connection
   app.get('/api/test-mysql', async (req, res) => {
-    const host = (req.query.host as string) || '145.79.209.34';
+    const host = (req.query.host as string) || process.env.DB_HOST;
     try {
-      const mysql = await import('mysql2/promise');
-      const conn = await mysql.createConnection({
-        host,
-        port: 3306,
-        user: 'u833687569_wowfilewala909',
-        password: '2WBVSwFhmSzyc7@',
-        database: 'u833687569_wowfilewala909',
-        connectTimeout: 5000,
-      });
-      const [rows] = await conn.query('SHOW TABLES;');
-      await conn.end();
+      const [rows] = await pool.query('SHOW TABLES;');
       res.json({
         success: true,
         host,
-        database: 'u833687569_wowfilewala909',
-        user: 'u833687569_wowfilewala909',
+        database: process.env.DB_NAME,
+        user: process.env.DB_USER,
         message: 'Hostinger MySQL Database se connection 100% SUCCESSFUL & LIVE hai!',
         tables: rows,
       });
@@ -132,6 +135,58 @@ async function startServer() {
           ? `Hostinger Remote MySQL me IP 34.34.244.150 ya % add karein. (${err.message})`
           : err.message,
       });
+    }
+  });
+
+  app.post('/api/save-appointment', async (req, res) => {
+    try {
+      const data = req.body;
+      await pool.query('INSERT INTO appointments (name, email, phone, device_model, service_needed, appointment_date, appointment_time, description, status, user_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        [data.name, data.email, data.phone, data.device_model, data.service_needed, data.appointment_date, data.appointment_time, data.description, 'pending', data.user_id || 'anonymous']);
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  app.post('/api/save-user', async (req, res) => {
+    try {
+      const data = req.body;
+      await pool.query('INSERT INTO registered_users (id, email, mobile_number, name, bio, wallet_balance, hwid) VALUES (?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE email=?, mobile_number=?, name=?, bio=?, wallet_balance=?, hwid=?',
+        [data.id, data.email, data.mobile_number, data.name, data.bio, data.wallet_balance, data.hwid, data.email, data.mobile_number, data.name, data.bio, data.wallet_balance, data.hwid]);
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  app.get('/api/get-users', async (req, res) => {
+    try {
+      const [rows] = await pool.query('SELECT * FROM registered_users');
+      res.json({ success: true, data: rows });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  app.post('/api/save-order', async (req, res) => {
+    try {
+      const data = req.body;
+      await pool.query('INSERT INTO order_history (order_id, user_id, user_email, order_type, title, quantity, total_price, status, order_details, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        [data.order_id, data.user_id, data.user_email, data.order_type, data.title, data.quantity, data.total_price, data.status, data.order_details, data.created_at]);
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  app.post('/api/admin-reset-hwid', async (req, res) => {
+    try {
+      const { userId } = req.body;
+      await pool.query('UPDATE registered_users SET hwid = NULL WHERE id = ?', [userId]);
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
     }
   });
 

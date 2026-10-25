@@ -96,3 +96,9 @@ export const playSuccessSound = () => {
   if (!isSoundEnabled()) return;
   synth.playChime([523.25, 783.99], 'sine', 0.2, 0.05, 0.1);
 };
+
+// 6. Order Approved Sound
+export const playOrderApprovedSound = () => {
+  if (!isSoundEnabled()) return;
+  synth.playChime([523.25, 659.25, 783.99], 'sine', 0.3, 0.07, 0.08);
+};
