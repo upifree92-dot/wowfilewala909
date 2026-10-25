@@ -1,0 +1,86 @@
+/* Global stylesheet for KGFILEWALA */
+html, body {
+  font-family: "Poppins", sans-serif;
+  top: 0 !important;
+  overflow-x: hidden;
+  max-width: 100%;
+}
+
+/* Hide Google Translate top banner */
+.skiptranslate iframe {
+  display: none !important;
+}
+
+/* Hide "Powered by Google Translate" */
+.goog-te-gadget {
+  font-size: 0px !important;
+  color: transparent !important;
+}
+.goog-te-gadget .goog-te-combo {
+  font-size: 10px !important;
+  font-weight: 500 !important;
+  margin: 0 !important;
+  padding: 0 14px 0 0 !important;
+  border: none !important;
+  background-color: transparent !important;
+  color: #000 !important;
+  outline: none !important;
+  cursor: pointer;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+}
+.goog-te-gadget .goog-te-combo:focus {
+  outline: none !important;
+}
+.dark .goog-te-gadget .goog-te-combo {
+  color: inherit !important;
+}
+
+/* Running and rolling animations for Header Logo */
+@keyframes football-roll-run {
+  0% {
+    transform: translateX(-4px) rotate(0deg) translateY(0);
+  }
+  25% {
+    transform: translateX(-1px) rotate(90deg) translateY(-2px);
+  }
+  50% {
+    transform: translateX(2px) rotate(180deg) translateY(0);
+  }
+  75% {
+    transform: translateX(5px) rotate(270deg) translateY(-2px);
+  }
+  100% {
+    transform: translateX(-4px) rotate(360deg) translateY(0);
+  }
+}
+
+@keyframes text-run {
+  0% {
+    transform: translateX(0) skewX(0deg);
+  }
+  25% {
+    transform: translateX(2px) skewX(-2deg) translateY(-1px);
+  }
+  50% {
+    transform: translateX(-1px) skewX(1deg) translateY(0);
+  }
+  75% {
+    transform: translateX(3px) skewX(-1deg) translateY(-1px);
+  }
+  100% {
+    transform: translateX(0) skewX(0deg);
+  }
+}
+
+.football-running {
+  animation: football-roll-run 1.4s infinite ease-in-out;
+  display: inline-block;
+  transform-origin: center;
+}
+
+.text-running {
+  animation: text-run 1.2s infinite ease-in-out;
+  display: inline-block;
+}

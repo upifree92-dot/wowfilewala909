@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>wowfilewala</title>
+    <script>
+      (function() {
+        // 1. Suppress console.error / warn for Vite proxy websocket disconnects
+        var _err = console.error;
+        console.error = function() {
+          for (var i = 0; i < arguments.length; i++) {
+            var msg = String(arguments[i] && (arguments[i].message || arguments[i]) || '');
+            if (msg.indexOf('websocket') !== -1 || msg.indexOf('WebSocket') !== -1 || msg.indexOf('[vite]') !== -1) {
+              return;
+            }
+          }
+          _err.apply(console, arguments);
+        };
+        var _warn = console.warn;
+        console.warn = function() {
+          for (var i = 0; i < arguments.length; i++) {
+            var msg = String(arguments[i] && (arguments[i].message || arguments[i]) || '');
+            if (msg.indexOf('websocket') !== -1 || msg.indexOf('WebSocket') !== -1 || msg.indexOf('[vite]') !== -1) {
+              return;
+            }
+          }
+          _warn.apply(console, arguments);
+        };
+
+        // 2. Global rejection & error handler
+        window.addEventListener('unhandledrejection', function(event) {
+          var str = String(event.reason || (event.reason && event.reason.message) || '');
+          if (str.indexOf('WebSocket') !== -1 || str.indexOf('vite') !== -1 || str.indexOf('closed without opened') !== -1) {
+            if (event.stopImmediatePropagation) event.stopImmediatePropagation();
+            event.preventDefault();
+          }
+        }, true);
+        window.addEventListener('error', function(event) {
+          var str = String(event.message || event.error || '');
+          if (str.indexOf('WebSocket') !== -1 || str.indexOf('vite') !== -1 || str.indexOf('closed without opened') !== -1) {
+            if (event.stopImmediatePropagation) event.stopImmediatePropagation();
+            event.preventDefault();
+          }
+        }, true);
+
+        // 3. Mock Vite HMR WebSocket so dev client never throws closed without opened
+        if (typeof window !== 'undefined') {
+          var NativeWebSocket = window.WebSocket;
+          window.WebSocket = function(url, protocols) {
+            var urlStr = String(url || '');
+            if (urlStr.indexOf('ais-dev') !== -1 || urlStr.indexOf('localhost') !== -1 || urlStr.indexOf('127.0.0.1') !== -1 || urlStr.indexOf('run.app') !== -1) {
+              var dummy = {
+                url: urlStr,
+                readyState: 1, // OPEN
+                binaryType: 'blob',
+                bufferedAmount: 0,
+                extensions: '',
+                protocol: '',
+                onopen: null,
+                onclose: null,
+                onerror: null,
+                onmessage: null,
+                send: function() {},
+                close: function() {},
+                addEventListener: function(type, listener) {
+                  if (type === 'open') {
+                    setTimeout(function() {
+                      try {
+                        if (typeof listener === 'function') listener({ type: 'open' });
+                        if (typeof dummy.onopen === 'function') dummy.onopen({ type: 'open' });
+                      } catch(e) {}
+                    }, 50);
+                  }
+                },
+                removeEventListener: function() {},
+                dispatchEvent: function() { return true; }
+              };
+              return dummy;
+            }
+            try {
+              return new NativeWebSocket(url, protocols);
+            } catch(e) {
+              return {
+                readyState: 3,
+                send: function() {},
+                close: function() {},
+                addEventListener: function() {},
+                removeEventListener: function() {}
+              };
+            }
+          };
+          if (NativeWebSocket) {
+            window.WebSocket.prototype = NativeWebSocket.prototype;
+            window.WebSocket.CONNECTING = 0;
+            window.WebSocket.OPEN = 1;
+            window.WebSocket.CLOSING = 2;
+            window.WebSocket.CLOSED = 3;
+          }
+        }
+      })();
+    </script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+      };
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/index.css">
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>

@@ -1,0 +1,30 @@
+{
+  "name": "111-of-og-kgfilewala-14445",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx server.ts",
+    "build": "vite build",
+    "start": "NODE_ENV=production tsx server.ts",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.108.2",
+    "@types/express": "^5.0.6",
+    "express": "^5.3.0",
+    "lucide-react": "^1.21.0",
+    "motion": "^12.42.0",
+    "mysql2": "^3.24.6",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
+    "react-router-dom": "6.24.0",
+    "tsx": "^4.23.15"
+  },
+  "devDependencies": {
+    "@types/node": "^22.14.0",
+    "@vitejs/plugin-react": "^5.0.0",
+    "typescript": "~5.8.2",
+    "vite": "^6.2.0"
+  }
+}

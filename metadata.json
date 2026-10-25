@@ -1,0 +1,8 @@
+{
+  "name": "Og KGFILEWALA 14445",
+  "description": "A web application for browsing and downloading digital files like firmware, flash tools, and more, using a points-based wallet system. Users can register, manage their profile, purchase points, and unlock download links.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

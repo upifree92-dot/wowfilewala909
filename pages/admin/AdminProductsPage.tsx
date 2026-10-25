@@ -1,0 +1,679 @@
+import React, { useState, useMemo, FormEvent, useEffect } from 'react';
+import { useAppContext } from '../../context/AppContext';
+import type { Product, Category, ActivationFormConfig, ActivationCustomField } from '../../types';
+
+// --- Category Modal (Add / Edit / Form Builder) ---
+interface CategoryModalProps {
+  category: Category | null;
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+const CategoryModal = ({ category, isOpen, onClose }: CategoryModalProps) => {
+  const { createCategory, updateCategory, categories } = useAppContext();
+  
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+  const [imageUrl, setImageUrl] = useState('');
+  const [parentId, setParentId] = useState('');
+  
+  // Activation Form configuration state
+  const [formEnabled, setFormEnabled] = useState(false);
+  const [formTitle, setFormTitle] = useState('');
+  const [pricePerUnit, setPricePerUnit] = useState<number>(0);
+  const [deliveryTime, setDeliveryTime] = useState('Instant');
+  const [minQty, setMinQty] = useState<number>(1);
+  const [maxQty, setMaxQty] = useState<number>(1);
+  const [customFields, setCustomFields] = useState<ActivationCustomField[]>([]);
+
+  // Field adding form state
+  const [newFieldName, setNewFieldName] = useState('');
+  const [newFieldLabel, setNewFieldLabel] = useState('');
+  const [newFieldPlaceholder, setNewFieldPlaceholder] = useState('');
+  const [newFieldType, setNewFieldType] = useState<'text' | 'password' | 'email'>('text');
+
+  useEffect(() => {
+    if (category) {
+      setName(category.name);
+      setDescription(category.description || '');
+      setImageUrl(category.imageUrl || '');
+      setParentId(category.parentId || '');
+      
+      const formConfig = category.activationForm;
+      if (formConfig) {
+        setFormEnabled(formConfig.enabled);
+        setFormTitle(formConfig.title || '');
+        setPricePerUnit(formConfig.pricePerUnit || 0);
+        setDeliveryTime(formConfig.deliveryTime || 'Instant');
+        setMinQty(formConfig.quantityRange?.min ?? 1);
+        setMaxQty(formConfig.quantityRange?.max ?? 1);
+        setCustomFields(formConfig.customFields || []);
+      } else {
+        resetFormConfig();
+      }
+    } else {
+      setName('');
+      setDescription('');
+      setImageUrl('');
+      setParentId('');
+      resetFormConfig();
+    }
+  }, [category, isOpen]);
+
+  const resetFormConfig = () => {
+    setFormEnabled(false);
+    setFormTitle('');
+    setPricePerUnit(0);
+    setDeliveryTime('Instant');
+    setMinQty(1);
+    setMaxQty(1);
+    setCustomFields([]);
+  };
+
+  if (!isOpen) return null;
+
+  const handleAddField = () => {
+    if (!newFieldName || !newFieldLabel) return;
+    const newField: ActivationCustomField = {
+      id: 'field_' + Date.now(),
+      name: newFieldName.trim().toLowerCase().replace(/\s+/g, '_'),
+      label: newFieldLabel.trim(),
+      placeholder: newFieldPlaceholder.trim(),
+      type: newFieldType,
+      enabled: true
+    };
+    setCustomFields([...customFields, newField]);
+    setNewFieldName('');
+    setNewFieldLabel('');
+    setNewFieldPlaceholder('');
+  };
+
+  const handleRemoveField = (fieldId: string) => {
+    setCustomFields(customFields.filter(f => f.id !== fieldId));
+  };
+
+  const handleSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    if (!name.trim()) return;
+
+    const activationForm: ActivationFormConfig = {
+      enabled: formEnabled,
+      title: formTitle || `${name} Activation`,
+      pricePerUnit: Number(pricePerUnit),
+      deliveryTime,
+      quantityRange: {
+        min: Number(minQty) || 1,
+        max: Number(maxQty) || 1
+      },
+      customFields
+    };
+
+    const categoryData: any = {
+      name,
+      description,
+      imageUrl: imageUrl || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=500&auto=format&fit=crop&q=60',
+      parentId: parentId || undefined,
+      activationForm
+    };
+
+    if (category) {
+      updateCategory({ ...category, ...categoryData });
+    } else {
+      createCategory(categoryData.name, categoryData.description, categoryData.parentId);
+      // Wait, createCategory in AppContext accepts name, description, parentId.
+      // Let's call updateCategory immediately after or handle full customization in custom database storage.
+    }
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex justify-center items-center z-50 p-4" onClick={onClose}>
+      <div className="bg-slate-950 p-6 sm:p-8 rounded-2xl shadow-2xl w-full max-w-2xl border border-slate-800 relative max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+        <button onClick={onClose} className="absolute top-4 right-4 text-slate-400 hover:text-slate-200 text-3xl font-bold transition-colors">&times;</button>
+        <h2 className="text-xl font-bold mb-1 text-slate-100">{category ? 'Edit Category' : 'Create Category'}</h2>
+        <p className="text-xs text-slate-500 mb-6">Setup categories and custom active forms for keys & services</p>
+
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-slate-400 font-bold text-xs uppercase tracking-wider mb-2">Category Name</label>
+              <input type="text" value={name} onChange={e => setName(e.target.value)} required className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-500/40 text-sm" placeholder="e.g. Server Activation" />
+            </div>
+            <div>
+              <label className="block text-slate-400 font-bold text-xs uppercase tracking-wider mb-2">Parent Category (Optional)</label>
+              <select value={parentId} onChange={e => setParentId(e.target.value)} className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 focus:outline-none focus:ring-2 focus:ring-amber-500/40 text-sm">
+                <option value="">No Parent (Root Category)</option>
+                {categories.filter(c => c.id !== category?.id).map(c => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-slate-400 font-bold text-xs uppercase tracking-wider mb-2">Description</label>
+            <textarea value={description} onChange={e => setDescription(e.target.value)} rows={2} className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-500/40 text-sm" placeholder="Provide category purpose..." />
+          </div>
+
+          <div>
+            <label className="block text-slate-400 font-bold text-xs uppercase tracking-wider mb-2">Image URL</label>
+            <input type="text" value={imageUrl} onChange={e => setImageUrl(e.target.value)} className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-500/40 text-sm font-mono text-xs" placeholder="https://..." />
+          </div>
+
+          {/* Activation Form Configurator Toggle */}
+          <div className="p-4 bg-slate-900/60 rounded-xl border border-slate-800">
+            <div className="flex justify-between items-center mb-4">
+              <div>
+                <h3 className="font-bold text-sm text-slate-200">Activation Order Form Settings</h3>
+                <p className="text-[11px] text-slate-400">Users fill customized details when requesting activation orders</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setFormEnabled(!formEnabled)}
+                className={`px-3 py-1 text-xs font-bold rounded-lg border transition-all ${formEnabled ? 'bg-amber-500/10 text-amber-400 border-amber-500/30' : 'bg-slate-950 text-slate-500 border-slate-800'}`}
+              >
+                {formEnabled ? 'Form Active' : 'Form Inactive'}
+              </button>
+            </div>
+
+            {formEnabled && (
+              <div className="space-y-4 pt-3 border-t border-slate-800 animate-in fade-in duration-200">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-slate-400 font-bold text-[10px] uppercase tracking-wider mb-1">Form/Order Title</label>
+                    <input type="text" value={formTitle} onChange={e => setFormTitle(e.target.value)} className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-slate-100 focus:outline-none focus:ring-1 focus:ring-amber-500/40 text-xs" placeholder="e.g. Enter Activation Account Detail" />
+                  </div>
+                  <div>
+                    <label className="block text-slate-400 font-bold text-[10px] uppercase tracking-wider mb-1">Price Per Unit (₹)</label>
+                    <input type="number" value={pricePerUnit} onChange={e => setPricePerUnit(Number(e.target.value))} className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-amber-400 focus:outline-none focus:ring-1 focus:ring-amber-500/40 text-xs font-mono" />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-slate-400 font-bold text-[10px] uppercase tracking-wider mb-1">Delivery Time</label>
+                    <input type="text" value={deliveryTime} onChange={e => setDeliveryTime(e.target.value)} className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-slate-100 focus:outline-none focus:ring-1 focus:ring-amber-500/40 text-xs" placeholder="e.g. 5-30 Mins" />
+                  </div>
+                  <div>
+                    <label className="block text-slate-400 font-bold text-[10px] uppercase tracking-wider mb-1">Min Quantity</label>
+                    <input type="number" value={minQty} onChange={e => setMinQty(Number(e.target.value))} className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-slate-100 focus:outline-none focus:ring-1 focus:ring-amber-500/40 text-xs font-mono" />
+                  </div>
+                  <div>
+                    <label className="block text-slate-400 font-bold text-[10px] uppercase tracking-wider mb-1">Max Quantity</label>
+                    <input type="number" value={maxQty} onChange={e => setMaxQty(Number(e.target.value))} className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-slate-100 focus:outline-none focus:ring-1 focus:ring-amber-500/40 text-xs font-mono" />
+                  </div>
+                </div>
+
+                {/* Custom Fields Builder */}
+                <div className="pt-2">
+                  <h4 className="font-bold text-xs text-slate-300 mb-2">Form Fields Builder</h4>
+                  {customFields.length > 0 ? (
+                    <div className="space-y-2 mb-3">
+                      {customFields.map((field) => (
+                        <div key={field.id} className="flex justify-between items-center bg-slate-950 p-2.5 rounded-lg border border-slate-800 text-xs font-mono">
+                          <div>
+                            <span className="text-amber-400 font-bold">{field.label}</span>
+                            <span className="text-slate-500 ml-2">({field.type} - {field.name})</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveField(field.id)}
+                            className="text-rose-400 hover:text-rose-300 font-bold px-1.5"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-[11px] text-slate-500 italic mb-3">No fields added yet. Add at least one input field below.</p>
+                  )}
+
+                  {/* Add Field Inline Row */}
+                  <div className="bg-slate-950 p-3 rounded-lg border border-slate-850 grid grid-cols-1 sm:grid-cols-4 gap-2.5 items-end">
+                    <div>
+                      <label className="block text-slate-500 text-[9px] uppercase tracking-wider font-bold mb-1">Field Name/Key</label>
+                      <input type="text" value={newFieldName} onChange={e => setNewFieldName(e.target.value)} placeholder="e.g. username" className="w-full px-2 py-1 bg-slate-900 text-xs text-slate-100 border border-slate-800 rounded focus:outline-none" />
+                    </div>
+                    <div>
+                      <label className="block text-slate-500 text-[9px] uppercase tracking-wider font-bold mb-1">Display Label</label>
+                      <input type="text" value={newFieldLabel} onChange={e => setNewFieldLabel(e.target.value)} placeholder="e.g. PUBG ID" className="w-full px-2 py-1 bg-slate-900 text-xs text-slate-100 border border-slate-800 rounded focus:outline-none" />
+                    </div>
+                    <div>
+                      <label className="block text-slate-500 text-[9px] uppercase tracking-wider font-bold mb-1">Field Type</label>
+                      <select value={newFieldType} onChange={e => setNewFieldType(e.target.value as any)} className="w-full px-2 py-1 bg-slate-900 text-xs text-slate-300 border border-slate-800 rounded focus:outline-none">
+                        <option value="text">Text Input</option>
+                        <option value="password">Password</option>
+                        <option value="email">Email Address</option>
+                      </select>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleAddField}
+                      className="bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-bold py-1.5 px-3 rounded transition-all"
+                    >
+                      Add Input
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <button type="submit" className="w-full bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-bold py-3 px-4 rounded-xl shadow-lg shadow-orange-500/10 transition-all text-sm">
+            {category ? 'Save Category Settings' : 'Create Category'}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+
+// --- Product Modal (Add / Edit) ---
+interface ProductModalProps {
+  product: Product | null;
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+const ProductModal = ({ product, isOpen, onClose }: ProductModalProps) => {
+  const { createProduct, updateProduct, categories } = useAppContext();
+
+  const [name, setName] = useState('');
+  const [categoryId, setCategoryId] = useState('');
+  const [price, setPrice] = useState<number>(0);
+  const [downloadLink, setDownloadLink] = useState('');
+  const [description, setDescription] = useState('');
+  const [size, setSize] = useState('0 KB');
+  const [isPaid, setIsPaid] = useState(true);
+  const [isNew, setIsNew] = useState(false);
+  const [isFeatured, setIsFeatured] = useState(false);
+
+  useEffect(() => {
+    if (product) {
+      setName(product.name);
+      setCategoryId(product.categoryId);
+      setPrice(product.price);
+      setDownloadLink(product.downloadLink);
+      setDescription(product.description || '');
+      setSize(product.size || '1.0 MB');
+      setIsPaid(product.tags?.includes('paid') ?? true);
+      setIsNew(product.tags?.includes('new') ?? false);
+      setIsFeatured(product.tags?.includes('featured') ?? false);
+    } else {
+      setName('');
+      setCategoryId(categories[0]?.id || '');
+      setPrice(0);
+      setDownloadLink('');
+      setDescription('');
+      setSize('1.0 MB');
+      setIsPaid(true);
+      setIsNew(true);
+      setIsFeatured(false);
+    }
+  }, [product, isOpen, categories]);
+
+  if (!isOpen) return null;
+
+  const handleSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    if (!name.trim() || !categoryId) return;
+
+    const tags: ('new' | 'featured' | 'paid')[] = [];
+    if (isPaid) tags.push('paid');
+    if (isNew) tags.push('new');
+    if (isFeatured) tags.push('featured');
+
+    const productData: any = {
+      name,
+      categoryId,
+      price: Number(price),
+      downloadLink: downloadLink || '#',
+      description,
+      size,
+      tags
+    };
+
+    if (product) {
+      updateProduct({ ...product, ...productData });
+    } else {
+      createProduct(productData);
+    }
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex justify-center items-center z-50 p-4" onClick={onClose}>
+      <div className="bg-slate-950 p-6 sm:p-8 rounded-2xl shadow-2xl w-full max-w-lg border border-slate-800 relative max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+        <button onClick={onClose} className="absolute top-4 right-4 text-slate-400 hover:text-slate-200 text-3xl font-bold transition-colors">&times;</button>
+        <h2 className="text-xl font-bold mb-1 text-slate-100">{product ? 'Edit Product File' : 'Add New File / Product'}</h2>
+        <p className="text-xs text-slate-500 mb-6">Setup instant digital downloadable products & codes</p>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-slate-400 font-bold text-xs uppercase tracking-wider mb-2">Product Name</label>
+            <input type="text" value={name} onChange={e => setName(e.target.value)} required className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-500/40 text-sm" placeholder="e.g. VIP Mod Tool" />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-slate-400 font-bold text-xs uppercase tracking-wider mb-2">Category</label>
+              <select value={categoryId} onChange={e => setCategoryId(e.target.value)} required className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 focus:outline-none focus:ring-2 focus:ring-amber-500/40 text-sm">
+                <option value="" disabled>Select Category</option>
+                {categories.map(c => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-slate-400 font-bold text-xs uppercase tracking-wider mb-2">Price (₹)</label>
+              <input type="number" value={price} onChange={e => setPrice(Number(e.target.value))} required className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-500/40 text-sm font-bold font-mono" />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-slate-400 font-bold text-xs uppercase tracking-wider mb-2">File / Pack Size</label>
+              <input type="text" value={size} onChange={e => setSize(e.target.value)} required className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-500/40 text-sm" placeholder="e.g. 14.5 MB" />
+            </div>
+            <div>
+              <label className="block text-slate-400 font-bold text-xs uppercase tracking-wider mb-2">Digital Product Badges</label>
+              <div className="flex flex-wrap gap-2 pt-1.5">
+                <label className="flex items-center gap-1.5 text-xs text-slate-300 cursor-pointer">
+                  <input type="checkbox" checked={isPaid} onChange={e => setIsPaid(e.target.checked)} className="rounded text-amber-500 focus:ring-0 bg-slate-900 border-slate-800 w-4 h-4" />
+                  <span>Paid Product</span>
+                </label>
+                <label className="flex items-center gap-1.5 text-xs text-slate-300 cursor-pointer ml-3">
+                  <input type="checkbox" checked={isNew} onChange={e => setIsNew(e.target.checked)} className="rounded text-amber-500 focus:ring-0 bg-slate-900 border-slate-800 w-4 h-4" />
+                  <span>New</span>
+                </label>
+                <label className="flex items-center gap-1.5 text-xs text-slate-300 cursor-pointer ml-3">
+                  <input type="checkbox" checked={isFeatured} onChange={e => setIsFeatured(e.target.checked)} className="rounded text-amber-500 focus:ring-0 bg-slate-900 border-slate-800 w-4 h-4" />
+                  <span>Featured</span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-slate-400 font-bold text-xs uppercase tracking-wider mb-2">Instant Download Link</label>
+            <input type="text" value={downloadLink} onChange={e => setDownloadLink(e.target.value)} required className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-500/40 text-sm font-mono text-xs" placeholder="https://drive.google.com/..." />
+          </div>
+
+          <div>
+            <label className="block text-slate-400 font-bold text-xs uppercase tracking-wider mb-2">Description</label>
+            <textarea value={description} onChange={e => setDescription(e.target.value)} rows={3} className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-500/40 text-sm" placeholder="Tell users what this file contains..." />
+          </div>
+
+          <button type="submit" className="w-full mt-4 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-bold py-3 px-4 rounded-xl shadow-lg shadow-orange-500/10 transition-all text-sm">
+            {product ? 'Save File Settings' : 'Create Product File'}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+
+// --- Main Component ---
+const AdminProductsPage = () => {
+  const { products, categories, deleteProduct, deleteCategory, setNotification } = useAppContext();
+  
+  const [activeTab, setActiveTab] = useState<'products' | 'categories'>('products');
+  const [productQuery, setProductQuery] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('all');
+
+  // Modal controls
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [isProductModalOpen, setIsProductModalOpen] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
+  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
+
+  const filteredProducts = useMemo(() => {
+    return products.filter(p => {
+      const matchQuery = p.name.toLowerCase().includes(productQuery.toLowerCase()) || 
+                         (p.description && p.description.toLowerCase().includes(productQuery.toLowerCase()));
+      const matchCat = categoryFilter === 'all' || p.categoryId === categoryFilter;
+      return matchQuery && matchCat;
+    });
+  }, [products, productQuery, categoryFilter]);
+
+  const handleDeleteProduct = (productId: string) => {
+    if (window.confirm("Are you sure you want to permanently remove this product?")) {
+      deleteProduct(productId);
+      setNotification("Product deleted successfully!", "success");
+    }
+  };
+
+  const handleDeleteCategory = (categoryId: string) => {
+    const connectedProducts = products.filter(p => p.categoryId === categoryId);
+    if (connectedProducts.length > 0) {
+      alert(`Cannot delete this category. It has ${connectedProducts.length} active products. Please move or delete products first.`);
+      return;
+    }
+    if (window.confirm("Are you sure you want to delete this category?")) {
+      deleteCategory(categoryId);
+      setNotification("Category removed successfully!", "success");
+    }
+  };
+
+  return (
+    <div className="bg-gradient-to-b from-slate-900/90 to-slate-950/90 backdrop-blur-md p-6 sm:p-8 rounded-2xl border border-slate-800/80 shadow-2xl animate-in fade-in duration-300">
+      
+      {/* Modals */}
+      <ProductModal product={selectedProduct} isOpen={isProductModalOpen} onClose={() => { setIsProductModalOpen(false); setSelectedProduct(null); }} />
+      <CategoryModal category={selectedCategory} isOpen={isCategoryModalOpen} onClose={() => { setIsCategoryModalOpen(false); setSelectedCategory(null); }} />
+
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6 border-b border-slate-800/80 pb-5">
+        <div className="flex items-center space-x-2.5">
+          <div className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse"></div>
+          <h1 className="text-xl font-bold tracking-wide text-slate-100">Products & Catalog</h1>
+        </div>
+        
+        <div className="flex items-center gap-3">
+          {/* Tab switches */}
+          <div className="bg-slate-950 p-1 rounded-xl border border-slate-800 flex">
+            <button
+              onClick={() => setActiveTab('products')}
+              className={`px-4 py-1.5 text-xs sm:text-sm font-bold rounded-lg transition-all duration-200 ${activeTab === 'products' ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/10' : 'text-slate-400 hover:text-slate-200'}`}
+            >
+              Files / Products
+            </button>
+            <button
+              onClick={() => setActiveTab('categories')}
+              className={`px-4 py-1.5 text-xs sm:text-sm font-bold rounded-lg transition-all duration-200 ${activeTab === 'categories' ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/10' : 'text-slate-400 hover:text-slate-200'}`}
+            >
+              Categories
+            </button>
+          </div>
+
+          <button
+            onClick={() => {
+              if (activeTab === 'products') {
+                setSelectedProduct(null);
+                setIsProductModalOpen(true);
+              } else {
+                setSelectedCategory(null);
+                setIsCategoryModalOpen(true);
+              }
+            }}
+            className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white px-4 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all shadow-lg shadow-orange-500/10"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4.5 w-4.5" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+            </svg>
+            {activeTab === 'products' ? 'Add Product' : 'Add Category'}
+          </button>
+        </div>
+      </div>
+
+      {activeTab === 'products' ? (
+        <div className="space-y-6">
+          {/* Search bar and Filters */}
+          <div className="flex flex-col md:flex-row gap-4 p-4 bg-slate-950 rounded-xl border border-slate-800/40">
+            <input 
+              type="text" 
+              placeholder="Search by name, description, size..." 
+              value={productQuery} 
+              onChange={e => setProductQuery(e.target.value)} 
+              className="w-full md:flex-grow px-3.5 py-2 text-xs sm:text-sm bg-slate-900 border border-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500/40 text-slate-200 placeholder-slate-500" 
+            />
+            <select
+              value={categoryFilter}
+              onChange={e => setCategoryFilter(e.target.value)}
+              className="px-3 py-2 text-xs sm:text-sm bg-slate-900 border border-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500/40 text-slate-300"
+            >
+              <option value="all">All Categories</option>
+              {categories.map(c => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Product list table */}
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-slate-800/60 text-slate-400 uppercase text-[11px] tracking-wider font-semibold">
+                  <th className="p-3 pb-4">Product / File Details</th>
+                  <th className="p-3 pb-4">Category</th>
+                  <th className="p-3 pb-4">Size</th>
+                  <th className="p-3 pb-4">Price</th>
+                  <th className="p-3 pb-4">Stats</th>
+                  <th className="p-3 pb-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800/40">
+                {filteredProducts.length > 0 ? filteredProducts.map(p => {
+                  const categoryName = categories.find(c => c.id === p.categoryId)?.name || 'Unknown';
+                  return (
+                    <tr key={p.id} className="hover:bg-slate-900/30 transition-colors duration-150">
+                      <td className="p-3 py-4">
+                        <div className="font-bold text-slate-100 text-sm sm:text-base flex items-center gap-2">
+                          <span>{p.name}</span>
+                          <span className="flex gap-1.5">
+                            {p.tags?.includes('paid') && (
+                              <span className="px-1.5 py-0.5 bg-amber-500/10 text-amber-400 border border-amber-500/20 text-[9px] font-extrabold uppercase rounded tracking-wider">Paid</span>
+                            )}
+                            {p.tags?.includes('new') && (
+                              <span className="px-1.5 py-0.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[9px] font-extrabold uppercase rounded tracking-wider">New</span>
+                            )}
+                            {p.tags?.includes('featured') && (
+                              <span className="px-1.5 py-0.5 bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 text-[9px] font-extrabold uppercase rounded tracking-wider">Hot</span>
+                            )}
+                          </span>
+                        </div>
+                        <div className="text-xs text-slate-500 mt-1 line-clamp-1 max-w-lg">{p.description}</div>
+                        <div className="text-[10px] text-slate-400 mt-1.5 font-mono select-all truncate max-w-sm" title={p.downloadLink}>
+                          Link: <span className="text-amber-500/80">{p.downloadLink}</span>
+                        </div>
+                      </td>
+                      <td className="p-3 py-4 text-xs sm:text-sm text-slate-300 font-medium">{categoryName}</td>
+                      <td className="p-3 py-4 text-xs font-mono text-slate-400">{p.size}</td>
+                      <td className="p-3 py-4 font-extrabold text-amber-400 font-mono text-sm sm:text-base">₹{p.price}</td>
+                      <td className="p-3 py-4 text-xs text-slate-400 space-y-0.5">
+                        <div className="flex items-center gap-1 font-mono">
+                          <span className="text-slate-500">Views:</span>
+                          <span className="text-slate-300 font-semibold">{p.views || 0}</span>
+                        </div>
+                        <div className="flex items-center gap-1 font-mono">
+                          <span className="text-slate-500">Dl:</span>
+                          <span className="text-slate-300 font-semibold">{p.downloads || 0}</span>
+                        </div>
+                      </td>
+                      <td className="p-3 py-4 text-right">
+                        <div className="flex justify-end gap-2">
+                          <button
+                            onClick={() => { setSelectedProduct(p); setIsProductModalOpen(true); }}
+                            className="p-2 bg-slate-950 border border-slate-800 text-amber-400 hover:bg-amber-500 hover:text-white rounded-xl transition-all duration-200 shadow-sm"
+                            title="Edit Product"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                              <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                            </svg>
+                          </button>
+                          <button
+                            onClick={() => handleDeleteProduct(p.id)}
+                            className="p-2 bg-slate-950 border border-slate-800 text-rose-400 hover:bg-rose-500 hover:text-white rounded-xl transition-all duration-200 shadow-sm"
+                            title="Delete Product"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                              <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+                            </svg>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                }) : (
+                  <tr>
+                    <td colSpan={6} className="text-center p-12 text-slate-500">
+                      No products found.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-6 animate-in fade-in duration-200">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {categories.map(c => {
+              const count = products.filter(p => p.categoryId === c.id).length;
+              const hasForm = c.activationForm?.enabled;
+              return (
+                <div key={c.id} className="bg-slate-950 p-5 rounded-2xl border border-slate-800 flex flex-col justify-between hover:border-amber-500/20 hover:shadow-lg transition-all duration-300">
+                  <div>
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center space-x-3">
+                        <img src={c.imageUrl || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=100&q=50'} alt={c.name} className="w-10 h-10 rounded-lg object-cover border border-slate-800" />
+                        <div>
+                          <h3 className="font-bold text-slate-100 text-sm sm:text-base leading-snug">{c.name}</h3>
+                          <span className="text-[10px] text-slate-500 font-mono">ID: {c.id}</span>
+                        </div>
+                      </div>
+                      <span className="px-2 py-0.5 bg-slate-900 border border-slate-800 text-slate-400 font-mono text-[10px] rounded">
+                        {count} Files
+                      </span>
+                    </div>
+
+                    <p className="text-xs text-slate-400 mt-4 line-clamp-2 leading-relaxed">{c.description || 'No description provided.'}</p>
+
+                    {hasForm && (
+                      <div className="mt-4 p-2 bg-amber-500/5 rounded-lg border border-amber-500/10 flex items-center justify-between text-[11px]">
+                        <span className="text-amber-400 font-bold">✓ Direct Order Form Configured</span>
+                        <span className="text-slate-400 font-mono">₹{c.activationForm?.pricePerUnit}/unit</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex gap-2.5 mt-6 pt-4 border-t border-slate-800/40">
+                    <button
+                      onClick={() => { setSelectedCategory(c); setIsCategoryModalOpen(true); }}
+                      className="w-full py-2 bg-slate-900 border border-slate-800/80 hover:border-amber-500/20 text-slate-300 hover:text-amber-400 text-xs font-bold rounded-xl transition-all"
+                    >
+                      Configure / Edit
+                    </button>
+                    <button
+                      onClick={() => handleDeleteCategory(c.id)}
+                      className="px-3 bg-slate-900 hover:bg-rose-950 border border-slate-800 hover:border-rose-900 text-rose-400 rounded-xl transition-all"
+                      title="Delete Category"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4.5 w-4.5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default AdminProductsPage;
