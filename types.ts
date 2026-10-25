@@ -64,6 +64,7 @@ export interface UserNotification {
   adminReply?: string; // For admin replies to user notifications/orders
   type?: 'order' | 'general';
   orderId?: string;
+  expiresAt?: string; // ISO string for when the notification should be hidden
 }
 
 export type TransactionType = 'purchase' | 'deposit' | 'admin_adjustment' | 'refund' | 'order';

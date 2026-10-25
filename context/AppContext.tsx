@@ -3004,6 +3004,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
                         rejectionReason: actualReason,
                         read: false,
                         timestamp: new Date().toISOString(),
+                        expiresAt: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
                     };
                 }
                 return un;

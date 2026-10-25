@@ -299,7 +299,8 @@ const NotificationsPage = () => {
         const notifications = getUserNotifications();
 
         const filteredNotifications = useMemo(() => {
-            const sorted = [...notifications].sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+            const now = Date.now();
+            const sorted = [...notifications].filter(n => !n.expiresAt || new Date(n.expiresAt).getTime() > now).sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
             if (!searchQuery.trim()) return sorted;
             const query = searchQuery.toLowerCase();
             return sorted.filter(n => {
