@@ -139,6 +139,7 @@ const AdminOrdersPage = () => {
                                 <th className="p-3 pb-4">User</th>
                                 <th className="p-3 pb-4">Order Details</th>
                                 <th className="p-3 pb-4">Status</th>
+                                <th className="p-3 pb-4">Actions</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-800/40">
@@ -182,6 +183,17 @@ const AdminOrdersPage = () => {
                                         </td>
                                          <td className="p-3 py-4">
                                             <StatusBadge status={order.status} />
+                                        </td>
+                                        <td className="p-3 py-4 flex flex-wrap gap-2">
+                                            {order.status === 'pending' && (
+                                                <button onClick={() => processActivationOrder(order.id)} className="px-3 py-1.5 text-[10px] font-bold rounded-lg bg-orange-500/10 text-orange-400 border border-orange-500/20 hover:bg-orange-500/20 transition-all">Process</button>
+                                            )}
+                                            {order.status === 'processing' && (
+                                                <button onClick={() => approveActivationOrder(order.id)} className="px-3 py-1.5 text-[10px] font-bold rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20 transition-all">Approve</button>
+                                            )}
+                                            {order.status !== 'rejected' && order.status !== 'approved' && (
+                                                <button onClick={() => setRejectingOrder(order)} className="px-3 py-1.5 text-[10px] font-bold rounded-lg bg-rose-500/10 text-rose-400 border border-rose-500/20 hover:bg-rose-500/20 transition-all">Reject</button>
+                                            )}
                                         </td>
                                     </tr>
                                 );
