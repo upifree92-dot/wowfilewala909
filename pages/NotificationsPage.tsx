@@ -8,7 +8,7 @@ import { Search, X } from 'lucide-react';
 import { useSEO } from '../hooks/useSEO';
 import {
   playOrderPlacedSound,
-  playOrderApprovedSound,
+  playOrderSuccessSound,
   playOrderRejectedSound,
   playAdminIncomingOrderSound,
   isSoundEnabled,
@@ -502,12 +502,12 @@ const NotificationsPage = () => {
                                 <span>Admin Alert</span>
                             </button>
                             <button
-                                onClick={() => { playOrderApprovedSound(); }}
+                                onClick={() => { playOrderSuccessSound(); }}
                                 className="py-2 px-2 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 text-xs font-medium rounded-lg shadow-sm transition-all flex items-center justify-center gap-1.5"
                                 title="Played when admin approves an order"
                             >
                                 <span>✅</span>
-                                <span>Order Approved</span>
+                                <span>Order Success</span>
                             </button>
 
                         </div>

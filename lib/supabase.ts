@@ -48,7 +48,7 @@ if (SUPABASE_URL.includes('.supabase.com')) {
 const SUPABASE_ANON_KEY = (customAnonKey || envAnonKey || 'sb_publishable_ci83oLkpiAEJ-jq1G3ssUQ_PVkkmCiM').trim();
 
 // Supabase disabled: Using Hostinger MySQL Database (u833687569_Wowfilewala) as the primary database
-export const isSandboxMode = true;
+export const isSandboxMode = false;
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {

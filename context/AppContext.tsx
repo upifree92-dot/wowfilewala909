@@ -5,7 +5,7 @@ import type { User, Product, CartItem, Category, BalancePackage, DownloadRecord,
 import { INITIAL_PRODUCTS, INITIAL_CATEGORIES, ADMIN_EMAIL, INITIAL_BALANCE_PACKAGES } from '../constants';
 import { INITIAL_SITE_CONTENT } from '../siteContent';
 import { saveDownloadRecord, saveRegisteredUser, deleteRegisteredUser, deleteAllNonAdminUsers, getRegisteredUser, getRegisteredUsers, saveOrder, saveWalletTransaction, updateOrderStatus, supabase, addSupabaseErrorListener, getSiteSetting, saveSiteSetting, clearAllSupabaseTables, isSandboxMode } from '../lib/supabase';
-import { playOrderPlacedSound, playOrderApprovedSound, playOrderRejectedSound, playAdminIncomingOrderSound, playSuccessSound } from '../lib/audio';
+import { playOrderPlacedSound, playOrderSuccessSound, playOrderRejectedSound, playAdminIncomingOrderSound, playSuccessSound } from '../lib/audio';
 
 // Helper for deep object property access
 const getNestedValue = (obj: any, path: string) => path.split('.').reduce((acc, part) => acc && acc[part], obj);
@@ -2925,7 +2925,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             console.warn('Failed to update order status in Supabase (non-blocking):', err);
         });
 
-        playOrderApprovedSound();
+        playOrderSuccessSound();
         setNotification('Order success and user has been notified.');
     };
 

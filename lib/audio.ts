@@ -73,8 +73,8 @@ export const playOrderPlacedSound = () => {
   synth.playChime([392, 523.25, 659.25], 'triangle', 0.25, 0.08, 0.1);
 };
 
-// 2. Order Approved Sound (Bright, reward chord)
-export const playOrderApprovedSound = () => {
+// 2. Order Success Sound (Bright, reward chord)
+export const playOrderSuccessSound = () => {
   if (!isSoundEnabled()) return;
   synth.playChime([523.25, 659.25, 783.99, 1046.5], 'sine', 0.35, 0.07, 0.08);
 };
