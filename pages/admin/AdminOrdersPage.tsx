@@ -209,7 +209,7 @@ const AdminOrdersPage = () => {
                                                 <button onClick={() => approveActivationOrder(order.id, orderComments[order.id] || '')} className="px-3 py-1.5 text-[10px] font-bold rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20 transition-all">Success</button>
                                             )}
                                             {order.status !== 'rejected' && order.status !== 'approved' && (
-                                                <button onClick={() => { console.log("Reject button clicked for:", order.id); setRejectingOrder(order); }} className="px-3 py-1.5 text-[10px] font-bold rounded-lg bg-rose-500/10 text-rose-400 border border-rose-500/20 hover:bg-rose-500/20 transition-all">Rejected</button>
+                                                <button type="button" onClick={() => setRejectingOrder(order)} className="px-3 py-1.5 text-[10px] font-bold rounded-lg bg-rose-500/10 text-rose-400 border border-rose-500/20 hover:bg-rose-500/20 transition-all">Rejected</button>
                                             )}
                                         </td>
                                     </tr>
