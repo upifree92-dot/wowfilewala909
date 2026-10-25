@@ -214,7 +214,6 @@ const NotificationsPage = () => {
                                     <th className="p-3">{siteContent.notificationsPage.submittedCredentialsColumn}</th>
                                     <th className="p-3">{siteContent.notificationsPage.statusColumn}</th>
                                     <th className="p-3">{siteContent.notificationsPage.dateColumn}</th>
-                                    <th className="p-3 text-right">{siteContent.notificationsPage.actionsColumn}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -248,22 +247,6 @@ const NotificationsPage = () => {
 
                                         <td className="p-3"><StatusBadge status={n.status || 'info'} /></td>
                                         <td className="p-3 text-xs text-slate-500 dark:text-slate-400">{new Date(n.timestamp).toLocaleString()}</td>
-                                        <td className="p-3 text-right">
-                                            <div className="flex justify-end gap-1.5">
-                                                {n.type === 'order' && !n.isReplied && (
-                                                    <button onClick={() => setReplyingNotification(n)} className="p-1.5 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors" title={siteContent.notificationsPage.replyButton}>
-                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M7.707 3.293a1 1 0 010 1.414L5.414 7H11a7 7 0 017 7v2a1 1 0 11-2 0v-2a5 5 0 00-5-5H5.414l2.293 2.293a1 1 0 11-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
-                                                    </button>
-                                                )}
-                                                {n.status === 'pending' && (
-                                                    <>
-                                                        <button onClick={() => approveActivationOrder(n.id)} className="p-1.5 bg-green-500 text-white rounded hover:bg-green-600 transition-colors" title={siteContent.notificationsPage.approveButton}><svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg></button>
-                                                        <button onClick={() => setRejectingNotification(n)} className="p-1.5 bg-yellow-500 text-white rounded hover:bg-yellow-600 transition-colors" title={siteContent.notificationsPage.rejectButton}><svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M13.477 14.89A6 6 0 015.11 6.524l8.365 8.365zm1.414-1.414L6.524 5.11a6 6 0 018.365 8.365zM18 10a8 8 0 11-16 0 8 8 0 0116 0z" clipRule="evenodd" /></svg></button>
-
-                                                    </>
-                                                )}
-                                            </div>
-                                        </td>
                                     </tr>
                                     );
                                 })}
