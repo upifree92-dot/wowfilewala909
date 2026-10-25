@@ -139,7 +139,6 @@ const AdminOrdersPage = () => {
                                 <th className="p-3 pb-4">User</th>
                                 <th className="p-3 pb-4">Order Details</th>
                                 <th className="p-3 pb-4">Status</th>
-
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-800/40">
