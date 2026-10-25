@@ -190,6 +190,17 @@ async function startServer() {
     }
   });
 
+  app.post('/api/save-transaction', async (req, res) => {
+    try {
+      const data = req.body;
+      await pool.query('INSERT INTO wallet_transactions (transaction_id, user_id, user_email, type, amount, description, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        [data.transaction_id, data.user_id, data.user_email, data.type, data.amount, data.description, data.created_at]);
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
   app.post('/api/admin-reset-hwid', async (req, res) => {
     try {
       const { userId } = req.body;
