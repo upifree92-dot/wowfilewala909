@@ -2978,7 +2978,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         if (!notification || !notification.userId || !notification.orderId) return;
 
         const actualReason = reason?.trim() || "No reason provided";
-        const priceToRefund = notification.orderDetails?.totalPrice || 0;
 
         const updatedAdminNotifications = adminNotifications.map(n => (n.id === notificationId || n.orderId === notification.orderId) ? { ...n, status: 'rejected' as const, read: true, rejectionReason: actualReason } : n);
         setAdminNotifications(updatedAdminNotifications);
@@ -2987,14 +2986,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         const userToNotify = allUsers[notification.userId];
         let newAllUsers = { ...allUsers };
         if (userToNotify) {
-            const newTransaction: Transaction = {
-                id: `txn-${Date.now()}`,
-                timestamp: new Date().toISOString(),
-                type: 'refund',
-                amount: priceToRefund,
-                description: `Refund for rejected order: ${notification.orderDetails?.categoryName || 'Order'}`
-            };
-
             const updatedNotifications = (userToNotify.notifications || []).map((un): UserNotification => {
                 if (un.orderId === notification.orderId) {
                     return {
@@ -3012,44 +3003,19 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             
             const updatedUser = {
                 ...userToNotify,
-                wallet: {
-                    ...userToNotify.wallet,
-                    balance: Number(userToNotify.wallet.balance) + Number(priceToRefund)
-                },
-                notifications: updatedNotifications,
-                transactionHistory: [newTransaction, ...(userToNotify.transactionHistory || [])]
+                notifications: updatedNotifications
             };
             
             newAllUsers = { ...allUsers, [userToNotify.id]: updatedUser };
             setAllUsers(newAllUsers);
             setLocalStorage('users', newAllUsers);
             
-            // Persist the refund to the database immediately
-            saveRegisteredUser({
-                id: updatedUser.id,
-                email: updatedUser.email,
-                mobile_number: updatedUser.mobileNumber,
-                name: updatedUser.profile.name,
-                bio: updatedUser.profile.bio,
-                wallet_balance: updatedUser.wallet.balance
-            }).catch(err => console.warn('Persistence error:', err));
-
             if(user && user.id === userToNotify.id) {
                 setUser(updatedUser);
                 setLocalStorage('currentUser', updatedUser);
             }
-
-            syncTransaction(userToNotify.id, userToNotify.email, newTransaction);
-            
-            // Broadcast real-time wallet update if Supabase is enabled
-            if (!isSandboxMode) {
-                supabase.channel('public:site_settings').send({
-                    type: 'broadcast',
-                    event: 'user_wallet_updated',
-                    payload: { userId: userToNotify.id, wallet_balance: updatedUser.wallet.balance }
-                });
-            }
         }
+
 
         // Push to server immediately so customer receives refund and rejected status live!
         pushServerSync({
