@@ -765,196 +765,80 @@ const ProfilePage = () => {
                   </p>
                 </div>
 
-                <div className="space-y-6">
-                  {(() => {
-                    const orderNotifications = (user.notifications || []).filter(n => n.type === 'order');
-                    if (orderNotifications.length === 0) {
-                      return (
-                        <div className="text-center py-12 text-slate-500 dark:text-slate-400 space-y-3 bg-slate-50 dark:bg-slate-800/20 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800">
-                          <p className="text-4xl">🏜️</p>
-                          <p className="text-sm font-bold">You have no active or completed orders yet.</p>
-                          <p className="text-xs text-slate-400 max-w-sm mx-auto">
-                            Submit custom repair or IMEI order forms inside the flashing tools categories to launch.
-                          </p>
-                        </div>
-                      );
-                    }
+              <div className="space-y-6">
+                {(() => {
+                  const orderNotifications = (user.notifications || []).filter(n => n.type === 'order');
+                  if (orderNotifications.length === 0) {
+                    return (
+                      <div className="text-center py-12 text-slate-500 dark:text-slate-400 space-y-3 bg-slate-50 dark:bg-slate-800/20 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800">
+                        <p className="text-4xl">🏜️</p>
+                        <p className="text-sm font-bold">You have no active or completed orders yet.</p>
+                      </div>
+                    );
+                  }
 
-                    const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
-                      const baseClasses = 'px-2.5 py-1 text-xs font-bold rounded-full capitalize inline-flex items-center';
-                      const styles: { [key: string]: string } = {
-                        pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400 border border-yellow-500/20',
-                        processing: 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/20 dark:text-cyan-400 border border-cyan-500/20',
-                        approved: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/20 dark:text-emerald-400 border border-emerald-500/20',
-                        rejected: 'bg-rose-100 text-rose-800 dark:bg-rose-900/20 dark:text-rose-400 border border-rose-500/20',
-                        info: 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400 border border-blue-500/20',
-                      };
-                      const displayStatus = status === 'approved' ? 'completed' : status;
-                      return <span className={`${baseClasses} ${styles[status] || styles['info']}`}>{displayStatus}</span>;
-                    };
+                  const StatusBadge: React.FC<{ status?: string }> = ({ status }) => {
+                    const baseClasses = 'px-3 py-1 text-xs font-bold rounded-lg capitalize inline-flex items-center gap-1.5';
+                    if (status === 'approved') return <span className={`${baseClasses} bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-400 border border-emerald-500/20`}><CheckCircle2 className="h-3 w-3" /> Success</span>;
+                    if (status === 'rejected') return <span className={`${baseClasses} bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-400 border border-rose-500/20`}>Rejected</span>;
+                    if (status === 'processing') return <span className={`${baseClasses} bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-400 border border-orange-500/20`}>Processing</span>;
+                    return <span className={`${baseClasses} bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-400 border border-amber-500/20`}>Pending</span>;
+                  };
 
-                    const OrderTracker: React.FC<{ status: string }> = ({ status }) => {
-                      let currentStep = 0;
-                      if (status === 'processing') currentStep = 1;
-                      else if (status === 'approved') currentStep = 2;
-                      else if (status === 'rejected') currentStep = -1;
-
-                      const isRejected = currentStep === -1;
-
-                      const normalSteps = [
-                        { label: 'Placed', desc: 'Team review' },
-                        { label: 'Processing', desc: 'IMEI validation' },
-                        { label: 'Completed', desc: 'Unlocked' }
-                      ];
-
-                      const rejectedSteps = [
-                        { label: 'Placed', desc: 'Submitted' },
-                        { label: 'Failed', desc: 'Check info' },
-                        { label: 'Refunded', desc: 'Wallet balance restored' }
-                      ];
-
-                      const steps = isRejected ? rejectedSteps : normalSteps;
-
-                      return (
-                        <div className="mt-4 mb-4 bg-slate-50 dark:bg-slate-900/40 p-4 rounded-xl border border-slate-200/60 dark:border-slate-800 shadow-inner">
-                          <div className="relative flex items-center justify-between mt-4 pb-2">
-                            <div className="absolute left-6 right-6 top-4 h-0.5 bg-slate-200 dark:bg-slate-800 rounded-full z-0"></div>
-                            
-                            {!isRejected ? (
-                              <div 
-                                className="absolute left-6 h-0.5 bg-cyan-500 rounded-full transition-all duration-500 ease-in-out z-0"
-                                style={{ 
-                                  width: `calc(${currentStep * 50}% - ${currentStep === 0 ? '0px' : currentStep === 1 ? '12px' : '24px'})` 
-                                }}
-                              ></div>
-                            ) : (
-                              <div 
-                                className="absolute left-6 h-0.5 bg-rose-500 rounded-full transition-all duration-500 ease-in-out z-0"
-                                style={{ width: 'calc(100% - 48px)' }}
-                              ></div>
-                            )}
-
-                            {steps.map((step, idx) => {
-                              let isDone = false;
-                              let isActive = false;
+                  return (
+                    <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm bg-white dark:bg-slate-900/50">
+                      <table className="w-full text-left text-xs sm:text-sm">
+                        <thead className="bg-slate-50 dark:bg-slate-950 text-slate-500 dark:text-slate-400 uppercase text-[10px] tracking-wider border-b border-slate-200 dark:border-slate-800">
+                          <tr>
+                            <th className="p-4 font-black">STATUS</th>
+                            <th className="p-4 font-black">O.ID</th>
+                            <th className="p-4 font-black">TYPE</th>
+                            <th className="p-4 font-black">QNT</th>
+                            <th className="p-4 font-black">PRICE</th>
+                            <th className="p-4 font-black">SERVICE NAME</th>
+                            <th className="p-4 font-black">FIELD</th>
+                            <th className="p-4 font-black">SUBMITTED ON</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                          {[...orderNotifications]
+                            .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+                            .map(n => {
+                              // Basic parsing of message to get details (as per existing logic)
+                              const details = n.message.split('\n\nSubmitted Details:\n')[1] || '';
                               
-                              if (isRejected) {
-                                isDone = idx === 0;
-                                isActive = idx > 0;
-                              } else {
-                                isDone = idx < currentStep;
-                                isActive = idx === currentStep;
-                              }
-
-                              let circleStyle = 'bg-slate-100 dark:bg-slate-800 border-slate-300 dark:border-slate-700 text-slate-400';
-                              let labelStyle = 'text-slate-400 dark:text-slate-500';
-
-                              if (isRejected) {
-                                if (idx === 0) {
-                                  circleStyle = 'bg-emerald-500 border-emerald-600 text-white';
-                                  labelStyle = 'text-emerald-600 dark:text-emerald-400 font-bold';
-                                } else {
-                                  circleStyle = 'bg-rose-500 border-rose-600 text-white';
-                                  labelStyle = 'text-rose-500 dark:text-rose-400 font-bold';
-                                }
-                              } else if (isDone) {
-                                circleStyle = 'bg-cyan-500 border-cyan-600 text-white';
-                                labelStyle = 'text-cyan-600 dark:text-cyan-400 font-bold';
-                              } else if (isActive) {
-                                circleStyle = 'bg-white dark:bg-slate-800 border-2 border-cyan-500 text-cyan-500 ring-4 ring-cyan-100 dark:ring-cyan-950';
-                                labelStyle = 'text-slate-800 dark:text-slate-200 font-extrabold';
-                              }
+                              // Extracting fields for the table - assuming a specific format from message
+                              const getField = (key: string) => {
+                                const regex = new RegExp(`${key}:\\s*(.*)`);
+                                const match = details.match(regex);
+                                return match ? match[1] : '-';
+                              };
+                              
+                              const type = getField('Order Type') || 'N/A';
+                              const qnt = getField('Quantity') || '1';
+                              const price = getField('Total Price') || '0';
+                              const field = getField('Username') || getField('IMEI') || '-'; // Simplified field extraction
+                              const serviceName = n.title.replace(`Order #${n.orderId} `, '');
 
                               return (
-                                <div key={idx} className="flex flex-col items-center text-center z-10 w-20">
-                                  <div className={`relative flex items-center justify-center w-7 h-7 rounded-full border transition-all duration-300 text-xs font-bold ${circleStyle}`}>
-                                    {isRejected ? (
-                                      idx === 0 ? '✓' : idx === 1 ? '✕' : '↩'
-                                    ) : isDone ? (
-                                      '✓'
-                                    ) : (
-                                      idx + 1
-                                    )}
-                                  </div>
-                                  <span className={`text-[10px] mt-1.5 leading-tight font-black uppercase tracking-wide ${labelStyle}`}>
-                                    {step.label}
-                                  </span>
-                                </div>
+                                <tr key={n.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
+                                  <td className="p-4"><StatusBadge status={n.status} /></td>
+                                  <td className="p-4 font-mono font-bold text-slate-700 dark:text-slate-300">#{n.orderId || 'N/A'}</td>
+                                  <td className="p-4 text-slate-600 dark:text-slate-400 font-semibold">{type}</td>
+                                  <td className="p-4 text-slate-600 dark:text-slate-400">{qnt}</td>
+                                  <td className="p-4 font-bold text-slate-800 dark:text-slate-200">{price}</td>
+                                  <td className="p-4 font-semibold text-slate-800 dark:text-slate-200">{serviceName}</td>
+                                  <td className="p-4 text-slate-600 dark:text-slate-400 text-[11px] font-mono">{field}</td>
+                                  <td className="p-4 text-slate-500 dark:text-slate-400 whitespace-nowrap">{new Date(n.timestamp).toLocaleString([], {day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute:'2-digit'})}</td>
+                                </tr>
                               );
                             })}
-                          </div>
-                        </div>
-                      );
-                    };
-
-                    return [...orderNotifications]
-                      .sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-                      .map(n => {
-                        const messageParts = n.message.split('\n\nSubmitted Details:\n');
-                        const hasDetails = messageParts.length > 1;
-
-                        return (
-                          <div key={n.id} className="bg-slate-50 dark:bg-slate-800/40 p-5 rounded-2xl border border-slate-200/60 dark:border-slate-850 shadow-sm space-y-4">
-                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-                              <div>
-                                <h4 className="font-extrabold text-base text-slate-800 dark:text-slate-200">{n.title}</h4>
-                                <p className="text-[10px] text-slate-400 dark:text-slate-500 font-mono mt-0.5">{new Date(n.timestamp).toLocaleString()}</p>
-                              </div>
-                              <StatusBadge status={n.status || 'pending'} />
-                            </div>
-
-                            {n.orderId && (
-                              <div className="text-xs font-bold text-slate-500 dark:text-slate-400 flex items-center gap-2 bg-white dark:bg-slate-900 px-3 py-1.5 rounded-lg border border-slate-200/50 dark:border-slate-800 w-fit">
-                                <span className="uppercase text-[9px] tracking-widest text-slate-400 font-extrabold">Order ID:</span>
-                                <span className="font-mono text-slate-700 dark:text-slate-300">{n.orderId}</span>
-                                <CopyButton textToCopy={n.orderId} className="w-5 h-5 !p-0.5 text-slate-400" />
-                              </div>
-                            )}
-
-                            <OrderTracker status={n.status || 'pending'} />
-
-                            {hasDetails ? (
-                              <div className="space-y-3">
-                                <p className="text-xs text-slate-600 dark:text-slate-400">{messageParts[0]}</p>
-                                <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200/60 dark:border-slate-800">
-                                  <h5 className="font-black text-[10px] uppercase tracking-wider text-slate-400 mb-2">Credentials Details</h5>
-                                  <ul className="space-y-1.5 divide-y divide-slate-100 dark:divide-slate-800/50">
-                                    {messageParts[1].split('\n- ').filter(item => item.trim() !== '').map((item, idx) => {
-                                      const itemParts = item.split(': ');
-                                      const key = itemParts[0];
-                                      const value = itemParts.slice(1).join(': ');
-                                      return (
-                                        <li key={key + idx} className="grid grid-cols-2 text-xs py-1.5 first:pt-0 last:pb-0">
-                                          <span className="text-slate-400 font-semibold truncate" title={key}>{key}</span>
-                                          <span className="font-mono font-bold text-slate-800 dark:text-slate-200 text-right truncate" title={value}>{value}</span>
-                                        </li>
-                                      );
-                                    })}
-                                  </ul>
-                                </div>
-                              </div>
-                            ) : (
-                              <p className="text-xs text-slate-600 dark:text-slate-400 whitespace-pre-wrap font-medium">{n.message}</p>
-                            )}
-
-                            {n.rejectionReason && (
-                              <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl">
-                                <p className="text-xs font-black text-rose-600 dark:text-rose-400 uppercase tracking-widest">Rejection Reason:</p>
-                                <p className="text-xs text-rose-500 dark:text-rose-400 mt-1 font-medium">{n.rejectionReason}</p>
-                              </div>
-                            )}
-
-                            {n.adminReply && (
-                              <div className="p-3 bg-cyan-500/10 border border-cyan-500/20 rounded-xl">
-                                <p className="text-xs font-black text-cyan-600 dark:text-cyan-400 uppercase tracking-widest">Admin Note:</p>
-                                <p className="text-xs text-cyan-500 dark:text-cyan-400 mt-1 font-medium">{n.adminReply}</p>
-                              </div>
-                            )}
-                          </div>
-                        );
-                      });
-                  })()}
-                </div>
+                        </tbody>
+                      </table>
+                    </div>
+                  );
+                })()}
+              </div>
               </div>
             )}
 
