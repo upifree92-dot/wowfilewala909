@@ -110,6 +110,12 @@ interface AppContextType {
   // IMEI Order
   placeImeiOrder: (orderDetails: any) => void;
   
+  // Order Success Modal (Screenshot Match)
+  orderSuccessModalOpen: boolean;
+  setOrderSuccessModalOpen: (open: boolean) => void;
+  lastPlacedOrderId: string | null;
+  showOrderSuccessModal: (orderId?: string) => void;
+
   // User Notifications
   getUserNotifications: () => UserNotification[];
   markUserNotificationAsRead: (notificationId: string) => void;
@@ -304,6 +310,13 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   });
   const [notification, setInternalNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [editingContent, setEditingContent] = useState<{ path: string; value: string } | null>(null);
+  const [orderSuccessModalOpen, setOrderSuccessModalOpen] = useState(false);
+  const [lastPlacedOrderId, setLastPlacedOrderId] = useState<string | null>(null);
+
+  const showOrderSuccessModal = (orderId?: string) => {
+    if (orderId) setLastPlacedOrderId(orderId);
+    setOrderSuccessModalOpen(true);
+  };
   
   // --- Theme State ---
   const [theme, setTheme] = useState<'light' | 'dark'>(() => getLocalStorage('theme', 'light'));
@@ -1698,6 +1711,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }).catch(err => console.warn('Supabase sync warning (non-blocking):', err));
     syncTransaction(user.id, user.email, newTransaction);
     setCart([]);
+    showOrderSuccessModal();
     setNotification('Purchase successful! Your downloads are available.');
     return true;
   };
@@ -2749,6 +2763,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
         playOrderPlacedSound();
         playAdminIncomingOrderSound();
+        showOrderSuccessModal(orderId);
         setNotification(siteContent.imeiOrderPage.orderSuccessMessage || 'Order placed!', 'success');
     };
 
@@ -2879,6 +2894,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
         playOrderPlacedSound();
         playAdminIncomingOrderSound();
+        showOrderSuccessModal(orderId);
         setNotification(siteContent.activationForm.orderSuccessMessage || 'Order placed!', 'success');
     };
     
@@ -3467,6 +3483,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     addNavLink, updateNavLink, deleteNavLink, reorderNavLinks,
     placeActivationOrder, approveActivationOrder, rejectActivationOrder, updateOrderStatusByAdmin, deleteAdminNotification, getAdminNotifications, markAdminNotificationAsRead, clearAdminNotifications, adminReplyToNotification,
     placeImeiOrder,
+    orderSuccessModalOpen, setOrderSuccessModalOpen, lastPlacedOrderId, showOrderSuccessModal,
     getUserNotifications, markUserNotificationAsRead, deleteUserNotification, clearUserNotifications,
     theme, toggleTheme,
     supabaseError, clearSupabaseError,

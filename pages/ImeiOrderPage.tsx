@@ -71,7 +71,9 @@ const ImeiOrderPage = () => {
             title: `${serviceMeta.badge} - ${config.title}`,
         });
 
-        navigate('/profile?tab=orders');
+        // Reset form inputs after order is placed
+        setFormData(initialFormState);
+        setQuantity(1);
     };
 
     if (!config.enabled && !(isAdmin && isEditMode)) {

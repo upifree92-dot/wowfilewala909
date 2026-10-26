@@ -16,6 +16,7 @@ import DownloadHistoryPage from './pages/DownloadHistoryPage';
 import RecentPage from './pages/RecentPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import Notification from './components/Notification';
+import OrderSuccessModal from './components/OrderSuccessModal';
 import EditModal from './components/EditModal';
 import WhatsAppButton from './components/WhatsAppButton';
 import BackToTop from './components/BackToTop';
@@ -179,6 +180,7 @@ const AppContent = () => {
           </Route>
         </Routes>
         <Notification />
+        <OrderSuccessModal />
         <EditModal />
         <BackToTop />
         <TextColorEditor />
@@ -217,6 +219,7 @@ const AppContent = () => {
       </main>
       <Footer />
       <Notification />
+      <OrderSuccessModal />
       <EditModal />
       <WhatsAppButton />
       <BackToTop />
