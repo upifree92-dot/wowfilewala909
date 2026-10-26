@@ -282,6 +282,7 @@ const ProductModal = ({ product, isOpen, onClose }: ProductModalProps) => {
 
   const [name, setName] = useState('');
   const [categoryId, setCategoryId] = useState('');
+  const [serviceType, setServiceType] = useState<'imei' | 'server' | 'remote' | 'file'>('server');
   const [price, setPrice] = useState<number>(0);
   const [downloadLink, setDownloadLink] = useState('');
   const [description, setDescription] = useState('');
@@ -293,7 +294,8 @@ const ProductModal = ({ product, isOpen, onClose }: ProductModalProps) => {
   useEffect(() => {
     if (product) {
       setName(product.name);
-      setCategoryId(product.categoryId);
+      setCategoryId(product.categoryId || '');
+      setServiceType(product.serviceType || 'server');
       setPrice(product.price);
       setDownloadLink(product.downloadLink);
       setDescription(product.description || '');
@@ -304,6 +306,7 @@ const ProductModal = ({ product, isOpen, onClose }: ProductModalProps) => {
     } else {
       setName('');
       setCategoryId(categories[0]?.id || '');
+      setServiceType('server');
       setPrice(0);
       setDownloadLink('');
       setDescription('');
@@ -328,6 +331,7 @@ const ProductModal = ({ product, isOpen, onClose }: ProductModalProps) => {
     const productData: any = {
       name,
       categoryId,
+      serviceType,
       price: Number(price),
       downloadLink: downloadLink || '#',
       description,
@@ -356,10 +360,19 @@ const ProductModal = ({ product, isOpen, onClose }: ProductModalProps) => {
             <input type="text" value={name} onChange={e => setName(e.target.value)} required className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-500/40 text-sm" placeholder="e.g. VIP Mod Tool" />
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label className="block text-slate-400 font-bold text-xs uppercase tracking-wider mb-2">Service Type</label>
+              <select value={serviceType} onChange={e => setServiceType(e.target.value as any)} required className="w-full px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-amber-400 font-bold focus:outline-none focus:ring-2 focus:ring-amber-500/40 text-xs sm:text-sm">
+                <option value="imei">📱 IMEI Service</option>
+                <option value="server">🖥️ Server Service</option>
+                <option value="remote">⚡ Remote Service</option>
+                <option value="file">📁 File Service</option>
+              </select>
+            </div>
             <div>
               <label className="block text-slate-400 font-bold text-xs uppercase tracking-wider mb-2">Category</label>
-              <select value={categoryId} onChange={e => setCategoryId(e.target.value)} required className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 focus:outline-none focus:ring-2 focus:ring-amber-500/40 text-sm">
+              <select value={categoryId} onChange={e => setCategoryId(e.target.value)} required className="w-full px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 focus:outline-none focus:ring-2 focus:ring-amber-500/40 text-xs sm:text-sm">
                 <option value="" disabled>Select Category</option>
                 {categories.map(c => (
                   <option key={c.id} value={c.id}>{c.name}</option>
@@ -368,7 +381,7 @@ const ProductModal = ({ product, isOpen, onClose }: ProductModalProps) => {
             </div>
             <div>
               <label className="block text-slate-400 font-bold text-xs uppercase tracking-wider mb-2">Price (₹)</label>
-              <input type="number" value={price} onChange={e => setPrice(Number(e.target.value))} required className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-500/40 text-sm font-bold font-mono" />
+              <input type="number" value={price} onChange={e => setPrice(Number(e.target.value))} required className="w-full px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-500/40 text-xs sm:text-sm font-bold font-mono" />
             </div>
           </div>
 
@@ -423,6 +436,7 @@ const AdminProductsPage = () => {
   const [activeTab, setActiveTab] = useState<'products' | 'categories'>('products');
   const [productQuery, setProductQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
+  const [serviceTypeFilter, setServiceTypeFilter] = useState<'all' | 'imei' | 'server' | 'remote' | 'file'>('all');
 
   // Modal controls
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -430,14 +444,34 @@ const AdminProductsPage = () => {
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
 
+  const getProductServiceType = (p: Product): 'imei' | 'server' | 'remote' | 'file' => {
+    if (p.serviceType) return p.serviceType;
+    const text = (p.name + ' ' + (p.description || '')).toLowerCase();
+    if (text.includes('imei') || text.includes('icloud') || text.includes('sn ') || text.includes('serial')) return 'imei';
+    if (text.includes('remote') || text.includes('teamviewer') || text.includes('flexihub') || text.includes('usb')) return 'remote';
+    if (text.includes('file') || text.includes('firmware') || text.includes('rom') || text.includes('dump') || text.includes('pdf')) return 'file';
+    return 'server';
+  };
+
+  const serviceCounts = useMemo(() => {
+    const counts = { all: products.length, imei: 0, server: 0, remote: 0, file: 0 };
+    products.forEach(p => {
+      const st = getProductServiceType(p);
+      counts[st]++;
+    });
+    return counts;
+  }, [products]);
+
   const filteredProducts = useMemo(() => {
     return products.filter(p => {
       const matchQuery = p.name.toLowerCase().includes(productQuery.toLowerCase()) || 
                          (p.description && p.description.toLowerCase().includes(productQuery.toLowerCase()));
       const matchCat = categoryFilter === 'all' || p.categoryId === categoryFilter;
-      return matchQuery && matchCat;
+      const st = getProductServiceType(p);
+      const matchServiceType = serviceTypeFilter === 'all' || st === serviceTypeFilter;
+      return matchQuery && matchCat && matchServiceType;
     });
-  }, [products, productQuery, categoryFilter]);
+  }, [products, productQuery, categoryFilter, serviceTypeFilter]);
 
   const handleDeleteProduct = (productId: string) => {
     if (window.confirm("Are you sure you want to permanently remove this product?")) {
@@ -468,7 +502,7 @@ const AdminProductsPage = () => {
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6 border-b border-slate-800/80 pb-5">
         <div className="flex items-center space-x-2.5">
           <div className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse"></div>
-          <h1 className="text-xl font-bold tracking-wide text-slate-100">Products & Catalog</h1>
+          <h1 className="text-xl font-bold tracking-wide text-slate-100">Services List & Catalog</h1>
         </div>
         
         <div className="flex items-center gap-3">
@@ -478,7 +512,7 @@ const AdminProductsPage = () => {
               onClick={() => setActiveTab('products')}
               className={`px-4 py-1.5 text-xs sm:text-sm font-bold rounded-lg transition-all duration-200 ${activeTab === 'products' ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/10' : 'text-slate-400 hover:text-slate-200'}`}
             >
-              Files / Products
+              Services List
             </button>
             <button
               onClick={() => setActiveTab('categories')}
@@ -503,14 +537,88 @@ const AdminProductsPage = () => {
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4.5 w-4.5" viewBox="0 0 20 20" fill="currentColor">
               <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
             </svg>
-            {activeTab === 'products' ? 'Add Product' : 'Add Category'}
+            {activeTab === 'products' ? 'Add Service' : 'Add Category'}
           </button>
         </div>
       </div>
 
       {activeTab === 'products' ? (
         <div className="space-y-6">
-          {/* Search bar and Filters */}
+
+          {/* Service Type Options Bar (IMEI, Server, Remote, File) */}
+          <div className="flex flex-wrap gap-2.5 items-center bg-slate-950/80 p-2.5 rounded-2xl border border-slate-800/80">
+            <button
+              onClick={() => setServiceTypeFilter('all')}
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+                serviceTypeFilter === 'all'
+                  ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20'
+                  : 'bg-slate-900/80 text-slate-400 hover:text-slate-200 border border-slate-800'
+              }`}
+            >
+              <span>🌐 All Services</span>
+              <span className={`px-1.5 py-0.5 rounded text-[10px] font-mono ${serviceTypeFilter === 'all' ? 'bg-slate-950/40 text-slate-950' : 'bg-slate-800 text-slate-400'}`}>
+                {serviceCounts.all}
+              </span>
+            </button>
+
+            <button
+              onClick={() => setServiceTypeFilter('imei')}
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+                serviceTypeFilter === 'imei'
+                  ? 'bg-blue-500 text-white shadow-md shadow-blue-500/20'
+                  : 'bg-slate-900/80 text-slate-400 hover:text-slate-200 border border-slate-800'
+              }`}
+            >
+              <span>📱 IMEI</span>
+              <span className={`px-1.5 py-0.5 rounded text-[10px] font-mono ${serviceTypeFilter === 'imei' ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-400'}`}>
+                {serviceCounts.imei}
+              </span>
+            </button>
+
+            <button
+              onClick={() => setServiceTypeFilter('server')}
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+                serviceTypeFilter === 'server'
+                  ? 'bg-purple-500 text-white shadow-md shadow-purple-500/20'
+                  : 'bg-slate-900/80 text-slate-400 hover:text-slate-200 border border-slate-800'
+              }`}
+            >
+              <span>🖥️ Server</span>
+              <span className={`px-1.5 py-0.5 rounded text-[10px] font-mono ${serviceTypeFilter === 'server' ? 'bg-purple-600 text-white' : 'bg-slate-800 text-slate-400'}`}>
+                {serviceCounts.server}
+              </span>
+            </button>
+
+            <button
+              onClick={() => setServiceTypeFilter('remote')}
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+                serviceTypeFilter === 'remote'
+                  ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20'
+                  : 'bg-slate-900/80 text-slate-400 hover:text-slate-200 border border-slate-800'
+              }`}
+            >
+              <span>⚡ Remote</span>
+              <span className={`px-1.5 py-0.5 rounded text-[10px] font-mono ${serviceTypeFilter === 'remote' ? 'bg-emerald-600 text-slate-950' : 'bg-slate-800 text-slate-400'}`}>
+                {serviceCounts.remote}
+              </span>
+            </button>
+
+            <button
+              onClick={() => setServiceTypeFilter('file')}
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+                serviceTypeFilter === 'file'
+                  ? 'bg-orange-500 text-white shadow-md shadow-orange-500/20'
+                  : 'bg-slate-900/80 text-slate-400 hover:text-slate-200 border border-slate-800'
+              }`}
+            >
+              <span>📁 File</span>
+              <span className={`px-1.5 py-0.5 rounded text-[10px] font-mono ${serviceTypeFilter === 'file' ? 'bg-orange-600 text-white' : 'bg-slate-800 text-slate-400'}`}>
+                {serviceCounts.file}
+              </span>
+            </button>
+          </div>
+
+          {/* Search bar and Category Filters */}
           <div className="flex flex-col md:flex-row gap-4 p-4 bg-slate-950 rounded-xl border border-slate-800/40">
             <input 
               type="text" 
@@ -536,7 +644,8 @@ const AdminProductsPage = () => {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="border-b border-slate-800/60 text-slate-400 uppercase text-[11px] tracking-wider font-semibold">
-                  <th className="p-3 pb-4">Product / File Details</th>
+                  <th className="p-3 pb-4">Service Details</th>
+                  <th className="p-3 pb-4">Type</th>
                   <th className="p-3 pb-4">Category</th>
                   <th className="p-3 pb-4">Size</th>
                   <th className="p-3 pb-4">Price</th>
@@ -547,6 +656,7 @@ const AdminProductsPage = () => {
               <tbody className="divide-y divide-slate-800/40">
                 {filteredProducts.length > 0 ? filteredProducts.map(p => {
                   const categoryName = categories.find(c => c.id === p.categoryId)?.name || 'Unknown';
+                  const st = getProductServiceType(p);
                   return (
                     <tr key={p.id} className="hover:bg-slate-900/30 transition-colors duration-150">
                       <td className="p-3 py-4">
@@ -568,6 +678,28 @@ const AdminProductsPage = () => {
                         <div className="text-[10px] text-slate-400 mt-1.5 font-mono select-all truncate max-w-sm" title={p.downloadLink}>
                           Link: <span className="text-amber-500/80">{p.downloadLink}</span>
                         </div>
+                      </td>
+                      <td className="p-3 py-4 text-xs font-semibold">
+                        {st === 'imei' && (
+                          <span className="px-2 py-1 bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded-lg inline-flex items-center gap-1 text-[11px]">
+                            📱 IMEI
+                          </span>
+                        )}
+                        {st === 'server' && (
+                          <span className="px-2 py-1 bg-purple-500/10 text-purple-400 border border-purple-500/20 rounded-lg inline-flex items-center gap-1 text-[11px]">
+                            🖥️ Server
+                          </span>
+                        )}
+                        {st === 'remote' && (
+                          <span className="px-2 py-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-lg inline-flex items-center gap-1 text-[11px]">
+                            ⚡ Remote
+                          </span>
+                        )}
+                        {st === 'file' && (
+                          <span className="px-2 py-1 bg-orange-500/10 text-orange-400 border border-orange-500/20 rounded-lg inline-flex items-center gap-1 text-[11px]">
+                            📁 File
+                          </span>
+                        )}
                       </td>
                       <td className="p-3 py-4 text-xs sm:text-sm text-slate-300 font-medium">{categoryName}</td>
                       <td className="p-3 py-4 text-xs font-mono text-slate-400">{p.size}</td>
@@ -608,8 +740,8 @@ const AdminProductsPage = () => {
                   );
                 }) : (
                   <tr>
-                    <td colSpan={6} className="text-center p-12 text-slate-500">
-                      No products found.
+                    <td colSpan={7} className="text-center p-12 text-slate-500">
+                      No services found for selected filter.
                     </td>
                   </tr>
                 )}

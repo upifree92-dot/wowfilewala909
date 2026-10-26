@@ -18,6 +18,7 @@ export interface Product {
   downloadUrl?: string;
   category?: string;
   createdAt?: string;
+  serviceType?: 'imei' | 'server' | 'remote' | 'file';
 }
 
 export interface ActivationCustomField {
@@ -48,6 +49,7 @@ export interface Category {
   imageUrl: string;
   parentId?: string;
   activationForm?: ActivationFormConfig;
+  serviceType?: 'imei' | 'server' | 'remote' | 'file';
 }
 
 export interface DownloadRecord {
