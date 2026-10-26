@@ -63,7 +63,7 @@ const ServiceListPanel: React.FC<ServiceListPanelProps> = ({
     },
     {
       id: 'remote',
-      label: 'Remote Service',
+      label: 'Remote/ Tool-Rent',
       path: '/imei-order?type=remote',
       subItems: [
         { name: 'UnlockTool / Griffin / Borneo Rent 24/7', path: '/imei-order?type=rent', badge: 'Instant ID' },

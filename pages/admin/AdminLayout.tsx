@@ -62,7 +62,7 @@ const AdminLayout = () => {
             subItems: [
                 { to: "/admin/services?type=imei", label: "IMEI", icon: "📱" },
                 { to: "/admin/services?type=server", label: "Server", icon: "🖥️" },
-                { to: "/admin/services?type=remote", label: "Remote", icon: "⚡" },
+                { to: "/admin/services?type=remote", label: "Remote Tool Rent", icon: "⚡" },
                 { to: "/admin/services?type=file", label: "File", icon: "📁" },
             ]
         },

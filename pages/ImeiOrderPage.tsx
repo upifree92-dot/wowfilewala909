@@ -19,11 +19,11 @@ const SERVICE_TYPE_META: Record<string, { badge: string; subtitle: string }> = {
         subtitle: '24/7 Automated Box, Dongle & Server Tool Credits / Activations',
     },
     rent: {
-        badge: 'RENT-24/7',
+        badge: 'Remote/ Tool-Rent',
         subtitle: 'Instant 24/7 Tool Rental ID & Password Delivery',
     },
     remote: {
-        badge: 'RENT-24/7',
+        badge: 'Remote/ Tool-Rent',
         subtitle: 'Instant 24/7 Tool Rental ID & Password Delivery',
     },
 };

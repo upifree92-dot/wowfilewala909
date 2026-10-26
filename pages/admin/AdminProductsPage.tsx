@@ -367,7 +367,7 @@ const ProductModal = ({ product, isOpen, onClose }: ProductModalProps) => {
               <select value={serviceType} onChange={e => setServiceType(e.target.value as any)} required className="w-full px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-amber-400 font-bold focus:outline-none focus:ring-2 focus:ring-amber-500/40 text-xs sm:text-sm">
                 <option value="imei">📱 IMEI Service</option>
                 <option value="server">🖥️ Server Service</option>
-                <option value="remote">⚡ Remote Service</option>
+                <option value="remote">⚡ Remote Tool Rent</option>
                 <option value="file">📁 File Service</option>
               </select>
             </div>
@@ -622,7 +622,7 @@ const AdminProductsPage = () => {
                   : 'bg-slate-900/80 text-slate-400 hover:text-slate-200 border border-slate-800'
               }`}
             >
-              <span>⚡ Remote</span>
+              <span>⚡ Remote Tool Rent</span>
               <span className={`px-1.5 py-0.5 rounded text-[10px] font-mono ${serviceTypeFilter === 'remote' ? 'bg-emerald-600 text-slate-950' : 'bg-slate-800 text-slate-400'}`}>
                 {serviceCounts.remote}
               </span>
@@ -717,7 +717,7 @@ const AdminProductsPage = () => {
                         )}
                         {st === 'remote' && (
                           <span className="px-2 py-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-lg inline-flex items-center gap-1 text-[11px]">
-                            ⚡ Remote
+                            ⚡ Remote Tool Rent
                           </span>
                         )}
                         {st === 'file' && (
