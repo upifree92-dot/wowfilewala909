@@ -27,7 +27,7 @@ import {
 } from 'lucide-react';
 
 const AdminLayout = () => {
-    const { isAdmin, logout, getAdminNotifications } = useAppContext();
+    const { isAdmin, logout, getAdminNotifications, siteContent } = useAppContext();
     const navigate = useNavigate();
     const location = useLocation();
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -60,26 +60,28 @@ const AdminLayout = () => {
         { to: "/admin/utilities", icon: <Box className="w-4 h-4 shrink-0" />, label: "Utilities", hasSubmenu: true },
         { to: "/admin/logs", icon: <Calendar className="w-4 h-4 shrink-0" />, label: "Activity Log", hasSubmenu: true },
         { to: "/admin/settings", icon: <Settings className="w-4 h-4 shrink-0" />, label: "Settings", hasSubmenu: true },
-        { to: "/admin/theme", icon: <Info className="w-4 h-4 shrink-0" />, label: "GSM Theme", hasSubmenu: false },
+        { to: "/admin/theme", icon: <Info className="w-4 h-4 shrink-0" />, label: "Website Theme", hasSubmenu: false },
     ];
 
     return (
         <div className="flex h-screen bg-[#f4f6fa] text-slate-800 font-sans overflow-hidden">
             {/* Desktop Left Sidebar (Pure Black #000000 exactly matching photo) */}
             <aside className="hidden lg:flex flex-col w-64 bg-black text-white shrink-0 border-r border-neutral-900 select-none z-30">
-                {/* Brand Logo & Version matching screenshot */}
+                {/* Brand Logo & Title */}
                 <div className="h-16 flex items-center px-4 border-b border-neutral-900 gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-neutral-900 border border-neutral-800 flex items-center justify-center font-black text-white text-base shadow-inner">
-                        G
-                    </div>
-                    <div className="overflow-hidden">
-                        <h1 className="text-sm font-extrabold text-white tracking-wide uppercase leading-tight">
-                            GSM THEME
-                        </h1>
-                        <p className="text-[10px] text-neutral-400 font-mono mt-0.5">
-                            Version: 2027.63.0
-                        </p>
-                    </div>
+                    <Link to="/admin" className="flex items-center gap-2.5 overflow-hidden">
+                        <div className="w-8 h-8 rounded-lg bg-amber-500 text-slate-950 flex items-center justify-center font-black text-base shadow-sm shrink-0">
+                            W
+                        </div>
+                        <div className="overflow-hidden">
+                            <h1 className="text-sm font-extrabold text-white tracking-wide uppercase leading-tight truncate">
+                                {siteContent?.header?.title || 'WOWFILEWALA'}
+                            </h1>
+                            <p className="text-[10px] text-neutral-400 font-medium">
+                                Admin Dashboard
+                            </p>
+                        </div>
+                    </Link>
                 </div>
 
                 {/* Sidebar Navigation Items List */}
@@ -122,15 +124,17 @@ const AdminLayout = () => {
                     <div className="fixed inset-0 bg-black/70 backdrop-blur-xs" onClick={() => setMobileMenuOpen(false)} />
                     <div className="relative w-64 max-w-[80%] bg-black text-white flex flex-col h-full shadow-2xl z-50">
                         <div className="h-16 flex items-center justify-between px-4 border-b border-neutral-900">
-                            <div className="flex items-center gap-2.5">
-                                <div className="w-8 h-8 rounded-lg bg-neutral-900 border border-neutral-800 flex items-center justify-center font-black text-white text-base">
-                                    G
+                            <Link to="/admin" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2.5">
+                                <div className="w-8 h-8 rounded-lg bg-amber-500 text-slate-950 flex items-center justify-center font-black text-base">
+                                    W
                                 </div>
                                 <div>
-                                    <h1 className="text-sm font-extrabold text-white tracking-wide uppercase">GSM THEME</h1>
-                                    <p className="text-[10px] text-neutral-400 font-mono">Version: 2027.63.0</p>
+                                    <h1 className="text-sm font-extrabold text-white tracking-wide uppercase">
+                                        {siteContent?.header?.title || 'WOWFILEWALA'}
+                                    </h1>
+                                    <p className="text-[10px] text-neutral-400 font-medium">Admin Dashboard</p>
                                 </div>
-                            </div>
+                            </Link>
                             <button onClick={() => setMobileMenuOpen(false)} className="text-neutral-400 hover:text-white p-1">
                                 <X className="w-5 h-5" />
                             </button>

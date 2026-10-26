@@ -73,7 +73,7 @@ const DashboardPage = () => {
                         1. License Expiring Soon
                     </h4>
                     <p className="text-xs text-red-500 mt-0.5 leading-relaxed">
-                        Your GSM Theme Support &amp; Update license expires in 17 day(s). Renew soon to avoid any interruption.
+                        Your system support &amp; update license expires in 17 day(s). Renew soon to avoid any interruption.
                     </p>
                 </div>
                 <div>
