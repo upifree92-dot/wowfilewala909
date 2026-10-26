@@ -64,7 +64,7 @@ const CATALOG_SERVICES: ApiServiceOption[] = [
 ];
 
 const ImeiOrderPage = () => {
-    useSEO('Service List & Place Order', 'Place a new IMEI, Server, or RENT-24/7 service order.');
+    useSEO('Service List & Place Order', 'Place a new IMEI, Server, or Remote Tool Rent service order.');
     const [searchParams, setSearchParams] = useSearchParams();
     const navigate = useNavigate();
     
@@ -76,26 +76,64 @@ const ImeiOrderPage = () => {
     const apiServer = siteContent.apiServer || {};
     
     const [isSettingsModalOpen, setSettingsModalOpen] = useState(false);
+    const [allFetchedServices, setAllFetchedServices] = useState<ApiServiceOption[]>(CATALOG_SERVICES);
+    const [filterQuery, setFilterQuery] = useState('');
 
-    // Filter available services for current active tab
+    // Load full 583 services list from API proxy endpoint
+    useEffect(() => {
+        let isMounted = true;
+        fetch('/api/fetch-gsm-services', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ apiUrl: apiServer.apiUrl, username: apiServer.username })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (isMounted && data?.success && Array.isArray(data.services) && data.services.length > 0) {
+                const mapped: ApiServiceOption[] = data.services.map((srv: any) => {
+                    const st = srv.serviceType === 'remote' ? 'rent' : (srv.serviceType || 'server');
+                    const isRemote = st === 'rent';
+                    const isImei = st === 'imei';
+                    return {
+                        id: srv.id,
+                        name: srv.name,
+                        type: st as 'imei' | 'server' | 'rent',
+                        price: srv.price || 0,
+                        deliveryTime: isRemote ? 'Instant ID/Pass' : (isImei ? 'Instant IMEI' : 'Auto API 24x7'),
+                        inputLabel: isRemote ? 'Your WhatsApp / Mobile Number' : (isImei ? 'IMEI / Serial Number' : 'ECID / Account / Username'),
+                        inputPlaceholder: isRemote ? 'Enter WhatsApp number to receive login ID & Password...' : (isImei ? 'Enter 15-digit IMEI or Serial Number...' : 'Enter required details or Username...')
+                    };
+                });
+                setAllFetchedServices(mapped);
+            }
+        })
+        .catch(err => console.warn('Could not fetch dynamic GSM services:', err));
+
+        return () => { isMounted = false; };
+    }, [apiServer.apiUrl, apiServer.username]);
+
+    // Filter available services for current active tab & search query
     const availableServices = useMemo(() => {
-        return CATALOG_SERVICES.filter(s => s.type === activeType);
-    }, [activeType]);
+        return allFetchedServices.filter(s => {
+            const matchType = s.type === activeType || (activeType === 'rent' && s.type === 'rent');
+            const matchQuery = !filterQuery || s.name.toLowerCase().includes(filterQuery.toLowerCase());
+            return matchType && matchQuery;
+        });
+    }, [allFetchedServices, activeType, filterQuery]);
 
     // Selected service state
-    const [selectedServiceId, setSelectedServiceId] = useState<string>(availableServices[0]?.id || CATALOG_SERVICES[0].id);
+    const [selectedServiceId, setSelectedServiceId] = useState<string>('');
 
-    // Sync selected service when activeType changes
+    // Sync selected service when activeType or availableServices changes
     useEffect(() => {
-        const firstSrv = CATALOG_SERVICES.find(s => s.type === activeType);
-        if (firstSrv) {
-            setSelectedServiceId(firstSrv.id);
+        if (availableServices.length > 0) {
+            setSelectedServiceId(availableServices[0].id);
         }
-    }, [activeType]);
+    }, [activeType, filterQuery]);
 
     const selectedService = useMemo(() => {
-        return CATALOG_SERVICES.find(s => s.id === selectedServiceId) || availableServices[0] || CATALOG_SERVICES[0];
-    }, [selectedServiceId, availableServices]);
+        return allFetchedServices.find(s => s.id === selectedServiceId) || availableServices[0] || CATALOG_SERVICES[0];
+    }, [selectedServiceId, availableServices, allFetchedServices]);
 
     // Form inputs state
     const [serviceInputValue, setServiceInputValue] = useState('');
@@ -208,11 +246,25 @@ const ImeiOrderPage = () => {
                     </p>
                 </div>
 
-                {/* 1. Select Service / Rent Tool Dropdown */}
-                <div className="mb-6">
-                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-2">
-                        Select {activeType === 'rent' ? 'Tool Rental / Access' : activeType === 'server' ? 'Server Service' : 'IMEI Service'}
-                    </label>
+                {/* 1. Search Filter & Select Service / Rent Tool Dropdown */}
+                <div className="mb-6 space-y-2.5">
+                    <div className="flex justify-between items-center">
+                        <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">
+                            Select {activeType === 'rent' ? 'Remote Tool Rental' : activeType === 'server' ? 'Server Service' : 'IMEI Service'}
+                        </label>
+                        <span className="text-[11px] font-mono font-bold text-amber-500">
+                            {availableServices.length} Services Available
+                        </span>
+                    </div>
+
+                    <input
+                        type="text"
+                        value={filterQuery}
+                        onChange={(e) => setFilterQuery(e.target.value)}
+                        placeholder={`🔍 Search in ${availableServices.length} services (e.g. UnlockTool, AMT, Samsung, iPhone)...`}
+                        className="w-full p-3 rounded-xl bg-slate-900 border border-slate-700 text-slate-100 text-xs sm:text-sm focus:outline-none focus:border-amber-500 placeholder-slate-500"
+                    />
+
                     <select
                         value={selectedServiceId}
                         onChange={(e) => setSelectedServiceId(e.target.value)}
