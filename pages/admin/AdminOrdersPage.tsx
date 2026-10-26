@@ -464,23 +464,6 @@ const AdminOrdersPage = () => {
                                                             </button>
                                                         </div>
 
-                                                        {/* Locked notice badge */}
-                                                        {isLocked && (
-                                                            <div className={`px-2.5 py-1.5 rounded-lg border text-[11px] flex items-center justify-between gap-1.5 ${
-                                                                order.status === 'approved'
-                                                                    ? 'bg-emerald-500/10 border-emerald-500/25 text-emerald-300'
-                                                                    : 'bg-rose-500/10 border-rose-500/25 text-rose-300'
-                                                            }`}>
-                                                                <div className="flex items-center gap-1.5 font-bold">
-                                                                    <Lock className="w-3 h-3 shrink-0" />
-                                                                    <span>{order.status === 'approved' ? 'Success (Finalized & Locked)' : 'Rejected (Finalized & Locked)'}</span>
-                                                                </div>
-                                                                <span className="text-[9px] uppercase font-black px-1.5 py-0.5 rounded bg-black/40 text-slate-400 shrink-0">
-                                                                    No changes
-                                                                </span>
-                                                            </div>
-                                                        )}
-
                                                         {/* Delivered note / reason preview chip */}
                                                         {(order.adminReply || order.rejectionReason) && (
                                                             <div className="text-[10px] font-mono bg-slate-950/80 px-2 py-1 rounded border border-slate-800 text-slate-400 flex items-center gap-1 truncate">
