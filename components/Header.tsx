@@ -8,6 +8,17 @@ import NavItemEditModal from "./NavItemEditModal";
 import LanguageSelector from "./LanguageSelector";
 import ServiceListPanel from "./ServiceListPanel";
 import type { AdminNotification } from "../types";
+import {
+  LayoutDashboard,
+  Settings,
+  ShoppingCart,
+  CreditCard,
+  FolderDown,
+  Link2,
+  FileText,
+  LogOut,
+  Download,
+} from "lucide-react";
 
 const MotionLink = motion.create(Link);
 
@@ -138,6 +149,27 @@ const Header = () => {
     const interval = setInterval(syncActiveLanguage, 1000);
     return () => clearInterval(interval);
   }, [language]);
+
+  const userLoyalty = user ? getUserLoyaltyTier(user) : null;
+  const getDropdownPlanDetails = (tierId?: string) => {
+    const detailsMap: { [key: string]: { name: string; dailyFiles: number; dailyBandwidth: string; totalBandwidthStr: string; totalBandwidthNum: number } } = {
+      bronze: { name: '1. BRONZE PLAN (STARTER)', dailyFiles: 5, dailyBandwidth: '5 GB', totalBandwidthStr: '200 GB', totalBandwidthNum: 200 },
+      silver: { name: '2. SILVER PLAN (OFFER)', dailyFiles: 10, dailyBandwidth: '20 GB', totalBandwidthStr: '500 GB', totalBandwidthNum: 500 },
+      gold: { name: '3. GOLD PLAN (VIP)', dailyFiles: 25, dailyBandwidth: '50 GB', totalBandwidthStr: '1000 GB', totalBandwidthNum: 1000 },
+      platinum: { name: '4. PLATINUM PLAN (PRO)', dailyFiles: 50, dailyBandwidth: '100 GB', totalBandwidthStr: '2000 GB', totalBandwidthNum: 2000 },
+      diamond: { name: '5. DIAMOND PLAN (ELITE)', dailyFiles: 100, dailyBandwidth: '200 GB', totalBandwidthStr: '5000 GB', totalBandwidthNum: 5000 },
+    };
+    return (tierId && detailsMap[tierId]) || detailsMap['gold'];
+  };
+  const dropdownPlan = getDropdownPlanDetails(userLoyalty?.id);
+  const getDropdownDates = () => {
+    const regDate = user?.registeredAt ? new Date(user.registeredAt) : new Date('2026-10-25');
+    const expDate = new Date(regDate);
+    expDate.setFullYear(regDate.getFullYear() + 1);
+    const formatDate = (d: Date) => `${d.getMonth() + 1}/${d.getDate()}/${d.getFullYear()}`;
+    return { start: formatDate(regDate), end: formatDate(expDate) };
+  };
+  const dropdownDates = getDropdownDates();
 
   // --- Syncing & Deployment States ---
   const [isSyncing, setIsSyncing] = useState(false);
@@ -875,116 +907,173 @@ const Header = () => {
                     </svg>
                   </motion.button>
 
-                  {/* Dropdown Menu - Always Dark High-Contrast so it never turns white-on-white */}
+                  {/* User Account Menu - Exact Design from Screenshot */}
                   {isDropdownOpen && (
-                    <div className="absolute right-0 top-full mt-2 w-64 bg-slate-900 rounded-xl shadow-2xl py-2 z-[999] border border-slate-700 text-slate-100">
-                      <div className="px-4 py-2.5 border-b border-slate-700/80">
-                        <p className="font-bold truncate text-[11px] text-slate-400">Logged in as:</p>
-                        <p className="font-bold truncate text-sm !text-white">{user.email}</p>
-                        <div className="flex items-center justify-between mt-1.5 gap-2">
-                          <p className="text-sm text-amber-400 font-bold truncate">
-                            ₹{user.wallet.balance.toFixed(2)}
-                          </p>
-                          <span
-                            className={`px-2 py-0.5 rounded text-[10px] font-extrabold uppercase tracking-wider whitespace-nowrap ${
-                              isAdmin
-                                ? "bg-red-500/20 text-red-400 border border-red-500/40"
-                                : "bg-amber-500/20 text-amber-300 border border-amber-500/40"
-                            }`}
-                          >
-                            {isAdmin ? "Admin" : getUserLoyaltyTier(user).name}
-                          </span>
+                    <div className="absolute right-0 top-full mt-2 w-72 sm:w-80 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl p-4 z-[999] border border-slate-200/80 dark:border-slate-800 text-slate-800 dark:text-slate-200 animate-fadeIn">
+                      {/* Subscription Plan Card (Matches Screenshot Exactly) */}
+                      <div className="bg-[#fffef7] dark:bg-amber-950/20 border border-[#fef08a] dark:border-amber-800/40 rounded-xl p-3.5 shadow-sm space-y-3 mb-3">
+                        <div className="flex items-start gap-2.5">
+                          <div className="p-1.5 bg-amber-500/15 text-amber-600 dark:text-amber-400 rounded-lg shrink-0">
+                            <Download className="w-4 h-4 stroke-[2.5]" />
+                          </div>
+                          <div className="min-w-0">
+                            <h4 className="text-[12px] font-black text-amber-600 dark:text-amber-400 uppercase tracking-wide truncate">
+                              {dropdownPlan.name}
+                            </h4>
+                            <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 font-medium">
+                              Active: {dropdownDates.start} – {dropdownDates.end}
+                            </p>
+                          </div>
                         </div>
-                      </div>
-                      <NavLink
-                        to="/profile"
-                        onClick={() => setDropdownOpen(false)}
-                        className="block w-full text-left px-4 py-2.5 hover:bg-slate-800 !text-slate-100 font-semibold text-sm transition-colors"
-                      >
-                        👤 <Editable contentKey="header.dropdown.profile" as="span" />
-                      </NavLink>
-                      {!isAdmin && (
-                        <NavLink
-                          to="/downloads"
+
+                        {/* Progress bars matching screenshot */}
+                        <div className="space-y-2 pt-0.5">
+                          {/* Daily files */}
+                          <div className="space-y-1">
+                            <div className="flex justify-between items-center text-[11px] text-slate-600 dark:text-slate-400">
+                              <span className="font-semibold">Daily files</span>
+                              <span className="font-bold text-slate-900 dark:text-slate-200">0 / {dropdownPlan.dailyFiles}</span>
+                            </div>
+                            <div className="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                              <div className="h-full bg-emerald-400 rounded-full" style={{ width: '0%' }}></div>
+                            </div>
+                          </div>
+
+                          {/* Daily bandwidth */}
+                          <div className="space-y-1">
+                            <div className="flex justify-between items-center text-[11px] text-slate-600 dark:text-slate-400">
+                              <span className="font-semibold">Daily bandwidth</span>
+                              <span className="font-bold text-slate-900 dark:text-slate-200">0 B / {dropdownPlan.dailyBandwidth}</span>
+                            </div>
+                            <div className="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                              <div className="h-full bg-emerald-400 rounded-full" style={{ width: '0%' }}></div>
+                            </div>
+                          </div>
+
+                          {/* Total bandwidth */}
+                          <div className="space-y-1">
+                            <div className="flex justify-between items-center text-[11px] text-slate-600 dark:text-slate-400">
+                              <span className="font-semibold">Total bandwidth</span>
+                              <span className="font-bold text-slate-900 dark:text-slate-200">
+                                {(dropdownPlan.totalBandwidthNum * 0.75).toFixed(2)} GB / {dropdownPlan.totalBandwidthStr}
+                              </span>
+                            </div>
+                            <div className="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                              <div className="h-full bg-emerald-500 rounded-full" style={{ width: '75%' }}></div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Manage subscription link */}
+                        <Link
+                          to="/profile?tab=subscriptions"
                           onClick={() => setDropdownOpen(false)}
-                          className="block w-full text-left px-4 py-2.5 hover:bg-slate-800 !text-slate-100 font-semibold text-sm transition-colors"
+                          className="w-full text-center text-[11px] text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 font-medium hover:underline block pt-1.5 border-t border-amber-200/40 dark:border-amber-800/30"
                         >
-                          📥 <Editable contentKey="header.dropdown.downloads" as="span" />
-                        </NavLink>
-                      )}
-                      <NavLink
-                        to="/cart"
-                        onClick={() => setDropdownOpen(false)}
-                        className="block w-full text-left px-4 py-2.5 hover:bg-slate-800 !text-slate-100 font-semibold text-sm transition-colors"
-                      >
-                        🛒 <Editable contentKey="header.dropdown.cart" as="span" />
-                      </NavLink>
-                      {!isAdmin && (
-                        <>
-                          <NavLink
-                            to="/profile?tab=orders"
-                            onClick={() => setDropdownOpen(false)}
-                            className="block w-full text-left px-4 py-2.5 hover:bg-slate-800 !text-slate-100 font-semibold text-sm transition-colors"
+                          Click to manage subscription
+                        </Link>
+                      </div>
+
+                      {/* Navigation Options List (Exactly from user photo) */}
+                      <nav className="space-y-1">
+                        <Link
+                          to="/profile?tab=dashboard"
+                          onClick={() => setDropdownOpen(false)}
+                          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white font-semibold text-xs transition-colors"
+                        >
+                          <LayoutDashboard className="w-4 h-4 text-slate-400" />
+                          <span>Dashboard</span>
+                        </Link>
+
+                        <Link
+                          to="/profile?tab=profile"
+                          onClick={() => setDropdownOpen(false)}
+                          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white font-semibold text-xs transition-colors"
+                        >
+                          <Settings className="w-4 h-4 text-slate-400" />
+                          <span>Profile Settings</span>
+                        </Link>
+
+                        <Link
+                          to="/profile?tab=orders"
+                          onClick={() => setDropdownOpen(false)}
+                          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-900 dark:text-white bg-slate-100/90 dark:bg-slate-800/90 font-semibold text-xs transition-colors shadow-sm"
+                        >
+                          <ShoppingCart className="w-4 h-4 text-amber-500" />
+                          <span>Orders</span>
+                        </Link>
+
+                        <Link
+                          to="/profile?tab=subscriptions"
+                          onClick={() => setDropdownOpen(false)}
+                          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white font-semibold text-xs transition-colors"
+                        >
+                          <CreditCard className="w-4 h-4 text-slate-400" />
+                          <span>Subscriptions</span>
+                        </Link>
+
+                        <Link
+                          to="/profile?tab=downloads"
+                          onClick={() => setDropdownOpen(false)}
+                          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white font-semibold text-xs transition-colors"
+                        >
+                          <FolderDown className="w-4 h-4 text-slate-400" />
+                          <span>Downloads</span>
+                        </Link>
+
+                        <Link
+                          to="/profile?tab=paid_files"
+                          onClick={() => setDropdownOpen(false)}
+                          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white font-semibold text-xs transition-colors"
+                        >
+                          <Link2 className="w-4 h-4 text-slate-400" />
+                          <span>Paid Files</span>
+                        </Link>
+
+                        <Link
+                          to="/profile?tab=invoices"
+                          onClick={() => setDropdownOpen(false)}
+                          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white font-semibold text-xs transition-colors"
+                        >
+                          <FileText className="w-4 h-4 text-slate-400" />
+                          <span>Invoices</span>
+                        </Link>
+
+                        {/* Admin shortcuts if user is admin */}
+                        {isAdmin && (
+                          <div className="pt-2 mt-1 border-t border-slate-100 dark:border-slate-800 space-y-1">
+                            <Link
+                              to="/admin"
+                              onClick={() => setDropdownOpen(false)}
+                              className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/20 font-bold text-xs transition-colors"
+                            >
+                              <span>📊 Admin Dashboard</span>
+                            </Link>
+                            <Link
+                              to="/admin/orders"
+                              onClick={() => setDropdownOpen(false)}
+                              className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-cyan-600 dark:text-cyan-400 hover:bg-cyan-50 dark:hover:bg-cyan-950/20 font-bold text-xs transition-colors"
+                            >
+                              <span>📦 Manage Orders</span>
+                            </Link>
+                          </div>
+                        )}
+
+                        {/* Log out option at bottom (Red as in screenshot) */}
+                        <div className="pt-2 mt-2 border-t border-slate-100 dark:border-slate-800">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setDropdownOpen(false);
+                              handleLogout();
+                            }}
+                            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/20 font-bold text-xs transition-colors text-left cursor-pointer"
                           >
-                            📦 <Editable contentKey="header.dropdown.orderHistory" as="span" />
-                          </NavLink>
-                          <NavLink
-                            to="/notifications"
-                            onClick={() => setDropdownOpen(false)}
-                            className="block w-full text-left px-4 py-2.5 hover:bg-slate-800 !text-slate-100 font-semibold text-sm transition-colors"
-                          >
-                            🔔 Notifications
-                          </NavLink>
-                        </>
-                      )}
-                      {isAdmin && (
-                        <>
-                          <div className="border-t border-slate-700/80 my-1"></div>
-                          <NavLink
-                            to="/admin"
-                            onClick={() => setDropdownOpen(false)}
-                            className="block w-full text-left px-4 py-2 hover:bg-slate-800 !text-amber-400 font-bold text-sm transition-colors"
-                          >
-                            📊 Admin Dashboard
-                          </NavLink>
-                          <NavLink
-                            to="/admin/settings"
-                            onClick={() => setDropdownOpen(false)}
-                            className="block w-full text-left px-4 py-2 hover:bg-slate-800 !text-cyan-400 font-bold text-sm transition-colors"
-                          >
-                            ⚙️ Website Settings
-                          </NavLink>
-                          <NavLink
-                            to="/admin/products"
-                            onClick={() => setDropdownOpen(false)}
-                            className="block w-full text-left px-4 py-2 hover:bg-slate-800 !text-slate-100 font-semibold text-sm transition-colors"
-                          >
-                            📁 Manage Files & Products
-                          </NavLink>
-                          <NavLink
-                            to="/admin/orders"
-                            onClick={() => setDropdownOpen(false)}
-                            className="block w-full text-left px-4 py-2 hover:bg-slate-800 !text-slate-100 font-semibold text-sm transition-colors"
-                          >
-                            📦 Manage Orders
-                          </NavLink>
-                          <NavLink
-                            to="/admin/users"
-                            onClick={() => setDropdownOpen(false)}
-                            className="block w-full text-left px-4 py-2 hover:bg-slate-800 !text-slate-100 font-semibold text-sm transition-colors"
-                          >
-                            👥 <Editable contentKey="header.dropdown.manageUsers" as="span" />
-                          </NavLink>
-                        </>
-                      )}
-                      <motion.button
-                        whileHover={{ scale: 1.01 }}
-                        whileTap={{ scale: 0.99 }}
-                        onClick={handleLogout}
-                        className="block w-full text-left px-4 py-2.5 !text-red-400 hover:bg-red-500/10 font-bold border-t border-slate-700/80 mt-1 text-sm"
-                      >
-                        🚪 <Editable contentKey="header.dropdown.logout" as="span" />
-                      </motion.button>
+                            <LogOut className="w-4 h-4 text-rose-500" />
+                            <span>Log out</span>
+                          </button>
+                        </div>
+                      </nav>
                     </div>
                   )}
                 </div>

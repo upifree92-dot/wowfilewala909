@@ -15,6 +15,7 @@ import {
   CreditCard,
   FolderDown,
   Coins,
+  Link2,
   FileText,
   LogOut,
   ArrowLeft,
@@ -61,11 +62,12 @@ const ProfilePage = () => {
   useEffect(() => {
     if (tabParam && ['dashboard', 'profile', 'orders', 'subscriptions', 'downloads', 'paid_files', 'invoices'].includes(tabParam)) {
       setActiveTab(tabParam as any);
+      setShowMenuOnMobile(false);
     }
   }, [tabParam]);
   
   // Mobile navigation state
-  const [showMenuOnMobile, setShowMenuOnMobile] = useState<boolean>(true);
+  const [showMenuOnMobile, setShowMenuOnMobile] = useState<boolean>(!tabParam);
 
   // Profile forms state
   const [name, setName] = useState(user?.profile.name || '');
@@ -362,7 +364,7 @@ const ProfilePage = () => {
                     : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/40 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
-                <Coins className={`w-5 h-5 ${activeTab === 'paid_files' ? 'text-amber-500' : 'text-slate-400'}`} />
+                <Link2 className={`w-5 h-5 ${activeTab === 'paid_files' ? 'text-amber-500' : 'text-slate-400'}`} />
                 <span>Paid Files</span>
               </button>
 
