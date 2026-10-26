@@ -1,5 +1,5 @@
 import React, { useState, useMemo, FormEvent } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
 import type { InputField } from '../types';
 import BackButton from '../components/BackButton';
@@ -26,6 +26,7 @@ const SERVICE_TYPE_META: Record<string, { badge: string; subtitle: string }> = {
 const ImeiOrderPage = () => {
     useSEO('Service List & Place Order', 'Place a new IMEI, Server, or RENT-24/7 service order.');
     const [searchParams, setSearchParams] = useSearchParams();
+    const navigate = useNavigate();
     const activeType = searchParams.get('type') || 'imei';
 
     const { user, siteContent, placeImeiOrder, setNotification, isAdmin, isEditMode } = useAppContext();
@@ -70,9 +71,7 @@ const ImeiOrderPage = () => {
             title: `${serviceMeta.badge} - ${config.title}`,
         });
 
-        // Reset form
-        setFormData(initialFormState);
-        setQuantity(1);
+        navigate('/profile?tab=orders');
     };
 
     if (!config.enabled && !(isAdmin && isEditMode)) {
