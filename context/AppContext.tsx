@@ -99,7 +99,6 @@ interface AppContextType {
   // Activation Order & Notifications
   placeActivationOrder: (category: Category, orderDetails: any) => void;
   approveActivationOrder: (notificationId: string, replyMessage: string) => void;
-  processActivationOrder: (notificationId: string, replyMessage: string) => void;
   rejectActivationOrder: (notificationId: string, reason: string) => void;
   adminReplyToNotification: (notificationId: string, replyMessage: string) => void;
   deleteAdminNotification: (notificationId: string) => void;
@@ -2919,56 +2918,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         setNotification('Order success and user has been notified.');
     };
 
-    const processActivationOrder = (notificationId: string, replyMessage: string) => {
-        if (!isAdmin) return;
-
-        const notification = adminNotifications.find(n => n.id === notificationId);
-        if (!notification || !notification.userId || !notification.orderId) return;
-
-        const updatedAdminNotifications = adminNotifications.map(n => (n.id === notificationId || n.orderId === notification.orderId) ? { ...n, status: 'processing' as const, read: true, adminReply: replyMessage || "Order Processing" } : n);
-        setAdminNotifications(updatedAdminNotifications);
-        setLocalStorage('adminNotifications', updatedAdminNotifications);
-        
-        const userToNotify = allUsers[notification.userId];
-        let newAllUsers = { ...allUsers };
-        if (userToNotify) {
-            const updatedNotifications = (userToNotify.notifications || []).map((un): UserNotification => {
-                if (un.orderId === notification.orderId) {
-                    return {
-                        ...un,
-                        status: 'processing',
-                        title: `Order #${un.orderId} Processing`,
-                        read: false,
-                        adminReply: replyMessage || "Order Processing",
-                        timestamp: new Date().toISOString(),
-                    };
-                }
-                return un;
-            });
-            
-            const updatedUser = { ...userToNotify, notifications: updatedNotifications };
-            newAllUsers = { ...allUsers, [userToNotify.id]: updatedUser };
-            setAllUsers(newAllUsers);
-            setLocalStorage('users', newAllUsers);
-            
-            if (user && user.id === userToNotify.id) {
-                setUser(updatedUser);
-                setLocalStorage('currentUser', updatedUser);
-            }
-        }
-
-        pushServerSync({
-            adminNotifications: updatedAdminNotifications,
-            users: Object.values(newAllUsers)
-        }, true).catch(err => console.warn('Sync order processing error:', err));
-
-        updateOrderStatus(notification.orderId, 'processing').catch(err => {
-            console.warn('Failed to update order status in Supabase (non-blocking):', err);
-        });
-
-        playSuccessSound();
-        setNotification('Order set to processing and user has been notified.');
-    };
+    // processActivationOrder removed
 
     const rejectActivationOrder = (notificationId: string, reason: string) => {
         if (!isAdmin) return;
@@ -3143,12 +3093,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         setNotification('Reply sent to user and saved to order history.');
     };
 
-    const updateOrderStatusByAdmin = (notificationId: string, newStatus: 'pending' | 'processing' | 'approved' | 'rejected', comment: string) => {
+    const updateOrderStatusByAdmin = (notificationId: string, newStatus: 'pending' | 'approved' | 'rejected', comment: string) => {
         if (!isAdmin) return;
         if (newStatus === 'approved') {
             approveActivationOrder(notificationId, comment || 'Order completed successfully');
-        } else if (newStatus === 'processing') {
-            processActivationOrder(notificationId, comment || 'Order is being processed');
         } else if (newStatus === 'rejected') {
             rejectActivationOrder(notificationId, comment || 'Order rejected by administrator');
         } else if (newStatus === 'pending') {
@@ -3267,8 +3215,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             existing.status = an.status || existing.status;
             if (an.status === 'approved') {
               existing.title = `Order #${an.orderId} Success`;
-            } else if (an.status === 'processing') {
-              existing.title = `Order #${an.orderId} Processing`;
             } else if (an.status === 'rejected') {
               existing.title = `Order #${an.orderId} Rejected`;
               existing.rejectionReason = an.rejectionReason || existing.rejectionReason;
@@ -3282,8 +3228,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
               id: `user-notif-${an.orderId}`,
               title: an.status === 'approved' 
                 ? `Order #${an.orderId} Success` 
-                : an.status === 'processing' 
-                ? `Order #${an.orderId} Processing`
                 : an.status === 'rejected'
                 ? `Order #${an.orderId} Rejected`
                 : `Order #${an.orderId} Placed`,

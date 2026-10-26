@@ -5,8 +5,8 @@ import { AlertCircle, X, Search } from 'lucide-react';
 import CopyButton from '../../components/CopyButton';
 
 const AdminOrdersPage = () => {
-    const { getAllOrders, approveActivationOrder, processActivationOrder, rejectActivationOrder, updateOrderStatusByAdmin, deleteAdminNotification, clearAdminNotifications, getAllUsers, user: currentUser, isAdmin } = useAppContext();
-    const [filter, setFilter] = useState<'all' | 'pending' | 'processing' | 'approved' | 'rejected'>('all');
+    const { getAllOrders, approveActivationOrder, rejectActivationOrder, updateOrderStatusByAdmin, deleteAdminNotification, clearAdminNotifications, getAllUsers, user: currentUser, isAdmin } = useAppContext();
+    const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
     const [searchQuery, setSearchQuery] = useState('');
     const [orderComments, setOrderComments] = useState<Record<string, string>>({});
     
@@ -54,7 +54,7 @@ const AdminOrdersPage = () => {
         return list;
     }, [allOrders, filter, searchQuery, users]);
     
-    const FilterButton = ({ value, label }: { value: 'all' | 'pending' | 'processing' | 'approved' | 'rejected', label: string }) => (
+    const FilterButton = ({ value, label }: { value: 'all' | 'pending' | 'approved' | 'rejected', label: string }) => (
         <button
             onClick={() => setFilter(value)}
             className={`px-4 py-1.5 text-xs sm:text-sm font-bold rounded-xl transition-all duration-200 border ${filter === value ? 'bg-gradient-to-r from-amber-500 to-orange-600 text-white border-transparent shadow-lg shadow-orange-500/10 scale-102' : 'bg-slate-900/40 text-slate-400 hover:text-slate-200 border-slate-800'}`}
@@ -67,7 +67,6 @@ const AdminOrdersPage = () => {
         const baseClasses = 'px-2.5 py-1 text-[11px] font-bold rounded-lg capitalize inline-block tracking-wide border';
         const styles: { [key: string]: string } = {
             pending: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
-            processing: 'bg-orange-500/10 text-orange-400 border-orange-500/20',
             approved: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
             rejected: 'bg-rose-500/10 text-rose-400 border-rose-500/20',
             info: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
@@ -75,7 +74,6 @@ const AdminOrdersPage = () => {
         const labelMap: { [key: string]: string } = {
             approved: 'Success',
             pending: 'Pending',
-            processing: 'Processing',
             rejected: 'Rejected',
             info: 'Info'
         };
@@ -134,7 +132,6 @@ const AdminOrdersPage = () => {
             <div className="flex flex-wrap items-center gap-2 mb-6">
                 <FilterButton value="all" label="All" />
                 <FilterButton value="pending" label="Pending" />
-                <FilterButton value="processing" label="Processing" />
                 <FilterButton value="approved" label="Success" />
                 <FilterButton value="rejected" label="Rejected" />
             </div>
@@ -218,7 +215,6 @@ const AdminOrdersPage = () => {
                                                     className="flex-1 text-xs py-1 px-1.5 rounded bg-slate-950 border border-slate-700 text-slate-100 font-bold focus:outline-none focus:border-amber-500 cursor-pointer"
                                                 >
                                                     <option value="pending">🟡 Pending</option>
-                                                    <option value="processing">🟠 In Process</option>
                                                     <option value="approved">🟢 Success</option>
                                                     <option value="rejected">🔴 Rejected & Refund</option>
                                                 </select>
@@ -248,17 +244,7 @@ const AdminOrdersPage = () => {
                                                 >
                                                     Success
                                                 </button>
-                                                <button 
-                                                    type="button" 
-                                                    onClick={() => {
-                                                        const msg = orderComments[order.id] !== undefined ? orderComments[order.id] : (order.adminReply || 'Order is being processed');
-                                                        processActivationOrder(order.id, msg);
-                                                    }} 
-                                                    className="px-2 py-1.5 text-[10px] font-extrabold rounded-md bg-orange-500/20 hover:bg-orange-500/30 text-orange-300 border border-orange-500/30 transition-all text-center active:scale-95"
-                                                    title="Select In Process & Send to User"
-                                                >
-                                                    Process
-                                                </button>
+                                                {/* Process button removed */}
                                                 <button 
                                                     type="button" 
                                                     onClick={() => {
