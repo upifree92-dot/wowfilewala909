@@ -23,7 +23,7 @@ const AuthPage = () => {
   useSEO(isLogin ? 'Login' : 'Register', isLogin ? 'Login to your account.' : 'Create a new account.');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const { siteContent, login, register, checkUserExists, notification, setNotification, clearNotification } = useAppContext();
+  const { siteContent, login, register, checkUserExists, notification, setNotification, clearNotification, hwidMismatchInfo, setHwidMismatchInfo, performSelfHwidReset } = useAppContext();
   const navigate = useNavigate();
 
   // Registration-specific state
@@ -361,6 +361,59 @@ const AuthPage = () => {
         )}
 
       </div>
+
+      {hwidMismatchInfo && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fadeIn font-sans">
+          <div className="bg-slate-900 border border-slate-700 rounded-2xl max-w-md w-full p-6 text-white shadow-2xl space-y-5">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div className="flex items-center gap-2">
+                <span className="w-3 h-3 rounded-full bg-amber-400 animate-pulse" />
+                <h3 className="text-lg font-extrabold text-amber-400">Device Change Detected (HWID Mismatch)</h3>
+              </div>
+              <button onClick={() => setHwidMismatchInfo(null)} className="text-slate-400 hover:text-white">✕</button>
+            </div>
+
+            <p className="text-sm text-slate-300 leading-relaxed">
+              You are logging in from a new device (laptop, mobile, PC, or MacBook). Your account is currently bound to another device.
+            </p>
+
+            <div className="bg-slate-800/80 rounded-xl p-3 text-xs space-y-1.5 font-mono border border-slate-700/60">
+              <p className="text-slate-400">Account: <span className="text-white">{hwidMismatchInfo.email}</span></p>
+              <p className="text-slate-400">Registered HWID: <span className="text-amber-300 truncate block">{hwidMismatchInfo.registeredHWID}</span></p>
+              <p className="text-slate-400">Current Device HWID: <span className="text-cyan-300 truncate block">{hwidMismatchInfo.currentHWID}</span></p>
+            </div>
+
+            <div className="flex flex-col gap-2.5 pt-2">
+              <button
+                onClick={async () => {
+                  await performSelfHwidReset();
+                  navigate('/');
+                }}
+                className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 px-4 rounded-xl transition-all shadow-lg text-sm flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <span>Reset HWID to Current Device Now</span>
+              </button>
+
+              <a
+                href={`https://wa.me/${(((siteContent?.pricing?.adminWhatsappNumber || siteContent?.whatsapp?.phoneNumber || "8658465589").replace(/\D/g, '').length === 10 ? "91" : "") + (siteContent?.pricing?.adminWhatsappNumber || siteContent?.whatsapp?.phoneNumber || "8658465589").replace(/\D/g, ''))}?text=${encodeURIComponent(`Hi Admin, I have changed my device. Please reset my Hardware ID (HWID) for account: ${hwidMismatchInfo.email}`)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full bg-[#25D366] hover:bg-[#20ba5a] text-white font-bold py-3 px-4 rounded-xl transition-all shadow-lg text-sm flex items-center justify-center gap-2"
+              >
+                <img src={siteContent?.whatsapp?.iconUrl || "https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg"} alt="WhatsApp" className="w-4 h-4" />
+                <span>Request HWID Reset via WhatsApp</span>
+              </a>
+
+              <button
+                onClick={() => setHwidMismatchInfo(null)}
+                className="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-2.5 px-4 rounded-xl transition-all text-xs cursor-pointer"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

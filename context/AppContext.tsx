@@ -146,6 +146,11 @@ interface AppContextType {
 
   // Wipe/Reset all data for fresh start
   adminResetAllData: () => Promise<{ success: boolean }>;
+
+  // HWID Mismatch & Self Reset
+  hwidMismatchInfo: { email: string; currentHWID: string; registeredHWID: string; userId?: string; userObj?: User } | null;
+  setHwidMismatchInfo: (info: { email: string; currentHWID: string; registeredHWID: string; userId?: string; userObj?: User } | null) => void;
+  performSelfHwidReset: () => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -218,6 +223,37 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [anonymousRecents, setAnonymousRecents] = useState<string[]>(() => getLocalStorage('anonymousRecents', []));
   const [allUsers, setAllUsers] = useState<Record<string, User>>(() => getLocalStorage('users', {}));
   const [adminNotifications, setAdminNotifications] = useState<AdminNotification[]>(() => getLocalStorage('adminNotifications', []));
+
+  const [hwidMismatchInfo, setHwidMismatchInfo] = useState<{
+    email: string;
+    currentHWID: string;
+    registeredHWID: string;
+    userId?: string;
+    userObj?: User;
+  } | null>(null);
+
+  const performSelfHwidReset = async () => {
+    if (!hwidMismatchInfo) return;
+    const { userId, userObj, currentHWID, email } = hwidMismatchInfo;
+    if (userId && userObj) {
+      userObj.hwid = currentHWID;
+      await saveRegisteredUser({
+        id: userId,
+        email: email,
+        mobile_number: userObj.mobileNumber,
+        name: userObj.profile.name,
+        bio: userObj.profile.bio,
+        wallet_balance: userObj.wallet.balance,
+        hwid: currentHWID
+      }).catch(err => console.warn('HWID self-reset save error:', err));
+
+      setAllUsers(prev => ({ ...prev, [userId]: userObj }));
+      setUser(userObj);
+      setHwidMismatchInfo(null);
+      setLocalStorage('currentUser', userObj);
+      setNotification('Hardware ID successfully updated to current device!', 'success');
+    }
+  };
 
   // --- New State for Live Editing and Content ---
   const [isEditMode, setIsEditMode] = useState(false);
@@ -1403,7 +1439,14 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           const currentHWID = getClientHWID();
           const registeredHWID = existingUser.hwid;
           if (registeredHWID && registeredHWID !== currentHWID) {
-            setNotification('This account is bound to another device. Please contact Admin on WhatsApp to reset your HWID / Hardware ID.', 'error');
+            setHwidMismatchInfo({
+              email,
+              currentHWID,
+              registeredHWID,
+              userId,
+              userObj: existingUser
+            });
+            setNotification('Device change detected! Hardware ID (HWID) reset required.', 'error');
             return false;
           }
           if (!registeredHWID) {
@@ -1436,7 +1479,14 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             const currentHWID = getClientHWID();
             const registeredHWID = localUser.hwid;
             if (registeredHWID && registeredHWID !== currentHWID) {
-              setNotification('This account is bound to another device. Please contact Admin on WhatsApp to reset your HWID / Hardware ID.', 'error');
+              setHwidMismatchInfo({
+                email,
+                currentHWID,
+                registeredHWID,
+                userId: localUser.id,
+                userObj: localUser
+              });
+              setNotification('Device change detected! Hardware ID (HWID) reset required.', 'error');
               return false;
             }
             if (!registeredHWID) {
@@ -1493,7 +1543,14 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           const currentHWID = getClientHWID();
           const registeredHWID = localUser.hwid;
           if (registeredHWID && registeredHWID !== currentHWID) {
-            setNotification('This account is bound to another device. Please contact Admin on WhatsApp to reset your HWID / Hardware ID.', 'error');
+            setHwidMismatchInfo({
+              email,
+              currentHWID,
+              registeredHWID,
+              userId: localUser.id,
+              userObj: localUser
+            });
+            setNotification('Device change detected! Hardware ID (HWID) reset required.', 'error');
             return false;
           }
           if (!registeredHWID) {
@@ -3623,7 +3680,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     realtimeSyncEnabled, setRealtimeSyncEnabled,
     autoWalletNewUser, updateAutoWalletNewUser,
     syncUsersFromSupabase,
-    adminResetAllData
+    adminResetAllData,
+    hwidMismatchInfo,
+    setHwidMismatchInfo,
+    performSelfHwidReset
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
