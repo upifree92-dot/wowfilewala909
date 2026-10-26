@@ -1,6 +1,7 @@
 import React, { useState, useEffect, FormEvent } from 'react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
+import type { UserNotification } from '../types';
 import { getLifetimePointsPurchased, getUserLoyaltyTier, getNextTierDetails, LOYALTY_TIERS, LoyaltyTier } from '../lib/loyalty';
 import BackButton from '../components/BackButton';
 import Editable from '../components/Editable';
