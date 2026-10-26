@@ -100,6 +100,7 @@ interface AppContextType {
   placeActivationOrder: (category: Category, orderDetails: any) => void;
   approveActivationOrder: (notificationId: string, replyMessage: string) => void;
   rejectActivationOrder: (notificationId: string, reason: string) => void;
+  updateOrderStatusByAdmin: (notificationId: string, newStatus: 'pending' | 'processing' | 'approved' | 'rejected', comment?: string) => void;
   adminReplyToNotification: (notificationId: string, replyMessage: string) => void;
   deleteAdminNotification: (notificationId: string) => void;
   getAdminNotifications: () => AdminNotification[];
@@ -3107,18 +3108,62 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         setNotification('Reply sent to user and saved to order history.');
     };
 
-    const updateOrderStatusByAdmin = (notificationId: string, newStatus: 'pending' | 'approved' | 'rejected', comment: string) => {
+    const updateOrderStatusByAdmin = (notificationId: string, newStatus: 'pending' | 'processing' | 'approved' | 'rejected', comment?: string) => {
         if (!isAdmin) return;
         if (newStatus === 'approved') {
             approveActivationOrder(notificationId, comment || 'Order completed successfully');
         } else if (newStatus === 'rejected') {
             rejectActivationOrder(notificationId, comment || 'Order rejected by administrator');
+        } else if (newStatus === 'processing') {
+            const notification = adminNotifications.find(n => n.id === notificationId || n.orderId === notificationId);
+            if (!notification) return;
+            const updatedAdminNotifications = adminNotifications.map(n => 
+                (n.id === notificationId || (notification.orderId && n.orderId === notification.orderId)) 
+                    ? { ...n, status: 'processing' as const, adminReply: comment !== undefined ? comment : (n.adminReply || 'In Process'), read: true } 
+                    : n
+            );
+            setAdminNotifications(updatedAdminNotifications);
+            setLocalStorage('adminNotifications', updatedAdminNotifications);
+
+            const targetUserId = notification.userId;
+            let newAllUsers = { ...allUsers };
+            if (targetUserId && allUsers[targetUserId]) {
+                const userToNotify = allUsers[targetUserId];
+                const updatedNotifications = (userToNotify.notifications || []).map((un): UserNotification => {
+                    if (un.orderId === notification.orderId || un.id === notification.id) {
+                        return {
+                            ...un,
+                            status: 'processing',
+                            title: `Order #${un.orderId || notification.orderId} In Process`,
+                            adminReply: comment !== undefined ? comment : (un.adminReply || 'In Process'),
+                            timestamp: new Date().toISOString(),
+                        };
+                    }
+                    return un;
+                });
+                const updatedUser = { ...userToNotify, notifications: updatedNotifications };
+                newAllUsers = { ...allUsers, [userToNotify.id]: updatedUser };
+                setAllUsers(newAllUsers);
+                setLocalStorage('users', newAllUsers);
+                if (user && user.id === userToNotify.id) {
+                    setUser(updatedUser);
+                    setLocalStorage('currentUser', updatedUser);
+                }
+            }
+            pushServerSync({
+                adminNotifications: updatedAdminNotifications,
+                users: Object.values(newAllUsers)
+            }, true).catch(err => console.warn('Sync processing error:', err));
+            if (notification.orderId) {
+                updateOrderStatus(notification.orderId, 'processing').catch(console.warn);
+            }
+            setNotification('Order status updated to In Process.');
         } else if (newStatus === 'pending') {
             const notification = adminNotifications.find(n => n.id === notificationId || n.orderId === notificationId);
             if (!notification) return;
             const updatedAdminNotifications = adminNotifications.map(n => 
                 (n.id === notificationId || (notification.orderId && n.orderId === notification.orderId)) 
-                    ? { ...n, status: 'pending' as const, adminReply: comment || '' } 
+                    ? { ...n, status: 'pending' as const, adminReply: comment !== undefined ? comment : (n.adminReply || '') } 
                     : n
             );
             setAdminNotifications(updatedAdminNotifications);
@@ -3134,7 +3179,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
                             ...un,
                             status: 'pending',
                             title: `Order #${un.orderId || notification.orderId} Pending`,
-                            adminReply: comment,
+                            adminReply: comment !== undefined ? comment : un.adminReply,
                             timestamp: new Date().toISOString(),
                         };
                     }
@@ -3156,7 +3201,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             if (notification.orderId) {
                 updateOrderStatus(notification.orderId, 'pending').catch(console.warn);
             }
-            setNotification('Order status updated to Pending.');
+            setNotification('Order status updated to Waiting Action (Pending).');
         }
     };
 

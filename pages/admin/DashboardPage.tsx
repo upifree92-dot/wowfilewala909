@@ -23,6 +23,7 @@ const DashboardPage = () => {
 
     // Order stats
     const pendingOrdersCount = useMemo(() => orders.filter(o => o.status === 'pending').length, [orders]);
+    const processingOrdersCount = useMemo(() => orders.filter(o => o.status === 'processing').length, [orders]);
     const successOrdersCount = useMemo(() => {
         const count = orders.filter(o => o.status === 'approved').length;
         return count > 0 ? count : 35; // Default matching screenshot
@@ -107,7 +108,7 @@ const DashboardPage = () => {
                     </div>
                     <div>
                         <p className="text-xs font-semibold text-amber-700">In Process</p>
-                        <p className="text-2xl font-black text-slate-800 mt-0.5">0</p>
+                        <p className="text-2xl font-black text-slate-800 mt-0.5">{processingOrdersCount}</p>
                     </div>
                 </div>
 

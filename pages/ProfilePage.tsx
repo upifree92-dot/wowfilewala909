@@ -794,6 +794,14 @@ const ProfilePage = () => {
                         </span>
                       );
                     }
+                    if (status === 'processing') {
+                      return (
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#0284c7] text-white font-bold text-xs rounded-lg shadow-sm whitespace-nowrap">
+                          <span className="text-xs animate-spin inline-block">⚙️</span>
+                          <span>In Process</span>
+                        </span>
+                      );
+                    }
                     if (status === 'rejected') {
                       return (
                         <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#e11d48] text-white font-bold text-xs rounded-lg shadow-sm whitespace-nowrap">
@@ -805,7 +813,7 @@ const ProfilePage = () => {
                     return (
                       <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#eab308] text-white font-bold text-xs rounded-lg shadow-sm whitespace-nowrap">
                         <span className="text-xs">🕒</span>
-                        <span>Pending</span>
+                        <span>Waiting Action</span>
                       </span>
                     );
                   };
