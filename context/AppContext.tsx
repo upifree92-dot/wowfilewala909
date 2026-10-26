@@ -3384,7 +3384,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     getAllUsers, adminUpdateUser, adminCreateUser, adminAdjustUserBalance, adminDeleteUser, adminDeleteAllUsers, adminToggleUserBlockStatus, adminResetUserHWID, userResetOwnHWID,
     getTotalSales, getAllOrders, getSalesDataForLastNDays,
     addNavLink, updateNavLink, deleteNavLink, reorderNavLinks,
-    placeActivationOrder, approveActivationOrder, processActivationOrder, rejectActivationOrder, updateOrderStatusByAdmin, deleteAdminNotification, getAdminNotifications, markAdminNotificationAsRead, clearAdminNotifications, adminReplyToNotification,
+    placeActivationOrder, approveActivationOrder, rejectActivationOrder, updateOrderStatusByAdmin, deleteAdminNotification, getAdminNotifications, markAdminNotificationAsRead, clearAdminNotifications, adminReplyToNotification,
     placeImeiOrder,
     getUserNotifications, markUserNotificationAsRead, deleteUserNotification, clearUserNotifications,
     theme, toggleTheme,
