@@ -12,12 +12,11 @@ const LanguageSelector: React.FC = () => {
       document.body.appendChild(script);
 
       (window as any).googleTranslateElementInit = () => {
-        // @ts-ignore
-        new window.google.translate.TranslateElement(
+        new (window as any).google.translate.TranslateElement(
           {
             pageLanguage: "en",
             layout:
-              window.google.translate.TranslateElement.InlineLayout.SIMPLE,
+              (window as any).google.translate.TranslateElement.InlineLayout.SIMPLE,
             autoDisplay: false,
           },
           "google_translate_element",

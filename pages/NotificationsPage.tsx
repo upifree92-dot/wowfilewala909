@@ -89,7 +89,9 @@ const NotificationsPage = () => {
     const { 
         user, isAdmin, 
         getUserNotifications, markUserNotificationAsRead,
-        getAllUsers, siteContent 
+        getAllUsers, siteContent,
+        getAdminNotifications, approveActivationOrder,
+        rejectActivationOrder, adminReplyToNotification
     } = useAppContext();
     const navigate = useNavigate();
     const [rejectingNotification, setRejectingNotification] = useState<AdminNotification | null>(null);

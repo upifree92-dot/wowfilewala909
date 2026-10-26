@@ -392,7 +392,7 @@ const AdminOrdersPage = () => {
                 id: `synth-order-${synthId}`,
                 orderId: synthId,
                 message: `Order #${synthId} completed`,
-                timestamp: new Date(Date.now() - (synthIdx * 86400000 * 2)).toISOString(),
+                timestamp: new Date(Date.now() - (syntheticIdx * 86400000 * 2)).toISOString(),
                 read: true,
                 type: 'order',
                 status: 'approved',
@@ -407,7 +407,7 @@ const AdminOrdersPage = () => {
                     customerMobile: '9555111944',
                 },
                 adminReply: 'GRT6QE422HP4P43S',
-                repliedAt: new Date(Date.now() - (synthIdx * 86400000 * 2) + 16 * 60000).toISOString(),
+                repliedAt: new Date(Date.now() - (syntheticIdx * 86400000 * 2) + 16 * 60000).toISOString(),
             });
             currCount++;
         }

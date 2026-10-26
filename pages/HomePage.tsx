@@ -243,7 +243,12 @@ const DEFAULT_SUB_CATEGORIES = [
 const HomePage = () => {
   useSEO('Home', 'GSM Firmware, Flash Files, Dump & Unlock Solutions Portal');
   const navigate = useNavigate();
-  const { user, products, categories, siteContent, isAdmin, createCategory, deleteCategory, setNotification, isEditMode, toggleEditMode, createProduct, updateCategory } = useAppContext();
+  const { 
+    user, products, categories, siteContent, isAdmin, 
+    createCategory, deleteCategory, setNotification, 
+    isEditMode, toggleEditMode, createProduct, updateCategory,
+    updateSiteContent, updateProduct, deleteProduct
+  } = useAppContext();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [activeSearch, setActiveSearch] = useState('');

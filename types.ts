@@ -2,19 +2,22 @@
 export interface Product {
   id: string;
   name: string;
-  categoryId: string;
+  categoryId?: string;
   price: number;
   downloadLink: string;
   date?: string;
   description: string;
   size: string;
-  views: number;
-  downloads: number;
-  rating: number;
-  tags: ('new' | 'featured' | 'paid')[];
+  views?: number;
+  downloads?: number;
+  rating?: number;
+  tags?: ('new' | 'featured' | 'paid' | 'free')[];
   isHiddenLink?: boolean;
   imageUrl?: string;
   subtitle?: string;
+  downloadUrl?: string;
+  category?: string;
+  createdAt?: string;
 }
 
 export interface ActivationCustomField {
@@ -131,6 +134,7 @@ export interface AdminNotification {
   rejectionReason?: string;
   isReplied?: boolean;
   adminReply?: string;
+  repliedAt?: string;
   orderId?: string;
 }
 

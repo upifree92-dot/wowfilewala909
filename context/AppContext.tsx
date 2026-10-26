@@ -556,7 +556,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         };
       }
 
-      const failed = results.find(r => !r.success);
+      const failed: any = results.find(r => !r.success);
       if (failed) {
         const errorMsg = failed.error?.message || String(failed.error || '');
         const isFetchError = errorMsg.includes('fetch') || errorMsg.includes('Failed to fetch') || errorMsg.includes('NetworkError') || errorMsg.includes('TypeError');
@@ -2550,7 +2550,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     if (!isAdmin) return;
     
     // First find all non-admin users
-    const usersToDelete = Object.values(allUsers).filter(u => u.email !== ADMIN_EMAIL);
+    const usersToDelete = (Object.values(allUsers) as User[]).filter(u => u.email !== ADMIN_EMAIL);
     if (usersToDelete.length === 0) {
       setNotification('No users to delete.');
       return;
@@ -2560,7 +2560,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     await deleteAllNonAdminUsers(ADMIN_EMAIL);
     
     // Reset local state to only include the admin user
-    const adminUser = Object.values(allUsers).find(u => u.email === ADMIN_EMAIL);
+    const adminUser = (Object.values(allUsers) as User[]).find(u => u.email === ADMIN_EMAIL);
     const updatedUsers: Record<string, User> = {};
     if (adminUser) {
       updatedUsers[adminUser.id] = adminUser;
@@ -2703,7 +2703,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
                 ...formDetails,
                 quantity,
                 totalPrice,
-                price: pricePerUnit,
+                price: price || 0,
                 categoryName: title,
             },
         };
@@ -3253,7 +3253,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const existingIds = new Set(list.map(n => n.id));
 
     // Automatically harvest any orders stored in users' notification histories
-    Object.values(allUsers).forEach(u => {
+    (Object.values(allUsers) as User[]).forEach(u => {
       if (u && Array.isArray(u.notifications)) {
         u.notifications.forEach(un => {
           if (un && un.orderId && !existingOrderIds.has(un.orderId)) {
