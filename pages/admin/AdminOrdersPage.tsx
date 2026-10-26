@@ -1,18 +1,28 @@
 import React, { useState, useMemo } from 'react';
 import { useAppContext } from '../../context/AppContext';
 import type { AdminNotification, User } from '../../types';
-import { AlertCircle, X, Search, Hourglass, Clock, CheckCircle2, Ban, Lock } from 'lucide-react';
+import { X, Search, Hourglass, Clock, CheckCircle2, Ban } from 'lucide-react';
 import CopyButton from '../../components/CopyButton';
 
 const AdminOrdersPage = () => {
-    const { getAllOrders, approveActivationOrder, rejectActivationOrder, updateOrderStatusByAdmin, getAllUsers, user: currentUser, isAdmin } = useAppContext();
+    const { 
+        getAllOrders, 
+        approveActivationOrder, 
+        rejectActivationOrder, 
+        updateOrderStatusByAdmin, 
+        getAllUsers, 
+        user: currentUser, 
+        isAdmin 
+    } = useAppContext();
+
     const [filter, setFilter] = useState<'all' | 'pending' | 'processing' | 'approved' | 'rejected'>('all');
     const [searchQuery, setSearchQuery] = useState('');
-    const [orderComments, setOrderComments] = useState<Record<string, string>>({});
-    
-    // Custom modal states for rejection
-    const [rejectingOrder, setRejectingOrder] = useState<AdminNotification | null>(null);
-    const [rejectionReason, setRejectionReason] = useState('');
+    const [selectedOrderIds, setSelectedOrderIds] = useState<Set<string>>(new Set());
+
+    // Modal state for the Reply / Action dialog (Matching image_141867e9.png)
+    const [actionModalOrder, setActionModalOrder] = useState<AdminNotification | null>(null);
+    const [modalActiveTab, setModalActiveTab] = useState<'success' | 'reject' | 'in_process' | 'waiting'>('success');
+    const [modalComments, setModalComments] = useState('');
 
     const users = getAllUsers();
     const userMap = users.reduce((acc, user) => {
@@ -28,7 +38,10 @@ const AdminOrdersPage = () => {
         return userId ? userMap[userId] : undefined;
     };
     
-    const allOrders = useMemo(() => getAllOrders().sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()), [getAllOrders]);
+    // Live harvested orders from all sources
+    const allOrders = useMemo(() => {
+        return getAllOrders().sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    }, [getAllOrders]);
 
     // Live counts for the 4 order status cards
     const waitingCount = useMemo(() => allOrders.filter(o => o.status === 'pending' || !o.status).length, [allOrders]);
@@ -64,68 +77,152 @@ const AdminOrdersPage = () => {
         }
         return list;
     }, [allOrders, filter, searchQuery, users]);
-    
+
+    // Format date in exact DD-MM-YYYY HH:mm matching screenshot
+    const formatSubmittedOn = (timestamp: string) => {
+        try {
+            const d = new Date(timestamp);
+            if (isNaN(d.getTime())) return '-';
+            const day = String(d.getDate()).padStart(2, '0');
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const year = d.getFullYear();
+            const hours = String(d.getHours()).padStart(2, '0');
+            const minutes = String(d.getMinutes()).padStart(2, '0');
+            return `${day}-${month}-${year} ${hours}:${minutes}`;
+        } catch {
+            return '-';
+        }
+    };
+
+    // Extract primary field value for table column "FIELD"
+    const getPrimaryFieldValue = (orderDetails: any) => {
+        if (!orderDetails) return '-';
+        let details = orderDetails;
+        if (typeof details === 'string') {
+            try { details = JSON.parse(details); } catch(e) {}
+        }
+        if (typeof details !== 'object' || details === null) return '-';
+        
+        if (details.email) return details.email;
+        if (details.gmail) return details.gmail;
+        if (details.username) return details.username;
+        if (details.mobile) return details.mobile;
+        if (details.imei) return details.imei;
+        if (details.serialNumber) return details.serialNumber;
+
+        const ignored = new Set(['categoryName', 'quantity', 'totalPrice', 'price', 'mobileNumber']);
+        for (const [k, v] of Object.entries(details)) {
+            if (!ignored.has(k) && v) return String(v);
+        }
+        return '-';
+    };
+
+    // Status Badge matching image_21755b26.png
     const StatusBadge: React.FC<{ status?: string }> = ({ status }) => {
         if (status === 'approved') {
             return (
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-bold rounded-lg bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 whitespace-nowrap">
-                    <CheckCircle2 className="w-3.5 h-3.5" />
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold rounded-md bg-[#10b981] text-white shadow-2xs whitespace-nowrap">
+                    <CheckCircle2 className="w-3.5 h-3.5 stroke-[2.5]" />
                     <span>Success</span>
                 </span>
             );
         }
         if (status === 'processing') {
             return (
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-bold rounded-lg bg-sky-500/15 text-sky-400 border border-sky-500/30 whitespace-nowrap">
-                    <Clock className="w-3.5 h-3.5" />
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold rounded-md bg-[#d97706] text-white shadow-2xs whitespace-nowrap">
+                    <Clock className="w-3.5 h-3.5 stroke-[2.5]" />
                     <span>In Process</span>
                 </span>
             );
         }
         if (status === 'rejected') {
             return (
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-bold rounded-lg bg-rose-500/15 text-rose-400 border border-rose-500/30 whitespace-nowrap">
-                    <Ban className="w-3.5 h-3.5" />
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold rounded-md bg-[#ef4444] text-white shadow-2xs whitespace-nowrap">
+                    <Ban className="w-3.5 h-3.5 stroke-[2.5]" />
                     <span>Rejected</span>
                 </span>
             );
         }
         return (
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-bold rounded-lg bg-amber-500/15 text-amber-400 border border-amber-500/30 whitespace-nowrap">
-                <Hourglass className="w-3.5 h-3.5" />
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold rounded-md bg-[#475569] text-white shadow-2xs whitespace-nowrap">
+                <Hourglass className="w-3.5 h-3.5 stroke-[2.5]" />
                 <span>Waiting Action</span>
             </span>
         );
     };
 
-    const handleRejectSubmit = (e: React.FormEvent) => {
+    // Open Action Modal
+    const openActionModal = (order: AdminNotification, tab: 'success' | 'reject' | 'in_process' | 'waiting' = 'success') => {
+        setActionModalOrder(order);
+        setModalActiveTab(tab);
+        setModalComments(order.adminReply || order.rejectionReason || '');
+    };
+
+    // Handle Modal Submissions
+    const handleModalSuccess = (e: React.FormEvent) => {
         e.preventDefault();
-        if (rejectingOrder) {
-            rejectActivationOrder(rejectingOrder.id, rejectionReason);
-            if (rejectingOrder.id) {
-                setOrderComments(prev => {
-                    const next = { ...prev };
-                    delete next[rejectingOrder.id];
-                    return next;
-                });
-            }
-            setRejectingOrder(null);
-            setRejectionReason('');
+        if (!actionModalOrder) return;
+        const msg = modalComments.trim() || 'Order completed successfully';
+        approveActivationOrder(actionModalOrder.id, msg);
+        setActionModalOrder(null);
+        setModalComments('');
+    };
+
+    const handleModalReject = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!actionModalOrder) return;
+        const reason = modalComments.trim() || 'Order rejected by administrator';
+        rejectActivationOrder(actionModalOrder.id, reason);
+        setActionModalOrder(null);
+        setModalComments('');
+    };
+
+    const handleModalInProcess = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!actionModalOrder) return;
+        const msg = modalComments.trim() || 'In Process';
+        updateOrderStatusByAdmin(actionModalOrder.id, 'processing', msg);
+        setActionModalOrder(null);
+        setModalComments('');
+    };
+
+    const handleModalWaiting = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!actionModalOrder) return;
+        const msg = modalComments.trim() || '';
+        updateOrderStatusByAdmin(actionModalOrder.id, 'pending', msg);
+        setActionModalOrder(null);
+        setModalComments('');
+    };
+
+    // Toggle row selection
+    const toggleSelectAll = () => {
+        if (selectedOrderIds.size === filteredOrders.length) {
+            setSelectedOrderIds(new Set());
+        } else {
+            setSelectedOrderIds(new Set(filteredOrders.map(o => o.id)));
         }
     };
 
+    const toggleSelectRow = (id: string) => {
+        const next = new Set(selectedOrderIds);
+        if (next.has(id)) next.delete(id);
+        else next.add(id);
+        setSelectedOrderIds(next);
+    };
+
     return (
-        <div className="bg-gradient-to-b from-slate-900/95 to-slate-950 p-6 sm:p-8 rounded-2xl border border-slate-800 shadow-2xl animate-in fade-in duration-300">
-            {/* Header & Search */}
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6 border-b border-slate-800 pb-5">
+        <div className="space-y-5 animate-in fade-in duration-300 pb-12">
+            {/* Top Bar with Title and Search */}
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-white p-5 rounded-xl border border-slate-200 shadow-xs">
                 <div className="flex items-center space-x-2.5">
                     <div className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse"></div>
-                    <h1 className="text-xl font-bold tracking-wide text-slate-100">Order Management</h1>
+                    <h1 className="text-xl font-black tracking-tight text-slate-900">Order Management</h1>
                 </div>
                 
                 {/* Search Input Bar for Order ID */}
                 <div className="relative w-full md:max-w-xs">
-                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
+                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
                         <Search className="h-4 w-4" />
                     </div>
                     <input
@@ -133,12 +230,12 @@ const AdminOrdersPage = () => {
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         placeholder="Search order ID, category, user..."
-                        className="w-full pl-10 pr-9 py-2 text-xs sm:text-sm bg-slate-950 border border-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500/40 text-slate-200 placeholder-slate-500 transition-all"
+                        className="w-full pl-10 pr-9 py-2 text-xs sm:text-sm bg-slate-50 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500 text-slate-900 placeholder-slate-400 transition-all"
                     />
                     {searchQuery && (
                         <button
                             onClick={() => setSearchQuery('')}
-                            className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-500 hover:text-slate-300"
+                            className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600"
                         >
                             <X className="h-4 w-4" />
                         </button>
@@ -146,27 +243,27 @@ const AdminOrdersPage = () => {
                 </div>
             </div>
 
-            {/* Top 4 Status Filter Buttons / Cards: Waiting Action (0), In Process (0), Success (0), Rejected (0) */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 mb-5">
+            {/* Top 4 Status Metric Cards: Waiting Action (0), In Process (0), Success (0), Rejected (0) */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
                 {/* Card 1: Waiting Action */}
                 <button
                     type="button"
                     onClick={() => setFilter(filter === 'pending' ? 'all' : 'pending')}
                     className={`text-left p-4 rounded-xl border transition-all cursor-pointer relative overflow-hidden group ${
                         filter === 'pending'
-                            ? 'bg-amber-500/10 border-amber-500 ring-2 ring-amber-500/30 shadow-lg shadow-amber-500/10'
-                            : 'bg-slate-950/80 border-slate-800 hover:border-slate-700 hover:bg-slate-900/60'
+                            ? 'bg-[#eff3f8] border-slate-400 ring-2 ring-slate-400/30 shadow-sm'
+                            : 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50/70 shadow-xs'
                     }`}
                 >
                     <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-slate-400 group-hover:text-amber-400 transition-colors uppercase tracking-wider">
+                        <span className="text-xs font-bold text-slate-600 uppercase tracking-wider">
                             Waiting Action
                         </span>
-                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${filter === 'pending' ? 'bg-amber-500 text-slate-950 font-black' : 'bg-slate-800 text-amber-400'}`}>
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${filter === 'pending' ? 'bg-[#475569] text-white font-black' : 'bg-slate-100 text-[#475569]'}`}>
                             <Hourglass className="w-4 h-4" />
                         </div>
                     </div>
-                    <p className="text-2xl sm:text-3xl font-black text-slate-100 mt-2 font-mono">{waitingCount}</p>
+                    <p className="text-2xl sm:text-3xl font-black text-slate-900 mt-2 font-mono">{waitingCount}</p>
                     <span className="text-[10px] text-slate-500 font-semibold mt-1 block">Pending approval</span>
                 </button>
 
@@ -176,20 +273,20 @@ const AdminOrdersPage = () => {
                     onClick={() => setFilter(filter === 'processing' ? 'all' : 'processing')}
                     className={`text-left p-4 rounded-xl border transition-all cursor-pointer relative overflow-hidden group ${
                         filter === 'processing'
-                            ? 'bg-sky-500/10 border-sky-500 ring-2 ring-sky-500/30 shadow-lg shadow-sky-500/10'
-                            : 'bg-slate-950/80 border-slate-800 hover:border-slate-700 hover:bg-slate-900/60'
+                            ? 'bg-[#fef9ed] border-amber-400 ring-2 ring-amber-400/30 shadow-sm'
+                            : 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50/70 shadow-xs'
                     }`}
                 >
                     <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-slate-400 group-hover:text-sky-400 transition-colors uppercase tracking-wider">
+                        <span className="text-xs font-bold text-amber-700 uppercase tracking-wider">
                             In Process
                         </span>
-                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${filter === 'processing' ? 'bg-sky-500 text-slate-950 font-black' : 'bg-slate-800 text-sky-400'}`}>
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${filter === 'processing' ? 'bg-[#d97706] text-white font-black' : 'bg-amber-50 text-[#d97706]'}`}>
                             <Clock className="w-4 h-4" />
                         </div>
                     </div>
-                    <p className="text-2xl sm:text-3xl font-black text-slate-100 mt-2 font-mono">{inProcessCount}</p>
-                    <span className="text-[10px] text-slate-500 font-semibold mt-1 block">Work in progress</span>
+                    <p className="text-2xl sm:text-3xl font-black text-slate-900 mt-2 font-mono">{inProcessCount}</p>
+                    <span className="text-[10px] text-amber-700 font-semibold mt-1 block">Work in progress</span>
                 </button>
 
                 {/* Card 3: Success */}
@@ -198,20 +295,20 @@ const AdminOrdersPage = () => {
                     onClick={() => setFilter(filter === 'approved' ? 'all' : 'approved')}
                     className={`text-left p-4 rounded-xl border transition-all cursor-pointer relative overflow-hidden group ${
                         filter === 'approved'
-                            ? 'bg-emerald-500/10 border-emerald-500 ring-2 ring-emerald-500/30 shadow-lg shadow-emerald-500/10'
-                            : 'bg-slate-950/80 border-slate-800 hover:border-slate-700 hover:bg-slate-900/60'
+                            ? 'bg-[#ecfdf5] border-emerald-400 ring-2 ring-emerald-400/30 shadow-sm'
+                            : 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50/70 shadow-xs'
                     }`}
                 >
                     <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-slate-400 group-hover:text-emerald-400 transition-colors uppercase tracking-wider">
+                        <span className="text-xs font-bold text-emerald-700 uppercase tracking-wider">
                             Success
                         </span>
-                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${filter === 'approved' ? 'bg-emerald-500 text-slate-950 font-black' : 'bg-slate-800 text-emerald-400'}`}>
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${filter === 'approved' ? 'bg-[#10b981] text-white font-black' : 'bg-emerald-50 text-[#10b981]'}`}>
                             <CheckCircle2 className="w-4 h-4" />
                         </div>
                     </div>
-                    <p className="text-2xl sm:text-3xl font-black text-slate-100 mt-2 font-mono">{successCount}</p>
-                    <span className="text-[10px] text-slate-500 font-semibold mt-1 block">Completed orders</span>
+                    <p className="text-2xl sm:text-3xl font-black text-slate-900 mt-2 font-mono">{successCount}</p>
+                    <span className="text-[10px] text-emerald-700 font-semibold mt-1 block">Completed orders</span>
                 </button>
 
                 {/* Card 4: Rejected */}
@@ -220,32 +317,32 @@ const AdminOrdersPage = () => {
                     onClick={() => setFilter(filter === 'rejected' ? 'all' : 'rejected')}
                     className={`text-left p-4 rounded-xl border transition-all cursor-pointer relative overflow-hidden group ${
                         filter === 'rejected'
-                            ? 'bg-rose-500/10 border-rose-500 ring-2 ring-rose-500/30 shadow-lg shadow-rose-500/10'
-                            : 'bg-slate-950/80 border-slate-800 hover:border-slate-700 hover:bg-slate-900/60'
+                            ? 'bg-[#fff1f2] border-rose-400 ring-2 ring-rose-400/30 shadow-sm'
+                            : 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50/70 shadow-xs'
                     }`}
                 >
                     <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-slate-400 group-hover:text-rose-400 transition-colors uppercase tracking-wider">
+                        <span className="text-xs font-bold text-rose-700 uppercase tracking-wider">
                             Rejected
                         </span>
-                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${filter === 'rejected' ? 'bg-rose-500 text-slate-950 font-black' : 'bg-slate-800 text-rose-400'}`}>
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${filter === 'rejected' ? 'bg-[#ef4444] text-white font-black' : 'bg-rose-50 text-[#ef4444]'}`}>
                             <Ban className="w-4 h-4" />
                         </div>
                     </div>
-                    <p className="text-2xl sm:text-3xl font-black text-slate-100 mt-2 font-mono">{rejectedCount}</p>
-                    <span className="text-[10px] text-slate-500 font-semibold mt-1 block">Refunded to user</span>
+                    <p className="text-2xl sm:text-3xl font-black text-slate-900 mt-2 font-mono">{rejectedCount}</p>
+                    <span className="text-[10px] text-rose-700 font-semibold mt-1 block">Refunded to user</span>
                 </button>
             </div>
 
             {/* Quick Filter Bar */}
-            <div className="flex items-center justify-between gap-3 mb-6 bg-slate-950/60 p-2.5 rounded-xl border border-slate-800/80">
+            <div className="flex items-center justify-between gap-3 bg-white p-3 rounded-xl border border-slate-200 shadow-xs">
                 <div className="flex items-center gap-2">
                     <button
                         onClick={() => setFilter('all')}
-                        className={`px-3 py-1.5 text-xs font-bold rounded-lg border transition-all ${
+                        className={`px-3.5 py-1.5 text-xs font-bold rounded-lg border transition-all ${
                             filter === 'all'
-                                ? 'bg-gradient-to-r from-amber-500 to-orange-600 text-white border-transparent shadow-md'
-                                : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-white'
+                                ? 'bg-slate-900 text-white border-slate-900 shadow-xs'
+                                : 'bg-slate-100 text-slate-600 border-slate-200 hover:text-slate-900'
                         }`}
                     >
                         All Orders ({allCount})
@@ -253,7 +350,7 @@ const AdminOrdersPage = () => {
                     {filter !== 'all' && (
                         <button
                             onClick={() => setFilter('all')}
-                            className="text-xs text-amber-400 hover:underline flex items-center gap-1 font-semibold ml-2"
+                            className="text-xs text-amber-600 hover:underline flex items-center gap-1 font-bold ml-2"
                         >
                             <X className="w-3.5 h-3.5" /> Show All
                         </button>
@@ -264,253 +361,329 @@ const AdminOrdersPage = () => {
                 </div>
             </div>
             
-            {/* Orders Table */}
-            <div className="overflow-x-auto">
-                {filteredOrders.length === 0 ? (
-                     <div className="bg-slate-950/50 border border-slate-800/50 p-10 rounded-2xl text-center mt-4">
-                        <h2 className="text-lg font-bold text-slate-300">No Orders Found</h2>
-                        <p className="text-slate-500 mt-2 text-sm">
-                            There are no orders with the status "{filter}".
-                        </p>
-                    </div>
-                ) : (
-                    <table className="w-full text-left border-collapse">
-                        <thead>
-                            <tr className="border-b border-slate-800 text-slate-400 uppercase text-[11px] tracking-wider font-semibold">
-                                <th className="p-3 pb-4">User</th>
-                                <th className="p-3 pb-4">Order Details</th>
-                                <th className="p-3 pb-4">Status</th>
-                                <th className="p-3 pb-4 min-w-[280px]">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-800/40">
-                            {filteredOrders.map(order => {
-                                const user = findUser(order.userId);
-                                const commentVal = orderComments[order.id] !== undefined 
-                                    ? orderComments[order.id] 
-                                    : (order.adminReply || order.rejectionReason || '');
+            {/* Orders Table - Exact match to image_21755b26.png */}
+            <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
+                <div className="overflow-x-auto">
+                    {filteredOrders.length === 0 ? (
+                        <div className="p-12 text-center">
+                            <h2 className="text-lg font-bold text-slate-800">No Orders Found</h2>
+                            <p className="text-slate-500 mt-1 text-sm">
+                                There are no orders with the status "{filter}".
+                            </p>
+                        </div>
+                    ) : (
+                        <table className="w-full text-left border-collapse text-xs sm:text-sm">
+                            <thead className="border-b border-slate-200 bg-slate-50/80">
+                                <tr className="text-slate-700 font-bold uppercase text-[11px] tracking-wider">
+                                    <th className="py-3 px-4 w-10 text-center">
+                                        <input
+                                            type="checkbox"
+                                            checked={selectedOrderIds.size === filteredOrders.length && filteredOrders.length > 0}
+                                            onChange={toggleSelectAll}
+                                            className="rounded border-slate-300 text-amber-600 focus:ring-amber-500 cursor-pointer"
+                                        />
+                                    </th>
+                                    <th className="py-3 px-4 font-black">O.ID</th>
+                                    <th className="py-3 px-4 font-black">SUBMITTED ON</th>
+                                    <th className="py-3 px-4 font-black">SERVICE NAME</th>
+                                    <th className="py-3 px-4 font-black">FIELD</th>
+                                    <th className="py-3 px-4 font-black">CUSTOMER</th>
+                                    <th className="py-3 px-4 font-black">PRICE</th>
+                                    <th className="py-3 px-4 font-black">STATUS</th>
+                                    <th className="py-3 px-4 font-black text-center">ACTION</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100 bg-white">
+                                {filteredOrders.map(order => {
+                                    const user = findUser(order.userId);
+                                    const isLocked = order.status === 'approved' || order.status === 'rejected';
+                                    const cleanOrderId = (order.orderId || order.id || '').replace(/^#/, '');
+                                    const submittedOn = formatSubmittedOn(order.timestamp);
+                                    const serviceName = order.orderDetails?.categoryName || 'Service Order';
+                                    const primaryField = getPrimaryFieldValue(order.orderDetails);
+                                    const customerName = (user?.profile?.name || user?.email?.split('@')[0] || 'CUSTOMER').toUpperCase();
+                                    const priceStr = `${Number(order.orderDetails?.totalPrice || 0).toFixed(2)} INR`;
 
-                                return (
-                                    <tr key={order.id} className="hover:bg-slate-900/30 transition-colors duration-150 align-top">
-                                        {/* User Column */}
-                                        <td className="p-3 py-4">
-                                            <div className="font-bold text-slate-100 text-sm sm:text-base">{user?.profile.name || '(No Name)'}</div>
-                                            <div className="text-xs text-slate-400 mt-0.5">{user?.email || 'Unknown Email'}</div>
-                                            <div className="text-[10px] text-slate-500 font-mono mt-2">{new Date(order.timestamp).toLocaleString()}</div>
-                                        </td>
+                                    return (
+                                        <tr 
+                                            key={order.id} 
+                                            className="hover:bg-slate-50/80 transition-colors duration-150 text-slate-800"
+                                        >
+                                            {/* Column 1: Checkbox */}
+                                            <td className="py-3.5 px-4 text-center">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectedOrderIds.has(order.id)}
+                                                    onChange={() => toggleSelectRow(order.id)}
+                                                    className="rounded border-slate-300 text-amber-600 focus:ring-amber-500 cursor-pointer"
+                                                />
+                                            </td>
 
-                                        {/* Order Details Column */}
-                                        <td className="p-3 py-4 text-sm">
-                                            <p className="font-bold text-slate-200">{order.orderDetails?.categoryName || 'Order'}</p>
-                                            <div className="text-xs mt-2 space-y-1.5 text-slate-400">
-                                                {order.orderId && (
-                                                    <div className="flex items-center gap-1.5 text-slate-400">
-                                                        <span>ID:</span>
-                                                        <span className="font-mono bg-slate-950 px-2 py-0.5 rounded text-[11px] text-amber-400 font-bold border border-amber-500/10">{order.orderId}</span>
-                                                        <CopyButton textToCopy={order.orderId} className="w-4.5 h-4.5 p-1 text-slate-500 hover:text-amber-400" />
-                                                    </div>
+                                            {/* Column 2: O.ID */}
+                                            <td className="py-3.5 px-4 font-bold text-slate-900 whitespace-nowrap">
+                                                <div className="flex items-center gap-1">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => openActionModal(order, 'success')}
+                                                        className="hover:text-amber-600 hover:underline cursor-pointer"
+                                                    >
+                                                        #{cleanOrderId}
+                                                    </button>
+                                                    <CopyButton textToCopy={cleanOrderId} className="w-3.5 h-3.5 text-slate-400 hover:text-amber-600" />
+                                                </div>
+                                            </td>
+
+                                            {/* Column 3: SUBMITTED ON */}
+                                            <td className="py-3.5 px-4 text-slate-600 whitespace-nowrap font-medium text-xs">
+                                                {submittedOn}
+                                            </td>
+
+                                            {/* Column 4: SERVICE NAME */}
+                                            <td className="py-3.5 px-4 font-semibold text-slate-900 max-w-[240px] truncate" title={serviceName}>
+                                                {serviceName}
+                                            </td>
+
+                                            {/* Column 5: FIELD */}
+                                            <td className="py-3.5 px-4 text-slate-600 max-w-[180px] truncate font-mono text-xs" title={primaryField}>
+                                                {primaryField}
+                                            </td>
+
+                                            {/* Column 6: CUSTOMER */}
+                                            <td className="py-3.5 px-4 font-bold text-slate-900 whitespace-nowrap">
+                                                {customerName}
+                                            </td>
+
+                                            {/* Column 7: PRICE */}
+                                            <td className="py-3.5 px-4 font-bold text-slate-900 whitespace-nowrap">
+                                                {priceStr}
+                                            </td>
+
+                                            {/* Column 8: STATUS */}
+                                            <td className="py-3.5 px-4 whitespace-nowrap">
+                                                <StatusBadge status={order.status} />
+                                            </td>
+
+                                            {/* Column 9: ACTION */}
+                                            <td className="py-3.5 px-4 text-center whitespace-nowrap">
+                                                {isLocked ? (
+                                                    <span className="text-slate-400 font-bold text-xs">-</span>
+                                                ) : (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => openActionModal(order, 'success')}
+                                                        className="px-3.5 py-1.5 bg-[#1e9e76] hover:bg-[#168160] text-white text-xs font-bold rounded-lg shadow-2xs transition-all active:scale-95 cursor-pointer"
+                                                        title="Open order action modal"
+                                                    >
+                                                        Action / Reply
+                                                    </button>
                                                 )}
-                                                
-                                                {/* Full Order Details */}
-                                                {(() => {
-                                                    let details = order.orderDetails;
-                                                    if (typeof details === 'string') {
-                                                        try { details = JSON.parse(details); } catch(e) {}
-                                                    }
-                                                    return typeof details === 'object' && details !== null ? Object.entries(details).map(([key, val]) => (
-                                                        key !== 'categoryName' && key !== 'quantity' && key !== 'totalPrice' && key !== 'price' && (
-                                                            <p key={key}><span className="text-slate-500 capitalize">{key.replace(/([A-Z])/g, ' $1')}:</span> {String(val)}</p>
-                                                        )
-                                                    )) : null;
-                                                })()}
-
-                                                <p><span className="text-slate-500">Qty:</span> {order.orderDetails?.quantity || 1}</p>
-                                                <p><span className="text-slate-500">Cost:</span> <span className="text-amber-400 font-semibold">₹{Number(order.orderDetails?.totalPrice || 0).toFixed(2)}</span></p>
-                                                {order.adminReply && (
-                                                    <p><span className="text-slate-500">Delivered:</span> <span className="text-emerald-400 font-mono font-semibold">{order.adminReply}</span></p>
-                                                )}
-                                                {order.rejectionReason && (
-                                                    <p><span className="text-slate-500">Reason:</span> <span className="text-rose-400 font-mono font-semibold">{order.rejectionReason}</span></p>
-                                                )}
-                                            </div>
-                                        </td>
-
-                                        {/* Status Column */}
-                                        <td className="p-3 py-4 whitespace-nowrap">
-                                            <StatusBadge status={order.status} />
-                                        </td>
-
-                                        {/* Actions Column: Hidden once order is Success or Rejected */}
-                                        <td className="p-3 py-4">
-                                            {(() => {
-                                                const isLocked = order.status === 'approved' || order.status === 'rejected';
-
-                                                if (isLocked) {
-                                                    return (
-                                                        <div className="flex items-center text-slate-600 text-xs font-semibold py-2">
-                                                            <span>-</span>
-                                                        </div>
-                                                    );
-                                                }
-
-                                                return (
-                                                    <div className="flex flex-col gap-2 min-w-[280px]">
-                                                        {/* Admin Reply / Activation Code Input */}
-                                                        <input 
-                                                            type="text" 
-                                                            placeholder="Enter activation code, reply note..."
-                                                            value={commentVal}
-                                                            className="w-full text-xs p-2 rounded-lg border border-slate-700 bg-slate-950 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-amber-500/50"
-                                                            onChange={(e) => {
-                                                                setOrderComments(prev => ({ ...prev, [order.id]: e.target.value }));
-                                                            }}
-                                                        />
-
-                                                        {/* 4 Clean Action Buttons */}
-                                                        <div className="grid grid-cols-2 gap-1.5">
-                                                            {/* Button 1: Waiting Action */}
-                                                            <button 
-                                                                type="button" 
-                                                                onClick={() => {
-                                                                    const msg = orderComments[order.id] !== undefined ? orderComments[order.id] : (order.adminReply || '');
-                                                                    updateOrderStatusByAdmin(order.id, 'pending', msg);
-                                                                }} 
-                                                                className={`px-2.5 py-1.5 text-[11px] font-bold rounded-lg border transition-all text-center flex items-center justify-center gap-1 active:scale-95 ${
-                                                                    order.status === 'pending' || !order.status
-                                                                        ? 'bg-amber-500 text-slate-950 font-black border-amber-400 shadow-sm'
-                                                                        : 'bg-slate-900/80 hover:bg-slate-800 text-amber-300 border-amber-500/30'
-                                                                }`}
-                                                                title="Set status to Waiting Action (Pending)"
-                                                            >
-                                                                <Hourglass className="w-3 h-3 shrink-0" />
-                                                                <span>Waiting Action</span>
-                                                            </button>
-
-                                                            {/* Button 2: In Process */}
-                                                            <button 
-                                                                type="button" 
-                                                                onClick={() => {
-                                                                    const msg = orderComments[order.id] !== undefined ? orderComments[order.id] : (order.adminReply || 'In Process');
-                                                                    updateOrderStatusByAdmin(order.id, 'processing', msg);
-                                                                }} 
-                                                                className={`px-2.5 py-1.5 text-[11px] font-bold rounded-lg border transition-all text-center flex items-center justify-center gap-1 active:scale-95 ${
-                                                                    order.status === 'processing'
-                                                                        ? 'bg-sky-500 text-slate-950 font-black border-sky-400 shadow-sm'
-                                                                        : 'bg-slate-900/80 hover:bg-slate-800 text-sky-300 border-sky-500/30'
-                                                                }`}
-                                                                title="Set status to In Process"
-                                                            >
-                                                                <Clock className="w-3 h-3 shrink-0" />
-                                                                <span>In Process</span>
-                                                            </button>
-
-                                                            {/* Button 3: Success */}
-                                                            <button 
-                                                                type="button" 
-                                                                onClick={() => {
-                                                                    const msg = orderComments[order.id] !== undefined ? orderComments[order.id] : (order.adminReply || 'Order completed successfully');
-                                                                    approveActivationOrder(order.id, msg);
-                                                                }} 
-                                                                className={`px-2.5 py-1.5 text-[11px] font-bold rounded-lg border transition-all text-center flex items-center justify-center gap-1 active:scale-95 ${
-                                                                    order.status === 'approved'
-                                                                        ? 'bg-emerald-500 text-slate-950 font-black border-emerald-400 shadow-sm'
-                                                                        : 'bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border-emerald-500/40'
-                                                                }`}
-                                                                title="Approve order as Success"
-                                                            >
-                                                                <CheckCircle2 className="w-3 h-3 shrink-0" />
-                                                                <span>Success</span>
-                                                            </button>
-
-                                                            {/* Button 4: Rejected */}
-                                                            <button 
-                                                                type="button" 
-                                                                onClick={() => {
-                                                                    const msg = orderComments[order.id] !== undefined ? orderComments[order.id] : (order.rejectionReason || order.adminReply || '');
-                                                                    if (msg) {
-                                                                        setRejectionReason(msg);
-                                                                    }
-                                                                    setRejectingOrder(order);
-                                                                }} 
-                                                                className={`px-2.5 py-1.5 text-[11px] font-bold rounded-lg border transition-all text-center flex items-center justify-center gap-1 active:scale-95 ${
-                                                                    order.status === 'rejected'
-                                                                        ? 'bg-rose-500 text-white font-black border-rose-400 shadow-sm'
-                                                                        : 'bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border-rose-500/40'
-                                                                }`}
-                                                                title="Reject order and refund customer wallet"
-                                                            >
-                                                                <Ban className="w-3 h-3 shrink-0" />
-                                                                <span>Rejected</span>
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                );
-                                            })()}
-                                        </td>
-                                    </tr>
-                                );
-                            })}
-                        </tbody>
-                    </table>
-                )}
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                    )}
+                </div>
             </div>
 
-            {/* Custom Rejection Modal */}
-            {rejectingOrder && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md animate-in fade-in duration-200">
-                    <div className="relative bg-slate-950 rounded-2xl max-w-md w-full shadow-2xl border border-slate-800 animate-in zoom-in-95 duration-200">
+            {/* GSM Order Details & Reply Modal (Exact match to image_141867e9.png) */}
+            {actionModalOrder && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
+                    <div className="bg-white text-slate-900 rounded-lg max-w-3xl w-full shadow-2xl border border-slate-200 overflow-hidden animate-in zoom-in-95 duration-150">
                         {/* Header */}
-                        <div className="flex items-center justify-between p-5 border-b border-slate-800 bg-slate-900/40 rounded-t-2xl">
-                            <div className="flex items-center gap-2.5">
-                                <div className="p-1.5 bg-rose-500/10 text-rose-400 border border-rose-500/10 rounded-lg">
-                                    <AlertCircle className="h-4.5 w-4.5" />
-                                </div>
-                                <h3 className="font-bold text-slate-100 text-base">Reject Order</h3>
-                            </div>
+                        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-white">
+                            <h2 className="text-lg font-black text-slate-900">
+                                Order ID: #{(actionModalOrder.orderId || actionModalOrder.id || '').replace(/^#/, '')}
+                            </h2>
                             <button
-                                onClick={() => setRejectingOrder(null)}
-                                className="p-1 text-slate-400 hover:text-slate-200 rounded-lg hover:bg-slate-900 transition-all duration-200"
+                                onClick={() => setActionModalOrder(null)}
+                                className="text-slate-400 hover:text-slate-700 transition-colors p-1"
                             >
-                                <X className="h-4.5 w-4.5" />
+                                <X className="w-5 h-5 stroke-[2.5]" />
                             </button>
                         </div>
 
-                        {/* Body */}
-                        <form onSubmit={handleRejectSubmit}>
-                            <div className="p-6">
-                                <p className="text-xs sm:text-sm text-slate-400 leading-relaxed mb-4">
-                                    Please provide a reason for rejecting the order <strong className="text-amber-400">#{rejectingOrder.orderId}</strong> ({rejectingOrder.orderDetails?.categoryName}). The cost (<span className="text-amber-400 font-semibold font-mono">₹{Number(rejectingOrder.orderDetails?.totalPrice || 0).toFixed(2)}</span>) will be automatically returned to the user's wallet.
-                                </p>
-                                <label className="block text-[10px] font-extrabold uppercase tracking-widest text-slate-500 mb-2.5">
-                                    Rejection Reason
-                                </label>
-                                <textarea
-                                    required
-                                    value={rejectionReason}
-                                    onChange={(e) => setRejectionReason(e.target.value)}
-                                    placeholder="e.g., Invalid credentials, or service out of stock"
-                                    rows={4}
-                                    className="w-full px-3.5 py-2.5 text-sm bg-slate-900/60 border border-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-500/40 focus:border-rose-500/40 text-slate-200 placeholder-slate-600 transition-all duration-200"
-                                />
-                            </div>
-
-                            {/* Footer */}
-                            <div className="flex items-center justify-end gap-2 px-6 py-4.5 bg-slate-900/20 border-t border-slate-800 rounded-b-2xl">
+                        {/* Modal Body: Left Tabs + Right Content Area */}
+                        <div className="flex flex-col md:flex-row min-h-[460px]">
+                            {/* Left Sidebar Tabs */}
+                            <div className="w-full md:w-52 bg-[#f8fafc] border-r border-slate-200 flex md:flex-col shrink-0 text-left">
                                 <button
                                     type="button"
-                                    onClick={() => setRejectingOrder(null)}
-                                    className="px-4 py-2 text-xs font-bold text-slate-400 hover:text-slate-200 hover:bg-slate-900 rounded-xl transition-all duration-200"
+                                    onClick={() => setModalActiveTab('success')}
+                                    className={`px-4 py-3.5 text-xs text-left transition-colors cursor-pointer ${
+                                        modalActiveTab === 'success'
+                                            ? 'bg-white text-slate-900 font-extrabold border-l-4 border-[#1e9e76] shadow-2xs'
+                                            : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 font-semibold'
+                                    }`}
                                 >
-                                    Cancel
+                                    Reply as Success
                                 </button>
                                 <button
-                                    type="submit"
-                                    className="px-4 py-2 text-xs font-bold bg-rose-600 hover:bg-rose-500 text-white rounded-xl transition-all duration-200 shadow-lg shadow-rose-600/10"
+                                    type="button"
+                                    onClick={() => setModalActiveTab('reject')}
+                                    className={`px-4 py-3.5 text-xs text-left transition-colors cursor-pointer ${
+                                        modalActiveTab === 'reject'
+                                            ? 'bg-white text-slate-900 font-extrabold border-l-4 border-rose-500 shadow-2xs'
+                                            : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 font-semibold'
+                                    }`}
                                 >
-                                    Confirm Rejection & Refund
+                                    Reply as Reject
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setModalActiveTab('in_process')}
+                                    className={`px-4 py-3.5 text-xs text-left transition-colors cursor-pointer ${
+                                        modalActiveTab === 'in_process'
+                                            ? 'bg-white text-slate-900 font-extrabold border-l-4 border-[#d97706] shadow-2xs'
+                                            : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 font-semibold'
+                                    }`}
+                                >
+                                    Set In Process
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setModalActiveTab('waiting')}
+                                    className={`px-4 py-3.5 text-xs text-left transition-colors cursor-pointer ${
+                                        modalActiveTab === 'waiting'
+                                            ? 'bg-white text-slate-900 font-extrabold border-l-4 border-[#475569] shadow-2xs'
+                                            : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 font-semibold'
+                                    }`}
+                                >
+                                    Waiting Action
                                 </button>
                             </div>
-                        </form>
+
+                            {/* Right Content Area */}
+                            {(() => {
+                                const modalUser = findUser(actionModalOrder.userId);
+                                const serviceName = actionModalOrder.orderDetails?.categoryName || 'Service Order';
+                                const qty = actionModalOrder.orderDetails?.quantity || 1;
+                                const totalPrice = Number(actionModalOrder.orderDetails?.totalPrice || 0).toFixed(2);
+                                const custName = modalUser?.profile?.name || 'Customer';
+                                const custEmail = modalUser?.email || 'N/A';
+                                const custMobile = modalUser?.mobileNumber || 'N/A';
+                                const submittedDate = formatSubmittedOn(actionModalOrder.timestamp);
+
+                                // Custom Fields
+                                let details = actionModalOrder.orderDetails;
+                                if (typeof details === 'string') {
+                                    try { details = JSON.parse(details); } catch(e) {}
+                                }
+                                const ignored = new Set(['categoryName', 'quantity', 'totalPrice', 'price', 'mobileNumber']);
+                                const customEntries = (typeof details === 'object' && details !== null)
+                                    ? Object.entries(details).filter(([k]) => !ignored.has(k))
+                                    : [];
+
+                                return (
+                                    <div className="flex-1 p-6 space-y-3.5 bg-white overflow-y-auto">
+                                        {/* Section 1: Service Name & Custom Fields */}
+                                        <div className="pb-3 border-b border-slate-100">
+                                            <h3 className="font-extrabold text-slate-900 text-sm leading-snug">
+                                                {serviceName}
+                                            </h3>
+                                            {customEntries.length > 0 ? (
+                                                customEntries.map(([k, v]) => (
+                                                    <p key={k} className="text-xs text-slate-800 mt-1">
+                                                        <strong className="font-bold text-slate-900 capitalize">
+                                                            {k.replace(/([A-Z])/g, ' $1')}:
+                                                        </strong>{' '}
+                                                        <span>{String(v)}</span>
+                                                    </p>
+                                                ))
+                                            ) : (
+                                                primaryField !== '-' && (
+                                                    <p className="text-xs text-slate-800 mt-1">
+                                                        <strong className="font-bold text-slate-900">Email:</strong>{' '}
+                                                        <span>{primaryField}</span>
+                                                    </p>
+                                                )
+                                            )}
+                                        </div>
+
+                                        {/* Section 2: Quantity & Total Price */}
+                                        <div className="pb-3 border-b border-slate-100 text-xs text-slate-800 space-y-1">
+                                            <p><strong className="font-bold text-slate-900">Quantity:</strong> {qty}</p>
+                                            <p><strong className="font-bold text-slate-900">Total Price:</strong> {totalPrice} INR</p>
+                                        </div>
+
+                                        {/* Section 3: Customer Info */}
+                                        <div className="pb-3 border-b border-slate-100 text-xs text-slate-800 space-y-1">
+                                            <p><strong className="font-bold text-slate-900">Customer Name:</strong> {custName}</p>
+                                            <p><strong className="font-bold text-slate-900">Customer Email:</strong> {custEmail}</p>
+                                            <p><strong className="font-bold text-slate-900">Customer Mobile:</strong> {custMobile}</p>
+                                        </div>
+
+                                        {/* Section 4: Submitted Date */}
+                                        <div className="pb-3 border-b border-slate-100 text-xs text-slate-800">
+                                            <strong className="font-bold text-slate-900">Submitted:</strong> {submittedDate}
+                                        </div>
+
+                                        {/* Section 5: Order Processing */}
+                                        <div className="pb-3 border-b border-slate-100 text-xs text-slate-800">
+                                            <strong className="font-bold text-slate-900">Order Processing:</strong> Manual
+                                        </div>
+
+                                        {/* Section 6: Order Status */}
+                                        <div className="pb-3 border-b border-slate-100 text-xs text-slate-800 flex items-center gap-2.5">
+                                            <strong className="font-bold text-slate-900">Order Status</strong>
+                                            <StatusBadge status={actionModalOrder.status} />
+                                        </div>
+
+                                        {/* Section 7: Comments Textarea */}
+                                        <div className="pt-1">
+                                            <textarea
+                                                rows={4}
+                                                placeholder="Comments"
+                                                value={modalComments}
+                                                onChange={(e) => setModalComments(e.target.value)}
+                                                className="w-full border border-slate-200 rounded-md p-3 text-sm focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-300 text-slate-900 placeholder-slate-400 resize-y"
+                                            />
+                                        </div>
+
+                                        {/* Section 8: Action Submit Button */}
+                                        <div className="pt-2">
+                                            {modalActiveTab === 'success' && (
+                                                <button
+                                                    type="button"
+                                                    onClick={handleModalSuccess}
+                                                    className="bg-[#1e9e76] hover:bg-[#168160] text-white font-bold text-xs uppercase tracking-wider px-5 py-2.5 rounded-md transition-all shadow-xs cursor-pointer"
+                                                >
+                                                    Reply as Success
+                                                </button>
+                                            )}
+                                            {modalActiveTab === 'reject' && (
+                                                <button
+                                                    type="button"
+                                                    onClick={handleModalReject}
+                                                    className="bg-[#d32f2f] hover:bg-[#b71c1c] text-white font-bold text-xs uppercase tracking-wider px-5 py-2.5 rounded-md transition-all shadow-xs cursor-pointer"
+                                                >
+                                                    Reply as Reject
+                                                </button>
+                                            )}
+                                            {modalActiveTab === 'in_process' && (
+                                                <button
+                                                    type="button"
+                                                    onClick={handleModalInProcess}
+                                                    className="bg-[#d97706] hover:bg-[#b45309] text-white font-bold text-xs uppercase tracking-wider px-5 py-2.5 rounded-md transition-all shadow-xs cursor-pointer"
+                                                >
+                                                    Set to In Process
+                                                </button>
+                                            )}
+                                            {modalActiveTab === 'waiting' && (
+                                                <button
+                                                    type="button"
+                                                    onClick={handleModalWaiting}
+                                                    className="bg-[#475569] hover:bg-[#334155] text-white font-bold text-xs uppercase tracking-wider px-5 py-2.5 rounded-md transition-all shadow-xs cursor-pointer"
+                                                >
+                                                    Set to Waiting Action
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+                                );
+                            })()}
+                        </div>
                     </div>
                 </div>
             )}

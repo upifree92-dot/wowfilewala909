@@ -3368,8 +3368,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }, [allUsers]);
 
     const getAllOrders = useCallback((): AdminNotification[] => {
-        return adminNotifications.filter(n => n.type === 'order');
-    }, [adminNotifications]);
+        return getAdminNotifications().filter(n => n.type === 'order' || Boolean(n.orderId));
+    }, [adminNotifications, allUsers]);
 
     const getSalesDataForLastNDays = useCallback((days: number): { date: string; sales: number }[] => {
         const salesByDay: { [key: string]: number } = {};
