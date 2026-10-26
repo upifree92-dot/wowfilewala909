@@ -4,6 +4,7 @@ import { useAppContext } from '../context/AppContext';
 import BackButton from '../components/BackButton';
 import type { User, AdminNotification } from '../types';
 import CopyButton from '../components/CopyButton';
+import OrderDetailModal from '../components/OrderDetailModal';
 import { Search, X } from 'lucide-react';
 import { useSEO } from '../hooks/useSEO';
 import {
@@ -96,6 +97,7 @@ const NotificationsPage = () => {
     const navigate = useNavigate();
     const [rejectingNotification, setRejectingNotification] = useState<AdminNotification | null>(null);
     const [replyingNotification, setReplyingNotification] = useState<AdminNotification | null>(null);
+    const [selectedOrderModal, setSelectedOrderModal] = useState<any | null>(null);
     const [soundsActive, setSoundsActive] = useState(isSoundEnabled());
     const [searchQuery, setSearchQuery] = useState('');
     const [currentTime, setCurrentTime] = useState(Date.now());
@@ -421,6 +423,20 @@ const NotificationsPage = () => {
                                             </div>
                                         )}
 
+                                        {/* View Order Details button matching user photo */}
+                                        {(n.orderId || n.type === 'order') && (
+                                            <div className="mt-3">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setSelectedOrderModal(n)}
+                                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#0c7c7e] hover:bg-[#0a6c6e] text-white text-xs font-bold shadow-xs transition-colors cursor-pointer"
+                                                >
+                                                    <span>View Order Details</span>
+                                                    <span className="text-xs font-mono">&rarr;</span>
+                                                </button>
+                                            </div>
+                                        )}
+
                                         <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-2">{new Date(n.timestamp).toLocaleString()}</p>
                                     </div>
                                     <div className="flex gap-1.5 self-center flex-shrink-0">
@@ -517,6 +533,13 @@ const NotificationsPage = () => {
                 </div>
 
                 {isAdmin ? <AdminView /> : <UserView />}
+
+                {/* Order Details Modal (Matching IMG-20261026-WA0006_a28a2bdb.jpg) */}
+                <OrderDetailModal
+                    isOpen={!!selectedOrderModal}
+                    onClose={() => setSelectedOrderModal(null)}
+                    order={selectedOrderModal}
+                />
             </div>
         </div>
     );

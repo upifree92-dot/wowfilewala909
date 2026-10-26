@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useAppContext } from '../../context/AppContext';
 import type { AdminNotification, User } from '../../types';
 import { X, Search, Check, Hourglass, Clock, Ban } from 'lucide-react';
+import OrderDetailModal from '../../components/OrderDetailModal';
 
 // Sample Historical Orders matching exact screenshot image_bf0e3a18.png
 const SEED_HISTORY_ORDERS: AdminNotification[] = [
@@ -352,6 +353,7 @@ const AdminOrdersPage = () => {
 
     // Modal state for the Reply / Customer Details dialog (image_5e411753.png)
     const [actionModalOrder, setActionModalOrder] = useState<AdminNotification | null>(null);
+    const [previewCustomerModal, setPreviewCustomerModal] = useState<AdminNotification | null>(null);
     const [modalActiveTab, setModalActiveTab] = useState<'overview' | 'success' | 'reject' | 'in_process' | 'waiting' | 'set_back_rejected'>('overview');
     const [modalComments, setModalComments] = useState('');
 
@@ -988,6 +990,18 @@ const AdminOrdersPage = () => {
                                                         {commentText}
                                                     </p>
                                                 </div>
+
+                                                {/* Customer Modal Preview Action */}
+                                                <div className="py-3 px-6 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
+                                                    <span className="text-xs text-slate-500 font-medium">Customer View:</span>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setPreviewCustomerModal(actionModalOrder)}
+                                                        className="px-3 py-1.5 rounded-md bg-[#0c7c7e] hover:bg-[#0a6a6c] text-white text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5 shadow-2xs"
+                                                    >
+                                                        <span>👁️ View Customer Modal</span>
+                                                    </button>
+                                                </div>
                                             </div>
                                         )}
 
@@ -1197,6 +1211,13 @@ const AdminOrdersPage = () => {
                     </div>
                 </div>
             )}
+
+            {/* Customer Order Details Modal (Exact match to IMG-20261026-WA0006_a28a2bdb.jpg) */}
+            <OrderDetailModal
+                isOpen={!!previewCustomerModal}
+                onClose={() => setPreviewCustomerModal(null)}
+                order={previewCustomerModal}
+            />
         </div>
     );
 };
