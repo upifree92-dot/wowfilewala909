@@ -35,6 +35,8 @@ const Header = () => {
     reorderNavLinks,
     getAdminNotifications,
     getUserNotifications,
+    markAllAdminNotificationsAsRead,
+    markAllUserNotificationsAsRead,
     theme,
     toggleTheme,
     forceGitAndCloudSync,
@@ -813,12 +815,16 @@ const Header = () => {
 
                 {/* 3. Notification Bell Icon */}
                 {isAdmin ? (
-                  <MotionLink
+                  <motion.button
+                    type="button"
                     whileHover={{ scale: 1.15 }}
                     whileTap={{ scale: 0.85 }}
-                    to="/admin/orders"
-                    className="relative text-slate-200 hover:text-white p-1.5 sm:p-2 transition-colors duration-200"
-                    title="Admin Pending Orders"
+                    onClick={() => {
+                      markAllAdminNotificationsAsRead();
+                      navigate("/admin/orders");
+                    }}
+                    className="relative text-slate-200 hover:text-white p-1.5 sm:p-2 transition-colors duration-200 cursor-pointer focus:outline-none"
+                    title="Admin Order Notifications & History"
                   >
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
@@ -837,19 +843,23 @@ const Header = () => {
                     {adminUnreadCount > 0 && (
                       <span className="absolute top-0.5 right-0.5 flex h-4 w-4">
                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-4 w-4 bg-red-500 text-white text-[9px] font-black items-center justify-center leading-none">
+                        <span className="relative inline-flex rounded-full h-4 w-4 bg-red-500 text-white text-[9px] font-black items-center justify-center leading-none shadow-sm">
                           {adminUnreadCount}
                         </span>
                       </span>
                     )}
-                  </MotionLink>
+                  </motion.button>
                 ) : (
-                  <MotionLink
+                  <motion.button
+                    type="button"
                     whileHover={{ scale: 1.15 }}
                     whileTap={{ scale: 0.85 }}
-                    to="/notifications"
-                    className="relative text-slate-200 hover:text-white p-1.5 sm:p-2 transition-colors duration-200"
-                    title="User Notifications"
+                    onClick={() => {
+                      markAllUserNotificationsAsRead();
+                      navigate("/notifications");
+                    }}
+                    className="relative text-slate-200 hover:text-white p-1.5 sm:p-2 transition-colors duration-200 cursor-pointer focus:outline-none"
+                    title="User Order Notifications"
                   >
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
@@ -868,12 +878,12 @@ const Header = () => {
                     {userUnreadCount > 0 && (
                       <span className="absolute top-0.5 right-0.5 flex h-4 w-4">
                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-4 w-4 bg-cyan-500 text-white text-[9px] font-black items-center justify-center leading-none">
+                        <span className="relative inline-flex rounded-full h-4 w-4 bg-cyan-500 text-white text-[9px] font-black items-center justify-center leading-none shadow-sm">
                           {userUnreadCount}
                         </span>
                       </span>
                     )}
-                  </MotionLink>
+                  </motion.button>
                 )}
 
                 {/* 4. User Profile Group */}

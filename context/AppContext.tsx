@@ -105,6 +105,7 @@ interface AppContextType {
   deleteAdminNotification: (notificationId: string) => void;
   getAdminNotifications: () => AdminNotification[];
   markAdminNotificationAsRead: (notificationId: string) => void;
+  markAllAdminNotificationsAsRead: () => void;
   clearAdminNotifications: () => void;
 
   // IMEI Order
@@ -119,6 +120,7 @@ interface AppContextType {
   // User Notifications
   getUserNotifications: () => UserNotification[];
   markUserNotificationAsRead: (notificationId: string) => void;
+  markAllUserNotificationsAsRead: () => void;
   deleteUserNotification: (notificationId: string) => void;
   clearUserNotifications: () => void;
 
@@ -3172,6 +3174,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
                             status: 'processing',
                             title: `Order #${un.orderId || notification.orderId} In Process`,
                             adminReply: comment !== undefined ? comment : (un.adminReply || 'In Process'),
+                            read: false,
                             timestamp: new Date().toISOString(),
                         };
                     }
@@ -3216,6 +3219,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
                             status: 'pending',
                             title: `Order #${un.orderId || notification.orderId} Pending`,
                             adminReply: comment !== undefined ? comment : un.adminReply,
+                            read: false,
                             timestamp: new Date().toISOString(),
                         };
                     }
@@ -3286,11 +3290,26 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
   
   const markAdminNotificationAsRead = (notificationId: string) => {
-    setAdminNotifications(prev => prev.map(n => n.id === notificationId ? { ...n, read: true } : n));
+    setAdminNotifications(prev => {
+      const updated = prev.map(n => (n.id === notificationId || n.orderId === notificationId) ? { ...n, read: true } : n);
+      setLocalStorage('adminNotifications', updated);
+      return updated;
+    });
+  };
+
+  const markAllAdminNotificationsAsRead = () => {
+    // Gather all current admin notifications and mark every single one as read
+    const all = getAdminNotifications().map(n => ({ ...n, read: true }));
+    setAdminNotifications(all);
+    setLocalStorage('adminNotifications', all);
+    pushServerSync({ adminNotifications: all }, true).catch(err => {
+      console.warn('Sync markAllAdminNotificationsAsRead error:', err);
+    });
   };
   
   const clearAdminNotifications = () => {
     setAdminNotifications([]);
+    setLocalStorage('adminNotifications', []);
   };
 
   // --- User Notification Management ---
@@ -3351,25 +3370,54 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       if (!user) return;
       const updatedUser = { ...user };
       if (!updatedUser.notifications) return;
-      updatedUser.notifications = updatedUser.notifications.map(n => n.id === notificationId ? { ...n, read: true } : n);
+      updatedUser.notifications = updatedUser.notifications.map(n => 
+        (n.id === notificationId || n.orderId === notificationId) ? { ...n, read: true } : n
+      );
       setUser(updatedUser);
-      setAllUsers(prev => ({ ...prev, [user.id]: updatedUser }));
+      setLocalStorage('currentUser', updatedUser);
+      const updatedAllUsers = { ...allUsers, [user.id]: updatedUser };
+      setAllUsers(updatedAllUsers);
+      setLocalStorage('users', updatedAllUsers);
+  };
+
+  const markAllUserNotificationsAsRead = () => {
+      if (!user) return;
+      // Mark all current user notifications (including any reconstructed ones) as read
+      const currentNotifications = getUserNotifications().map(n => ({ ...n, read: true }));
+      const updatedUser: User = {
+          ...user,
+          notifications: currentNotifications,
+      };
+      setUser(updatedUser);
+      setLocalStorage('currentUser', updatedUser);
+      const updatedAllUsers = { ...allUsers, [user.id]: updatedUser };
+      setAllUsers(updatedAllUsers);
+      setLocalStorage('users', updatedAllUsers);
+      pushServerSync({ users: Object.values(updatedAllUsers) }, true).catch(err => {
+          console.warn('Sync markAllUserNotificationsAsRead error:', err);
+      });
   };
   
   const deleteUserNotification = (notificationId: string) => {
         if (!user) return;
         const updatedUser = { ...user };
         if (!updatedUser.notifications) return;
-        updatedUser.notifications = updatedUser.notifications.filter(n => n.id !== notificationId);
+        updatedUser.notifications = updatedUser.notifications.filter(n => n.id !== notificationId && n.orderId !== notificationId);
         setUser(updatedUser);
-        setAllUsers(prev => ({ ...prev, [user.id]: updatedUser }));
+        setLocalStorage('currentUser', updatedUser);
+        const updatedAllUsers = { ...allUsers, [user.id]: updatedUser };
+        setAllUsers(updatedAllUsers);
+        setLocalStorage('users', updatedAllUsers);
     };
 
   const clearUserNotifications = () => {
       if (!user) return;
       const updatedUser = { ...user, notifications: [] };
       setUser(updatedUser);
-      setAllUsers(prev => ({ ...prev, [user.id]: updatedUser }));
+      setLocalStorage('currentUser', updatedUser);
+      const updatedAllUsers = { ...allUsers, [user.id]: updatedUser };
+      setAllUsers(updatedAllUsers);
+      setLocalStorage('users', updatedAllUsers);
   };
 
   // --- Admin Dashboard Data Helpers ---
@@ -3481,10 +3529,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     getAllUsers, adminUpdateUser, adminCreateUser, adminAdjustUserBalance, adminDeleteUser, adminDeleteAllUsers, adminToggleUserBlockStatus, adminResetUserHWID, userResetOwnHWID,
     getTotalSales, getAllOrders, getSalesDataForLastNDays,
     addNavLink, updateNavLink, deleteNavLink, reorderNavLinks,
-    placeActivationOrder, approveActivationOrder, rejectActivationOrder, updateOrderStatusByAdmin, deleteAdminNotification, getAdminNotifications, markAdminNotificationAsRead, clearAdminNotifications, adminReplyToNotification,
+    placeActivationOrder, approveActivationOrder, rejectActivationOrder, updateOrderStatusByAdmin, deleteAdminNotification, getAdminNotifications, markAdminNotificationAsRead, markAllAdminNotificationsAsRead, clearAdminNotifications, adminReplyToNotification,
     placeImeiOrder,
     orderSuccessModalOpen, setOrderSuccessModalOpen, lastPlacedOrderId, showOrderSuccessModal,
-    getUserNotifications, markUserNotificationAsRead, deleteUserNotification, clearUserNotifications,
+    getUserNotifications, markUserNotificationAsRead, markAllUserNotificationsAsRead, deleteUserNotification, clearUserNotifications,
     theme, toggleTheme,
     supabaseError, clearSupabaseError,
     forceGitAndCloudSync,
