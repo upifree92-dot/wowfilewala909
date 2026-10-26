@@ -2903,49 +2903,81 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const approveActivationOrder = (notificationId: string, replyMessage: string) => {
         if (!isAdmin) return;
         
-        const notification = adminNotifications.find(n => n.id === notificationId || n.orderId === notificationId);
-        if (!notification || !notification.userId || !notification.orderId) return;
+        const cleanId = notificationId.replace(/^(notif-|seed-order-|synth-order-|#)/, '');
+        let notification = adminNotifications.find(n => 
+            n.id === notificationId || 
+            n.orderId === notificationId || 
+            (n.orderId && n.orderId.replace(/^#/, '') === cleanId)
+        );
 
-        // Locking rule: once finalized, order cannot be changed
-        if (notification.status === 'approved' || notification.status === 'rejected') {
-            setNotification('Order is already finalized and locked.', 'error');
-            return;
+        if (!notification) {
+            notification = {
+                id: notificationId,
+                orderId: cleanId || notificationId,
+                message: `Order #${cleanId} status updated to Success`,
+                timestamp: new Date().toISOString(),
+                read: true,
+                type: 'order',
+                status: 'pending',
+                userId: 'user-shiv-kumar'
+            };
         }
 
-        const updatedAdminNotifications = adminNotifications.map(n => (n.id === notificationId || n.orderId === notification.orderId) ? { ...n, status: 'approved' as const, read: true, adminReply: replyMessage || "Order Approved" } : n);
+        const targetOrderId = notification.orderId || cleanId || notificationId;
+
+        let existsInAdminList = false;
+        const updatedAdminNotifications = adminNotifications.map(n => {
+            if (n.id === notificationId || n.orderId === targetOrderId || (n.orderId && n.orderId.replace(/^#/, '') === cleanId)) {
+                existsInAdminList = true;
+                return { ...n, status: 'approved' as const, read: true, adminReply: replyMessage };
+            }
+            return n;
+        });
+
+        if (!existsInAdminList) {
+            updatedAdminNotifications.unshift({
+                ...notification,
+                status: 'approved',
+                read: true,
+                adminReply: replyMessage
+            });
+        }
+
         setAdminNotifications(updatedAdminNotifications);
         setLocalStorage('adminNotifications', updatedAdminNotifications);
         
-        const userToNotify = allUsers[notification.userId];
+        const targetUserId = notification.userId || 'user-shiv-kumar';
+        const userToNotify = allUsers[targetUserId] || (Object.values(allUsers) as User[]).find(u => u.id === targetUserId);
         let newAllUsers = { ...allUsers };
+
         if (userToNotify) {
             let matched = false;
             const updatedNotifications = (userToNotify.notifications || []).map((un): UserNotification => {
-                if (un.orderId === notification.orderId || un.id === notification.id) {
+                if (un.orderId === targetOrderId || un.id === notificationId) {
                     matched = true;
                     return {
                         ...un,
                         status: 'approved',
-                        title: `Order #${un.orderId || notification.orderId} Success`,
+                        title: `Order #${un.orderId || targetOrderId} Success`,
                         read: false,
-                        adminReply: replyMessage || "Order Approved",
+                        adminReply: replyMessage,
                         timestamp: new Date().toISOString(),
                     };
                 }
                 return un;
             });
 
-            if (!matched && notification.orderId) {
+            if (!matched && targetOrderId) {
                 updatedNotifications.unshift({
                     id: `user-notif-${Date.now()}`,
-                    title: `Order #${notification.orderId} Success`,
-                    message: `Order #${notification.orderId} completed successfully. Reply: ${replyMessage || 'Order Approved'}`,
-                    adminReply: replyMessage || 'Order Approved',
+                    title: `Order #${targetOrderId} Success`,
+                    message: `Order #${targetOrderId} completed successfully. ${replyMessage ? 'Reply: ' + replyMessage : ''}`,
+                    adminReply: replyMessage,
                     read: false,
                     timestamp: new Date().toISOString(),
                     status: 'approved',
                     type: 'order',
-                    orderId: notification.orderId,
+                    orderId: targetOrderId,
                     orderDetails: notification.orderDetails,
                 });
             }
@@ -2955,7 +2987,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             setAllUsers(newAllUsers);
             setLocalStorage('users', newAllUsers);
             
-            if(user && user.id === userToNotify.id) {
+            if (user && user.id === userToNotify.id) {
                 setUser(updatedUser);
                 setLocalStorage('currentUser', updatedUser);
             }
@@ -2966,50 +2998,70 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             users: Object.values(newAllUsers)
         }, true).catch(err => console.warn('Sync order approval error:', err));
 
-        updateOrderStatus(notification.orderId, 'approved').catch(err => {
-            console.warn('Failed to update order status in Supabase (non-blocking):', err);
-        });
+        if (targetOrderId) {
+            updateOrderStatus(targetOrderId, 'approved').catch(err => {
+                console.warn('Failed to update order status in database:', err);
+            });
+        }
 
         playOrderSuccessSound();
-        setNotification('Order success and user has been notified.');
+        setNotification('Order status updated to Success (Approved)!', 'success');
     };
-
-    // processActivationOrder removed
 
     const rejectActivationOrder = (notificationId: string, reason: string) => {
         if (!isAdmin) return;
 
-        const notification = adminNotifications.find(n => n.id === notificationId || n.orderId === notificationId);
-        if (!notification) return;
+        const cleanId = notificationId.replace(/^(notif-|seed-order-|synth-order-|#)/, '');
+        let notification = adminNotifications.find(n => 
+            n.id === notificationId || 
+            n.orderId === notificationId || 
+            (n.orderId && n.orderId.replace(/^#/, '') === cleanId)
+        );
 
-        // Locking rule: once finalized, order cannot be changed
-        if (notification.status === 'approved' || notification.status === 'rejected') {
-            setNotification('Order is already finalized and locked.', 'error');
-            return;
+        if (!notification) {
+            notification = {
+                id: notificationId,
+                orderId: cleanId || notificationId,
+                message: `Order #${cleanId} status updated to Rejected`,
+                timestamp: new Date().toISOString(),
+                read: true,
+                type: 'order',
+                status: 'pending',
+                userId: 'user-shiv-kumar'
+            };
         }
 
-        const actualReason = reason?.trim() || "Order rejected by administrator";
+        const targetOrderId = notification.orderId || cleanId || notificationId;
+        const actualReason = reason?.trim() || "";
 
         let priceToRefund = Number(notification.orderDetails?.totalPrice || 0);
         if (!priceToRefund && notification.orderDetails?.price) {
             priceToRefund = Number(notification.orderDetails.price) * Number(notification.orderDetails.quantity || 1);
         }
-        if (!priceToRefund && typeof notification.message === 'string') {
-            const match = notification.message.match(/Total=₹\s*([0-9.]+)/i) || notification.message.match(/₹\s*([0-9.]+)/);
-            if (match && match[1]) {
-                priceToRefund = parseFloat(match[1]);
+
+        let existsInAdminList = false;
+        const updatedAdminNotifications = adminNotifications.map(n => {
+            if (n.id === notificationId || n.orderId === targetOrderId || (n.orderId && n.orderId.replace(/^#/, '') === cleanId)) {
+                existsInAdminList = true;
+                return { ...n, status: 'rejected' as const, read: true, rejectionReason: actualReason, adminReply: actualReason };
             }
+            return n;
+        });
+
+        if (!existsInAdminList) {
+            updatedAdminNotifications.unshift({
+                ...notification,
+                status: 'rejected',
+                read: true,
+                rejectionReason: actualReason,
+                adminReply: actualReason
+            });
         }
 
-        const updatedAdminNotifications = adminNotifications.map(n => 
-            (n.id === notificationId || (notification.orderId && n.orderId === notification.orderId)) 
-                ? { ...n, status: 'rejected' as const, read: true, rejectionReason: actualReason, adminReply: actualReason } 
-                : n
-        );
         setAdminNotifications(updatedAdminNotifications);
         setLocalStorage('adminNotifications', updatedAdminNotifications);
         
-        const targetUserId = notification.userId;
+        const targetUserId = notification.userId || 'user-shiv-kumar';
         let newAllUsers = { ...allUsers };
 
         if (targetUserId && allUsers[targetUserId]) {
@@ -3022,16 +3074,16 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
                 timestamp: new Date().toISOString(),
                 type: 'refund',
                 amount: priceToRefund,
-                description: `Refund for rejected order #${notification.orderId || notification.id}: ${notification.orderDetails?.categoryName || 'Order'}`
+                description: `Refund for rejected order #${targetOrderId}: ${notification.orderDetails?.categoryName || 'Order'}`
             };
 
             const updatedNotifications = (userToNotify.notifications || []).map((un): UserNotification => {
-                if (un.orderId === notification.orderId || un.id === notification.id) {
+                if (un.orderId === targetOrderId || un.id === notificationId) {
                     return {
                         ...un,
                         status: 'rejected',
-                        title: `Order #${un.orderId || notification.orderId} Rejected`,
-                        message: `Order #${un.orderId || notification.orderId} has been rejected. Reason: ${actualReason}.${priceToRefund > 0 ? ` ₹${priceToRefund.toFixed(2)} has been refunded to your wallet.` : ''}`,
+                        title: `Order #${un.orderId || targetOrderId} Rejected`,
+                        message: `Order #${un.orderId || targetOrderId} has been rejected. ${actualReason ? 'Reason: ' + actualReason + '.' : ''}${priceToRefund > 0 ? ` ₹${priceToRefund.toFixed(2)} has been refunded to your wallet.` : ''}`,
                         rejectionReason: actualReason,
                         adminReply: actualReason,
                         read: false,
@@ -3041,19 +3093,19 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
                 return un;
             });
 
-            // If notification didn't match existing, add a new user notification
-            const hasExisting = (userToNotify.notifications || []).some(un => un.orderId === notification.orderId);
-            if (!hasExisting && notification.orderId) {
+            const hasExisting = (userToNotify.notifications || []).some(un => un.orderId === targetOrderId);
+            if (!hasExisting && targetOrderId) {
                 updatedNotifications.unshift({
                     id: `user-notif-${Date.now()}`,
-                    title: `Order #${notification.orderId} Rejected`,
-                    message: `Order #${notification.orderId} was rejected. Reason: ${actualReason}.${priceToRefund > 0 ? ` ₹${priceToRefund.toFixed(2)} has been refunded to your wallet.` : ''}`,
+                    title: `Order #${targetOrderId} Rejected`,
+                    message: `Order #${targetOrderId} was rejected. ${actualReason ? 'Reason: ' + actualReason + '.' : ''}${priceToRefund > 0 ? ` ₹${priceToRefund.toFixed(2)} has been refunded to your wallet.` : ''}`,
                     rejectionReason: actualReason,
+                    adminReply: actualReason,
                     read: false,
                     timestamp: new Date().toISOString(),
                     status: 'rejected',
                     type: 'order',
-                    orderId: notification.orderId,
+                    orderId: targetOrderId,
                 });
             }
             
@@ -3072,42 +3124,25 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             newAllUsers = { ...allUsers, [userToNotify.id]: updatedUser };
             setAllUsers(newAllUsers);
             setLocalStorage('users', newAllUsers);
-            
-            // Persist the refund balance to Hostinger MySQL registered_users table
-            saveRegisteredUser({
-                id: updatedUser.id,
-                email: updatedUser.email,
-                mobile_number: updatedUser.mobileNumber,
-                name: updatedUser.profile?.name || '',
-                bio: updatedUser.profile?.bio || '',
-                wallet_balance: updatedUser.wallet.balance
-            }).catch(err => console.warn('Persistence error to MySQL registered_users:', err));
 
-            if (user && user.id === userToNotify.id) {
-                setUser(updatedUser);
-                setLocalStorage('currentUser', updatedUser);
-            }
-
-            // Record transaction in Hostinger MySQL wallet_transactions table
             if (priceToRefund > 0) {
                 syncTransaction(userToNotify.id, userToNotify.email, newTransaction);
             }
         }
 
-        // Push to server immediately so customer receives refund and rejected status live!
         pushServerSync({
             adminNotifications: updatedAdminNotifications,
             users: Object.values(newAllUsers)
         }, true).catch(err => console.warn('Sync reject error:', err));
 
-        if (notification.orderId) {
-            updateOrderStatus(notification.orderId, 'rejected').catch(err => {
-                console.warn('Failed to update order status in MySQL (non-blocking):', err);
+        if (targetOrderId) {
+            updateOrderStatus(targetOrderId, 'rejected').catch(err => {
+                console.warn('Failed to update order status in database:', err);
             });
         }
 
         playOrderRejectedSound();
-        setNotification(`Order rejected successfully. ₹${priceToRefund.toFixed(2)} has been refunded to customer's wallet.`, 'success');
+        setNotification(`Order status updated to Rejected.${priceToRefund > 0 ? ` ₹${priceToRefund.toFixed(2)} refunded.` : ''}`, 'success');
     };
 
     const adminReplyToNotification = (notificationId: string, replyMessage: string) => {
@@ -3158,108 +3193,96 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const updateOrderStatusByAdmin = (notificationId: string, newStatus: 'pending' | 'processing' | 'approved' | 'rejected', comment?: string) => {
         if (!isAdmin) return;
         
-        // Locking rule: once finalized (Success or Rejected), order cannot be modified
-        const currentNotif = adminNotifications.find(n => n.id === notificationId || n.orderId === notificationId);
-        if (currentNotif && (currentNotif.status === 'approved' || currentNotif.status === 'rejected')) {
-            setNotification('Order is already finalized and locked. No further modifications allowed.', 'error');
+        if (newStatus === 'approved') {
+            approveActivationOrder(notificationId, comment || '');
+            return;
+        } 
+        if (newStatus === 'rejected') {
+            rejectActivationOrder(notificationId, comment || '');
             return;
         }
 
-        if (newStatus === 'approved') {
-            approveActivationOrder(notificationId, comment || 'Order completed successfully');
-        } else if (newStatus === 'rejected') {
-            rejectActivationOrder(notificationId, comment || 'Order rejected by administrator');
-        } else if (newStatus === 'processing') {
-            const notification = adminNotifications.find(n => n.id === notificationId || n.orderId === notificationId);
-            if (!notification) return;
-            const updatedAdminNotifications = adminNotifications.map(n => 
-                (n.id === notificationId || (notification.orderId && n.orderId === notification.orderId)) 
-                    ? { ...n, status: 'processing' as const, adminReply: comment !== undefined ? comment : (n.adminReply || 'In Process'), read: true } 
-                    : n
-            );
-            setAdminNotifications(updatedAdminNotifications);
-            setLocalStorage('adminNotifications', updatedAdminNotifications);
+        const cleanId = notificationId.replace(/^(notif-|seed-order-|synth-order-|#)/, '');
+        let notification = adminNotifications.find(n => 
+            n.id === notificationId || 
+            n.orderId === notificationId || 
+            (n.orderId && n.orderId.replace(/^#/, '') === cleanId)
+        );
 
-            const targetUserId = notification.userId;
-            let newAllUsers = { ...allUsers };
-            if (targetUserId && allUsers[targetUserId]) {
-                const userToNotify = allUsers[targetUserId];
-                const updatedNotifications = (userToNotify.notifications || []).map((un): UserNotification => {
-                    if (un.orderId === notification.orderId || un.id === notification.id) {
-                        return {
-                            ...un,
-                            status: 'processing',
-                            title: `Order #${un.orderId || notification.orderId} In Process`,
-                            adminReply: comment !== undefined ? comment : (un.adminReply || 'In Process'),
-                            read: false,
-                            timestamp: new Date().toISOString(),
-                        };
-                    }
-                    return un;
-                });
-                const updatedUser = { ...userToNotify, notifications: updatedNotifications };
-                newAllUsers = { ...allUsers, [userToNotify.id]: updatedUser };
-                setAllUsers(newAllUsers);
-                setLocalStorage('users', newAllUsers);
-                if (user && user.id === userToNotify.id) {
-                    setUser(updatedUser);
-                    setLocalStorage('currentUser', updatedUser);
-                }
-            }
-            pushServerSync({
-                adminNotifications: updatedAdminNotifications,
-                users: Object.values(newAllUsers)
-            }, true).catch(err => console.warn('Sync processing error:', err));
-            if (notification.orderId) {
-                updateOrderStatus(notification.orderId, 'processing').catch(console.warn);
-            }
-            setNotification('Order status updated to In Process.');
-        } else if (newStatus === 'pending') {
-            const notification = adminNotifications.find(n => n.id === notificationId || n.orderId === notificationId);
-            if (!notification) return;
-            const updatedAdminNotifications = adminNotifications.map(n => 
-                (n.id === notificationId || (notification.orderId && n.orderId === notification.orderId)) 
-                    ? { ...n, status: 'pending' as const, adminReply: comment !== undefined ? comment : (n.adminReply || '') } 
-                    : n
-            );
-            setAdminNotifications(updatedAdminNotifications);
-            setLocalStorage('adminNotifications', updatedAdminNotifications);
-
-            const targetUserId = notification.userId;
-            let newAllUsers = { ...allUsers };
-            if (targetUserId && allUsers[targetUserId]) {
-                const userToNotify = allUsers[targetUserId];
-                const updatedNotifications = (userToNotify.notifications || []).map((un): UserNotification => {
-                    if (un.orderId === notification.orderId || un.id === notification.id) {
-                        return {
-                            ...un,
-                            status: 'pending',
-                            title: `Order #${un.orderId || notification.orderId} Pending`,
-                            adminReply: comment !== undefined ? comment : un.adminReply,
-                            read: false,
-                            timestamp: new Date().toISOString(),
-                        };
-                    }
-                    return un;
-                });
-                const updatedUser = { ...userToNotify, notifications: updatedNotifications };
-                newAllUsers = { ...allUsers, [userToNotify.id]: updatedUser };
-                setAllUsers(newAllUsers);
-                setLocalStorage('users', newAllUsers);
-                if (user && user.id === userToNotify.id) {
-                    setUser(updatedUser);
-                    setLocalStorage('currentUser', updatedUser);
-                }
-            }
-            pushServerSync({
-                adminNotifications: updatedAdminNotifications,
-                users: Object.values(newAllUsers)
-            }, true).catch(err => console.warn('Sync pending error:', err));
-            if (notification.orderId) {
-                updateOrderStatus(notification.orderId, 'pending').catch(console.warn);
-            }
-            setNotification('Order status updated to Waiting Action (Pending).');
+        if (!notification) {
+            notification = {
+                id: notificationId,
+                orderId: cleanId || notificationId,
+                message: `Order #${cleanId} status updated to ${newStatus}`,
+                timestamp: new Date().toISOString(),
+                read: true,
+                type: 'order',
+                status: 'pending',
+                userId: 'user-shiv-kumar'
+            };
         }
+
+        const targetOrderId = notification.orderId || cleanId || notificationId;
+
+        let existsInAdminList = false;
+        const updatedAdminNotifications = adminNotifications.map(n => {
+            if (n.id === notificationId || n.orderId === targetOrderId || (n.orderId && n.orderId.replace(/^#/, '') === cleanId)) {
+                existsInAdminList = true;
+                return { ...n, status: newStatus, read: true, adminReply: comment !== undefined ? comment : n.adminReply };
+            }
+            return n;
+        });
+
+        if (!existsInAdminList) {
+            updatedAdminNotifications.unshift({
+                ...notification,
+                status: newStatus,
+                read: true,
+                adminReply: comment
+            });
+        }
+
+        setAdminNotifications(updatedAdminNotifications);
+        setLocalStorage('adminNotifications', updatedAdminNotifications);
+
+        const targetUserId = notification.userId || 'user-shiv-kumar';
+        let newAllUsers = { ...allUsers };
+
+        if (targetUserId && allUsers[targetUserId]) {
+            const userToNotify = allUsers[targetUserId];
+            const updatedNotifications = (userToNotify.notifications || []).map((un): UserNotification => {
+                if (un.orderId === targetOrderId || un.id === notificationId) {
+                    return {
+                        ...un,
+                        status: newStatus,
+                        title: `Order #${un.orderId || targetOrderId} ${newStatus === 'processing' ? 'In Process' : 'Waiting Action'}`,
+                        adminReply: comment !== undefined ? comment : un.adminReply,
+                        read: false,
+                        timestamp: new Date().toISOString(),
+                    };
+                }
+                return un;
+            });
+            const updatedUser = { ...userToNotify, notifications: updatedNotifications };
+            newAllUsers = { ...allUsers, [userToNotify.id]: updatedUser };
+            setAllUsers(newAllUsers);
+            setLocalStorage('users', newAllUsers);
+            if (user && user.id === userToNotify.id) {
+                setUser(updatedUser);
+                setLocalStorage('currentUser', updatedUser);
+            }
+        }
+
+        pushServerSync({
+            adminNotifications: updatedAdminNotifications,
+            users: Object.values(newAllUsers)
+        }, true).catch(err => console.warn('Sync order status error:', err));
+
+        if (targetOrderId) {
+            updateOrderStatus(targetOrderId, newStatus).catch(console.warn);
+        }
+
+        setNotification(`Order status updated to ${newStatus === 'processing' ? 'In Process' : 'Waiting Action'}.`, 'success');
     };
 
     const deleteAdminNotification = (notificationId: string) => {
