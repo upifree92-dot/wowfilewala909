@@ -203,19 +203,15 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [user, setUser] = useState<User | null>(getLocalStorage('currentUser', null));
   const [cart, setCart] = useState<CartItem[]>(getLocalStorage('cart', []));
   const [products, setProducts] = useState<Product[]>(() => {
-    const loaded = getLocalStorage('products', INITIAL_PRODUCTS);
-    const merged = [...loaded];
-    let updated = false;
-    INITIAL_PRODUCTS.forEach(initialProd => {
-      if (!merged.some(p => p.id === initialProd.id)) {
-        merged.push(initialProd);
-        updated = true;
-      }
-    });
-    if (updated) {
-      setLocalStorage('products', merged);
-    }
-    return merged;
+    const loaded = getLocalStorage('products', []);
+    // Permanently remove all sample/demo files
+    const cleanProducts = loaded.filter((p: Product) => 
+      !p.id.startsWith('file-') && 
+      !p.id.startsWith('prod-') &&
+      !['file-vivo-x200fe', 'file-mtk-flash-tool-v6', 'file-da-mt6765', 'file-vivo-rpmb-parser', 'file-prog-emmc-ufs-firehose', 'file-free-vpn', 'file-qcn-edit-tool', 'file-mi-diag-port-enabler', 'file-ufi-all-ffu', 'file-idm-build-56', 'file-vivo-latest-2022-da', 'file-da-mtk-all-bin', 'prod-zhizhen-demo', 'prod-realme-n55', 'prod-cph2691', 'prod-infinix-hot-50'].includes(p.id)
+    );
+    setLocalStorage('products', cleanProducts);
+    return cleanProducts;
   });
   const [categories, setCategories] = useState<Category[]>(() => getLocalStorage('categories', INITIAL_CATEGORIES));
   const [balancePackages, setBalancePackages] = useState<BalancePackage[]>(() => getLocalStorage('balancePackages', INITIAL_BALANCE_PACKAGES));
@@ -400,8 +396,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       setLocalStorage('siteContent', loadedCloudContent);
     }
     if (Array.isArray(snapshot.products)) {
-      setProducts(snapshot.products);
-      setLocalStorage('products', snapshot.products);
+      const cleanProducts = snapshot.products.filter((p: any) => 
+        p && p.id && !p.id.startsWith('file-') && !p.id.startsWith('prod-')
+      );
+      setProducts(cleanProducts);
+      setLocalStorage('products', cleanProducts);
     }
     if (Array.isArray(snapshot.categories)) {
       setCategories(snapshot.categories);
