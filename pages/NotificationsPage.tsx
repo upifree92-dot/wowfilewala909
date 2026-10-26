@@ -90,6 +90,7 @@ const NotificationsPage = () => {
     const { 
         user, isAdmin, 
         getUserNotifications, markUserNotificationAsRead,
+        markAllUserNotificationsAsRead,
         getAllUsers, siteContent,
         getAdminNotifications, approveActivationOrder,
         rejectActivationOrder, adminReplyToNotification
@@ -101,6 +102,10 @@ const NotificationsPage = () => {
     const [soundsActive, setSoundsActive] = useState(isSoundEnabled());
     const [searchQuery, setSearchQuery] = useState('');
     const [currentTime, setCurrentTime] = useState(Date.now());
+
+    useEffect(() => {
+        markAllUserNotificationsAsRead();
+    }, [markAllUserNotificationsAsRead]);
 
     // Update currentTime every second for automatic real-time countdown updates
     useEffect(() => {

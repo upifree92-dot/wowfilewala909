@@ -318,6 +318,63 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
               </p>
             </div>
           </div>
+
+          {/* Customer & Order Submitted Details Box */}
+          {(() => {
+            const details = (order as any).orderDetails || {};
+            const custName = (order as any).customerName || details.customerName || details.name;
+            const custEmail = (order as any).customerEmail || details.customerEmail || details.email;
+            const custMobile = (order as any).customerMobile || details.customerMobile || details.mobile || details.mobileNumber;
+            const inputVal = details.input || details.sn || details.imei || details.serialNumber || details.username;
+            
+            const ignoredKeys = new Set(['categoryName', 'quantity', 'totalPrice', 'price', 'mobileNumber', 'customerName', 'customerEmail', 'customerMobile', 'name', 'email', 'mobile', 'input', 'sn', 'imei', 'serialNumber', 'username']);
+            const extraFields = typeof details === 'object' && details !== null 
+              ? Object.entries(details).filter(([k, v]) => !ignoredKeys.has(k) && v)
+              : [];
+
+            const hasAnyCustomerInfo = custName || custEmail || custMobile || inputVal || extraFields.length > 0;
+            if (!hasAnyCustomerInfo) return null;
+
+            return (
+              <div className="bg-[#fafbfc] dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-800 rounded-xl p-4 sm:p-5 space-y-2.5">
+                <span className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block">
+                  CUSTOMER & SUBMITTED DETAILS
+                </span>
+                <div className="space-y-1.5 text-xs text-slate-700 dark:text-slate-300">
+                  {custName && (
+                    <div className="flex justify-between items-center py-1 border-b border-slate-200/60 dark:border-slate-700/60">
+                      <span className="font-semibold text-slate-500 dark:text-slate-400">Customer Name:</span>
+                      <span className="font-bold text-slate-900 dark:text-slate-100">{custName}</span>
+                    </div>
+                  )}
+                  {custEmail && (
+                    <div className="flex justify-between items-center py-1 border-b border-slate-200/60 dark:border-slate-700/60">
+                      <span className="font-semibold text-slate-500 dark:text-slate-400">Customer Email:</span>
+                      <span className="font-medium text-slate-900 dark:text-slate-100 font-mono">{custEmail}</span>
+                    </div>
+                  )}
+                  {custMobile && (
+                    <div className="flex justify-between items-center py-1 border-b border-slate-200/60 dark:border-slate-700/60">
+                      <span className="font-semibold text-slate-500 dark:text-slate-400">Mobile Number:</span>
+                      <span className="font-medium text-slate-900 dark:text-slate-100">{custMobile}</span>
+                    </div>
+                  )}
+                  {inputVal && (
+                    <div className="flex justify-between items-center py-1 border-b border-slate-200/60 dark:border-slate-700/60">
+                      <span className="font-semibold text-slate-500 dark:text-slate-400">Input / Serial / IMEI:</span>
+                      <span className="font-mono font-bold text-slate-900 dark:text-slate-100 select-all">{inputVal}</span>
+                    </div>
+                  )}
+                  {extraFields.map(([k, v]) => (
+                    <div key={k} className="flex justify-between items-center py-1 border-b border-slate-200/60 dark:border-slate-700/60">
+                      <span className="font-semibold text-slate-500 dark:text-slate-400 capitalize">{k.replace(/([A-Z])/g, ' $1')}:</span>
+                      <span className="font-medium text-slate-900 dark:text-slate-100">{String(v)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
         </div>
       </div>
     </div>

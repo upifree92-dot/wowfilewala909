@@ -344,8 +344,13 @@ const AdminOrdersPage = () => {
         updateOrderStatusByAdmin, 
         getAllUsers, 
         user: currentUser, 
-        isAdmin 
+        isAdmin,
+        markAllAdminNotificationsAsRead
     } = useAppContext();
+
+    useEffect(() => {
+        markAllAdminNotificationsAsRead();
+    }, [markAllAdminNotificationsAsRead]);
 
     // Default to 'approved' filter to display "Success - 35" exactly like image_bf0e3a18.png
     const [filter, setFilter] = useState<'approved' | 'processing' | 'pending' | 'rejected' | 'all'>('approved');
