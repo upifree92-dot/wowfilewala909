@@ -33,8 +33,10 @@ const ServiceListPanel: React.FC<ServiceListPanelProps> = ({
       path: '/imei-order?type=imei',
       subItems: [
         { name: 'Place New IMEI Order', path: '/imei-order?type=imei', badge: 'Instant' },
-        { name: 'MDM & KG Lock Bypass (IMEI)', path: '/category/mdm-files', badge: '24/7' },
-        { name: 'Network & Carrier Unlock', path: '/category/unlock-files', badge: 'Official' },
+        { name: 'iPhone & iPad Warranty / Carrier / iCloud Check', path: '/imei-order?type=imei', badge: 'Fast' },
+        { name: 'FRPFILE & iRemoval PRO Hello Bypass', path: '/imei-order?type=imei', badge: 'A12+' },
+        { name: 'Samsung / Xiaomi / Vivo FRP & Network Unlock', path: '/imei-order?type=imei', badge: '24/7' },
+        { name: 'Official Network & Carrier Unlock Codes', path: '/imei-order?type=imei', badge: 'Official' },
       ],
       icon: (
         <svg className="w-5 h-5 text-white shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9">
@@ -49,9 +51,10 @@ const ServiceListPanel: React.FC<ServiceListPanelProps> = ({
       label: 'Server Service',
       path: '/imei-order?type=server',
       subItems: [
-        { name: 'Box & Dongle Activations / Credits', path: '/category/box-tools', badge: 'Auto' },
-        { name: 'Server Tool Activation Order', path: '/imei-order?type=server', badge: 'Fast' },
-        { name: 'Hardware & Schematic Diagrams', path: '/category/schematic', badge: 'Pro' },
+        { name: 'Box & Dongle Activations & Credits', path: '/imei-order?type=server', badge: 'Auto' },
+        { name: 'Borneo / JCID / DZKJ Hardware Schematics', path: '/imei-order?type=server', badge: 'Pro' },
+        { name: 'UnlockTool / Chimera / DFT Pro Server Credits', path: '/imei-order?type=server', badge: 'Instant' },
+        { name: 'Xiaomi Auth / OTP Flashing Tool', path: '/imei-order?type=server', badge: '24/7' },
       ],
       icon: (
         <svg className="w-5 h-5 text-white shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9">
@@ -66,9 +69,12 @@ const ServiceListPanel: React.FC<ServiceListPanelProps> = ({
       label: 'Remote/ Tool-Rent',
       path: '/imei-order?type=remote',
       subItems: [
-        { name: 'UnlockTool / Griffin / Borneo Rent 24/7', path: '/imei-order?type=rent', badge: 'Instant ID' },
-        { name: 'DFT Pro / Chimera / AMT Rental', path: '/category/box-tools', badge: 'Online' },
-        { name: 'Book Live Remote Technician', path: '/appointment-booking', badge: 'Live' },
+        { name: 'UnlockTool Rent 24/7 (Instant Access ID)', path: '/imei-order?type=rent', badge: 'Instant ID' },
+        { name: 'Griffin Unlocker / Pandora Tool Rent', path: '/imei-order?type=rent', badge: 'Online' },
+        { name: 'DFT Pro / Chimera / AMT Tool Rent', path: '/imei-order?type=rent', badge: 'Auto ID' },
+        { name: 'Android Multi Tool / EFT Pro Rent', path: '/imei-order?type=rent', badge: '24/7' },
+        { name: 'TFM / TSM / UAT / Hydra / KG Killer Rent', path: '/imei-order?type=rent', badge: 'Tool Rent' },
+        { name: 'All 20+ Remote Tool Rentals Available', path: '/imei-order?type=rent', badge: 'Rent All' },
       ],
       icon: (
         <svg className="w-5 h-5 text-white shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9">
@@ -84,13 +90,13 @@ const ServiceListPanel: React.FC<ServiceListPanelProps> = ({
       label: 'File service',
       path: '/',
       subItems: [
-        { name: 'All Tested Flash Files & Firmware', path: '/', badge: 'Tested' },
-        { name: 'Recent Uploaded Files', path: '/recent', badge: 'New' },
-        ...topCategories.slice(0, 4).map((cat) => ({
-          name: cat.name,
-          path: `/category/${cat.id}`,
-          badge: 'Folder',
-        })),
+        { name: 'Auth / Firehose / Preloader & DA Files', path: '/category/cat-auth-da', badge: 'Auth' },
+        { name: 'Dump Files ENG / EMMC / UFS / FFU / RPMB', path: '/category/cat-dump-files', badge: 'Dump' },
+        { name: 'Schematic Diagrams And Test Points', path: '/category/cat-schematics', badge: 'Diagram' },
+        { name: 'Network Files NvData / NvRam / EFS / QCN', path: '/category/cat-network-files', badge: 'QCN' },
+        { name: 'Official / Flashing Tools & Free Tools', path: '/category/cat-free-tools', badge: 'Tools' },
+        { name: 'Readed Firmware & Infinix Auth Files', path: '/category/cat-infinix-auth', badge: 'Firmware' },
+        { name: 'Oppo / Vivo / Realme Stock ROMs', path: '/category/cat-oppo-firmware', badge: 'ROMs' },
       ],
       icon: (
         <svg className="w-5 h-5 text-white shrink-0" viewBox="0 0 24 24" fill="currentColor">

@@ -652,6 +652,51 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     };
   }, [pullServerSync]);
 
+  // Auto-sync all 583 parsed GSM services into products catalog on initialization if missing
+  useEffect(() => {
+    fetch('/api/fetch-gsm-services', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({})
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data?.success && Array.isArray(data.services) && data.services.length > 0) {
+        setProducts(prev => {
+          if (prev.length >= data.services.length) return prev;
+          const defaultCat = categories[0]?.id || 'cat-box-tools';
+          const existingIds = new Set(prev.map(p => p.id));
+          const existingNames = new Set(prev.map(p => p.name.toLowerCase()));
+          const newProducts: Product[] = [];
+
+          data.services.forEach((srv: any) => {
+            if (!existingIds.has(srv.id) && !existingNames.has(srv.name.toLowerCase())) {
+              newProducts.push({
+                id: srv.id,
+                name: srv.name,
+                categoryId: defaultCat,
+                serviceType: srv.serviceType || 'server',
+                price: srv.price || 0,
+                downloadLink: 'https://www.gsmfastunlock.com',
+                description: srv.description || `${srv.name} - Official GSM Service`,
+                size: srv.size || 'Auto Sync',
+                tags: ['paid']
+              });
+            }
+          });
+
+          if (newProducts.length > 0) {
+            const updated = [...prev, ...newProducts];
+            setLocalStorage('products', updated);
+            return updated;
+          }
+          return prev;
+        });
+      }
+    })
+    .catch(err => console.warn('Non-blocking GSM catalog sync error:', err));
+  }, [categories]);
+
   // Poll /api/cloud-sync every 2 seconds when realtimeSyncEnabled is ON so other devices update live instantly
   useEffect(() => {
     if (!realtimeSyncEnabled) return;
