@@ -920,13 +920,22 @@ const Header = () => {
                         🛒 <Editable contentKey="header.dropdown.cart" as="span" />
                       </NavLink>
                       {!isAdmin && (
-                        <NavLink
-                          to="/notifications"
-                          onClick={() => setDropdownOpen(false)}
-                          className="block w-full text-left px-4 py-2.5 hover:bg-slate-800 !text-slate-100 font-semibold text-sm transition-colors"
-                        >
-                          🔔 <Editable contentKey="header.dropdown.orderHistory" as="span" />
-                        </NavLink>
+                        <>
+                          <NavLink
+                            to="/profile?tab=orders"
+                            onClick={() => setDropdownOpen(false)}
+                            className="block w-full text-left px-4 py-2.5 hover:bg-slate-800 !text-slate-100 font-semibold text-sm transition-colors"
+                          >
+                            📦 <Editable contentKey="header.dropdown.orderHistory" as="span" />
+                          </NavLink>
+                          <NavLink
+                            to="/notifications"
+                            onClick={() => setDropdownOpen(false)}
+                            className="block w-full text-left px-4 py-2.5 hover:bg-slate-800 !text-slate-100 font-semibold text-sm transition-colors"
+                          >
+                            🔔 Notifications
+                          </NavLink>
+                        </>
                       )}
                       {isAdmin && (
                         <>

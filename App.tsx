@@ -194,6 +194,8 @@ const AppContent = () => {
           <Route path="/recent" element={<RecentPage />} />
           <Route path="/downloads" element={<DownloadsPage />} />
           <Route path="/download-history" element={<DownloadHistoryPage />} />
+          <Route path="/orders" element={<Navigate to="/profile?tab=orders" replace />} />
+          <Route path="/order-history" element={<Navigate to="/profile?tab=orders" replace />} />
           <Route path="/tools" element={<ToolsPage />} />
           <Route path="/our-users" element={<OurUsersPage />} />
           <Route path="/notifications" element={<NotificationsPage />} />

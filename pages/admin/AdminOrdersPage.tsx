@@ -5,7 +5,7 @@ import { AlertCircle, X, Search } from 'lucide-react';
 import CopyButton from '../../components/CopyButton';
 
 const AdminOrdersPage = () => {
-    const { getAllOrders, approveActivationOrder, processActivationOrder, rejectActivationOrder, deleteAdminNotification, clearAdminNotifications, getAllUsers, user: currentUser, isAdmin } = useAppContext();
+    const { getAllOrders, approveActivationOrder, processActivationOrder, rejectActivationOrder, updateOrderStatusByAdmin, deleteAdminNotification, clearAdminNotifications, getAllUsers, user: currentUser, isAdmin } = useAppContext();
     const [filter, setFilter] = useState<'all' | 'pending' | 'processing' | 'approved' | 'rejected'>('all');
     const [searchQuery, setSearchQuery] = useState('');
     const [orderComments, setOrderComments] = useState<Record<string, string>>({});
@@ -199,74 +199,95 @@ const AdminOrdersPage = () => {
                                          <td className="p-3 py-4">
                                             <StatusBadge status={order.status} />
                                         </td>
-                                        <td className="p-3 py-4 flex flex-col gap-2 min-w-[140px]">
-                                            {order.status !== 'approved' && order.status !== 'rejected' ? (
-                                                <>
-                                                    <input 
-                                                        type="text" 
-                                                        placeholder="Reply / code / note..."
-                                                        value={orderComments[order.id] || ''}
-                                                        className="w-full text-xs p-2 rounded-lg border border-slate-700 bg-slate-950 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-amber-500/50"
-                                                        onChange={(e) => {
-                                                            setOrderComments(prev => ({ ...prev, [order.id]: e.target.value }));
-                                                        }}
-                                                    />
-                                                    <div className="flex flex-col gap-1.5">
-                                                        {order.status === 'pending' && (
-                                                            <button 
-                                                                onClick={() => {
-                                                                    processActivationOrder(order.id, orderComments[order.id] || 'Order is being processed');
-                                                                    setOrderComments(prev => ({ ...prev, [order.id]: '' }));
-                                                                }} 
-                                                                className="w-full px-3 py-1.5 text-xs font-bold rounded-lg bg-orange-500/15 text-orange-400 border border-orange-500/25 hover:bg-orange-500/25 transition-all text-center"
-                                                            >
-                                                                Process
-                                                            </button>
-                                                        )}
-                                                        {order.status === 'processing' && (
-                                                            <button 
-                                                                onClick={() => {
-                                                                    approveActivationOrder(order.id, orderComments[order.id] || 'Order completed successfully');
-                                                                    setOrderComments(prev => ({ ...prev, [order.id]: '' }));
-                                                                }} 
-                                                                className="w-full px-3 py-1.5 text-xs font-bold rounded-lg bg-emerald-500/15 text-emerald-400 border border-emerald-500/25 hover:bg-emerald-500/25 transition-all text-center"
-                                                            >
-                                                                Success
-                                                            </button>
-                                                        )}
-                                                        <button 
-                                                            type="button" 
-                                                            onClick={() => {
-                                                                if (orderComments[order.id]) {
-                                                                    setRejectionReason(orderComments[order.id]);
-                                                                }
-                                                                setRejectingOrder(order);
-                                                            }} 
-                                                            className="w-full px-2.5 py-1.5 text-xs font-bold rounded-lg bg-rose-500/15 text-rose-300 border border-rose-500/30 hover:bg-rose-500/25 transition-all flex items-center justify-center gap-1 shadow-sm"
-                                                            title="Reject order and refund amount to customer wallet"
-                                                        >
-                                                            Reject & Refund
-                                                        </button>
-                                                    </div>
-                                                </>
-                                            ) : (
-                                                /* Comment box and action buttons HIDE once Success or Rejected */
-                                                <div className="space-y-1.5 text-xs">
-                                                    {order.status === 'approved' ? (
-                                                        <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
-                                                            <span className="text-[10px] font-black uppercase text-emerald-400 tracking-wider block">Sent to Client:</span>
-                                                            <p className="text-[11px] text-slate-200 mt-1 break-words font-medium">
-                                                                {order.adminReply || 'Success - Order Completed'}
-                                                            </p>
-                                                        </div>
-                                                    ) : (
-                                                        <div className="p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/20">
-                                                            <span className="text-[10px] font-black uppercase text-rose-400 tracking-wider block">Refunded & Sent:</span>
-                                                            <p className="text-[11px] text-rose-200 mt-1 break-words font-medium">
-                                                                {order.rejectionReason || order.adminReply || 'Order Rejected & Refunded'}
-                                                            </p>
-                                                        </div>
-                                                    )}
+                                        <td className="p-3 py-4 flex flex-col gap-2 min-w-[170px]">
+                                            {/* Admin Status Dropdown Selector */}
+                                            <div className="flex items-center gap-1.5 bg-slate-900/90 p-1.5 rounded-lg border border-slate-800">
+                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider shrink-0">Status:</label>
+                                                <select
+                                                    value={order.status || 'pending'}
+                                                    onChange={(e) => {
+                                                        const newStatus = e.target.value as 'pending' | 'processing' | 'approved' | 'rejected';
+                                                        const comment = orderComments[order.id] !== undefined ? orderComments[order.id] : (order.adminReply || '');
+                                                        if (newStatus === 'rejected') {
+                                                            if (comment) setRejectionReason(comment);
+                                                            setRejectingOrder(order);
+                                                        } else {
+                                                            updateOrderStatusByAdmin(order.id, newStatus, comment);
+                                                        }
+                                                    }}
+                                                    className="flex-1 text-xs py-1 px-1.5 rounded bg-slate-950 border border-slate-700 text-slate-100 font-bold focus:outline-none focus:border-amber-500 cursor-pointer"
+                                                >
+                                                    <option value="pending">🟡 Pending</option>
+                                                    <option value="processing">🟠 In Process</option>
+                                                    <option value="approved">🟢 Success</option>
+                                                    <option value="rejected">🔴 Rejected & Refund</option>
+                                                </select>
+                                            </div>
+
+                                            {/* Admin Reply / Activation Code Input */}
+                                            <input 
+                                                type="text" 
+                                                placeholder="Enter activation code / note..."
+                                                value={orderComments[order.id] !== undefined ? orderComments[order.id] : (order.adminReply || order.rejectionReason || '')}
+                                                className="w-full text-xs p-2 rounded-lg border border-slate-700 bg-slate-950 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-amber-500/50"
+                                                onChange={(e) => {
+                                                    setOrderComments(prev => ({ ...prev, [order.id]: e.target.value }));
+                                                }}
+                                            />
+
+                                            {/* Quick Action Buttons */}
+                                            <div className="grid grid-cols-3 gap-1">
+                                                <button 
+                                                    type="button" 
+                                                    onClick={() => {
+                                                        const msg = orderComments[order.id] !== undefined ? orderComments[order.id] : (order.adminReply || 'Order completed successfully');
+                                                        approveActivationOrder(order.id, msg);
+                                                    }} 
+                                                    className="px-2 py-1.5 text-[10px] font-extrabold rounded-md bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/30 transition-all text-center active:scale-95"
+                                                    title="Select Success & Send to User"
+                                                >
+                                                    Success
+                                                </button>
+                                                <button 
+                                                    type="button" 
+                                                    onClick={() => {
+                                                        const msg = orderComments[order.id] !== undefined ? orderComments[order.id] : (order.adminReply || 'Order is being processed');
+                                                        processActivationOrder(order.id, msg);
+                                                    }} 
+                                                    className="px-2 py-1.5 text-[10px] font-extrabold rounded-md bg-orange-500/20 hover:bg-orange-500/30 text-orange-300 border border-orange-500/30 transition-all text-center active:scale-95"
+                                                    title="Select In Process & Send to User"
+                                                >
+                                                    Process
+                                                </button>
+                                                <button 
+                                                    type="button" 
+                                                    onClick={() => {
+                                                        const msg = orderComments[order.id] !== undefined ? orderComments[order.id] : (order.rejectionReason || order.adminReply || '');
+                                                        if (msg) {
+                                                            setRejectionReason(msg);
+                                                        }
+                                                        setRejectingOrder(order);
+                                                    }} 
+                                                    className="px-2 py-1.5 text-[10px] font-extrabold rounded-md bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/30 transition-all text-center active:scale-95"
+                                                    title="Select Rejected & Refund Customer Wallet"
+                                                >
+                                                    Reject
+                                                </button>
+                                            </div>
+
+                                            {/* Delivered preview */}
+                                            {(order.adminReply || order.rejectionReason) && (
+                                                <div className={`p-2 rounded-lg border text-[11px] ${
+                                                    order.status === 'approved' 
+                                                        ? 'bg-emerald-500/10 border-emerald-500/25 text-emerald-300' 
+                                                        : order.status === 'rejected'
+                                                        ? 'bg-rose-500/10 border-rose-500/25 text-rose-300'
+                                                        : 'bg-orange-500/10 border-orange-500/25 text-orange-300'
+                                                }`}>
+                                                    <span className="font-bold text-[10px] uppercase tracking-wider block">
+                                                        {order.status === 'approved' ? '✓ User Order History Shows:' : order.status === 'rejected' ? '✕ User Order History Shows:' : '⏳ User Order History Shows:'}
+                                                    </span>
+                                                    <p className="font-mono mt-0.5 break-all font-semibold select-all">{order.adminReply || order.rejectionReason}</p>
                                                 </div>
                                             )}
                                         </td>

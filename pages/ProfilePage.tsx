@@ -1,5 +1,5 @@
 import React, { useState, useEffect, FormEvent } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
 import { getLifetimePointsPurchased, getUserLoyaltyTier, getNextTierDetails, LOYALTY_TIERS, LoyaltyTier } from '../lib/loyalty';
 import BackButton from '../components/BackButton';
@@ -46,11 +46,23 @@ const maskHwid = (hwidString: string | undefined): string => {
 
 const ProfilePage = () => {
   useSEO('My Profile Panel', 'Manage your user account, subscriptions, downloads, and billing.');
-  const { user, updateProfile, notification, siteContent, products, isAdmin, logout } = useAppContext();
+  const { user, updateProfile, notification, siteContent, products, isAdmin, logout, getUserNotifications } = useAppContext();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const tabParam = searchParams.get('tab');
 
   // Tab state
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'profile' | 'orders' | 'subscriptions' | 'downloads' | 'paid_files' | 'invoices'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'profile' | 'orders' | 'subscriptions' | 'downloads' | 'paid_files' | 'invoices'>(
+    (tabParam && ['dashboard', 'profile', 'orders', 'subscriptions', 'downloads', 'paid_files', 'invoices'].includes(tabParam))
+      ? (tabParam as any)
+      : 'dashboard'
+  );
+
+  useEffect(() => {
+    if (tabParam && ['dashboard', 'profile', 'orders', 'subscriptions', 'downloads', 'paid_files', 'invoices'].includes(tabParam)) {
+      setActiveTab(tabParam as any);
+    }
+  }, [tabParam]);
   
   // Mobile navigation state
   const [showMenuOnMobile, setShowMenuOnMobile] = useState<boolean>(true);
@@ -767,7 +779,7 @@ const ProfilePage = () => {
 
               <div className="space-y-6">
                 {(() => {
-                  const orderNotifications = (user.notifications || []).filter(n => n.type === 'order');
+                  const orderNotifications = getUserNotifications().filter(n => n.type === 'order' || Boolean(n.orderId));
                   if (orderNotifications.length === 0) {
                     return (
                       <div className="text-center py-12 text-slate-500 dark:text-slate-400 space-y-3 bg-slate-50 dark:bg-slate-800/20 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800">
@@ -778,11 +790,11 @@ const ProfilePage = () => {
                   }
 
                   const StatusBadge: React.FC<{ status?: string }> = ({ status }) => {
-                    const baseClasses = 'px-3 py-1 text-xs font-bold rounded-lg capitalize inline-flex items-center gap-1.5';
-                    if (status === 'approved') return <span className={`${baseClasses} bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-400 border border-emerald-500/20`}><CheckCircle2 className="h-3 w-3" /> Success</span>;
-                    if (status === 'rejected') return <span className={`${baseClasses} bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-400 border border-rose-500/20`}>Rejected</span>;
-                    if (status === 'processing') return <span className={`${baseClasses} bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-400 border border-orange-500/20`}>Processing</span>;
-                    return <span className={`${baseClasses} bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-400 border border-amber-500/20`}>Pending</span>;
+                    const baseClasses = 'px-3 py-1 text-xs font-bold rounded-lg capitalize inline-flex items-center gap-1.5 shadow-sm';
+                    if (status === 'approved') return <span className={`${baseClasses} bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-500/30`}><CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> Success</span>;
+                    if (status === 'rejected') return <span className={`${baseClasses} bg-rose-100 text-rose-800 dark:bg-rose-950/40 dark:text-rose-300 border border-rose-500/30`}>✕ Rejected & Refunded</span>;
+                    if (status === 'processing') return <span className={`${baseClasses} bg-orange-100 text-orange-800 dark:bg-orange-950/40 dark:text-orange-300 border border-orange-500/30`}>⏳ In Process</span>;
+                    return <span className={`${baseClasses} bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300 border border-amber-500/30`}>🕒 Pending</span>;
                   };
 
                   return (

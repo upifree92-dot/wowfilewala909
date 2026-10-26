@@ -3143,6 +3143,61 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         setNotification('Reply sent to user and saved to order history.');
     };
 
+    const updateOrderStatusByAdmin = (notificationId: string, newStatus: 'pending' | 'processing' | 'approved' | 'rejected', comment: string) => {
+        if (!isAdmin) return;
+        if (newStatus === 'approved') {
+            approveActivationOrder(notificationId, comment || 'Order completed successfully');
+        } else if (newStatus === 'processing') {
+            processActivationOrder(notificationId, comment || 'Order is being processed');
+        } else if (newStatus === 'rejected') {
+            rejectActivationOrder(notificationId, comment || 'Order rejected by administrator');
+        } else if (newStatus === 'pending') {
+            const notification = adminNotifications.find(n => n.id === notificationId || n.orderId === notificationId);
+            if (!notification) return;
+            const updatedAdminNotifications = adminNotifications.map(n => 
+                (n.id === notificationId || (notification.orderId && n.orderId === notification.orderId)) 
+                    ? { ...n, status: 'pending' as const, adminReply: comment || '' } 
+                    : n
+            );
+            setAdminNotifications(updatedAdminNotifications);
+            setLocalStorage('adminNotifications', updatedAdminNotifications);
+
+            const targetUserId = notification.userId;
+            let newAllUsers = { ...allUsers };
+            if (targetUserId && allUsers[targetUserId]) {
+                const userToNotify = allUsers[targetUserId];
+                const updatedNotifications = (userToNotify.notifications || []).map((un): UserNotification => {
+                    if (un.orderId === notification.orderId || un.id === notification.id) {
+                        return {
+                            ...un,
+                            status: 'pending',
+                            title: `Order #${un.orderId || notification.orderId} Pending`,
+                            adminReply: comment,
+                            timestamp: new Date().toISOString(),
+                        };
+                    }
+                    return un;
+                });
+                const updatedUser = { ...userToNotify, notifications: updatedNotifications };
+                newAllUsers = { ...allUsers, [userToNotify.id]: updatedUser };
+                setAllUsers(newAllUsers);
+                setLocalStorage('users', newAllUsers);
+                if (user && user.id === userToNotify.id) {
+                    setUser(updatedUser);
+                    setLocalStorage('currentUser', updatedUser);
+                }
+            }
+            pushServerSync({
+                adminNotifications: updatedAdminNotifications,
+                users: Object.values(newAllUsers)
+            }, true).catch(err => console.warn('Sync pending error:', err));
+            if (notification.orderId) {
+                updateOrderStatus(notification.orderId, 'pending').catch(console.warn);
+            }
+            setNotification('Order status updated to Pending.');
+        }
+    };
+
     const deleteAdminNotification = (notificationId: string) => {
         if (!isAdmin) return;
         setAdminNotifications(prev => prev.filter(n => n.id !== notificationId));
@@ -3385,7 +3440,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     getAllUsers, adminUpdateUser, adminCreateUser, adminAdjustUserBalance, adminDeleteUser, adminDeleteAllUsers, adminToggleUserBlockStatus, adminResetUserHWID, userResetOwnHWID,
     getTotalSales, getAllOrders, getSalesDataForLastNDays,
     addNavLink, updateNavLink, deleteNavLink, reorderNavLinks,
-    placeActivationOrder, approveActivationOrder, processActivationOrder, rejectActivationOrder, deleteAdminNotification, getAdminNotifications, markAdminNotificationAsRead, clearAdminNotifications, adminReplyToNotification,
+    placeActivationOrder, approveActivationOrder, processActivationOrder, rejectActivationOrder, updateOrderStatusByAdmin, deleteAdminNotification, getAdminNotifications, markAdminNotificationAsRead, clearAdminNotifications, adminReplyToNotification,
     placeImeiOrder,
     getUserNotifications, markUserNotificationAsRead, deleteUserNotification, clearUserNotifications,
     theme, toggleTheme,
