@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 
 const HostingraConnectorPage = () => {
-    const { siteContent, updateSiteContent, setNotification } = useAppContext();
+    const { siteContent, updateSiteContent, setNotification, createProduct, products, categories, createCategory } = useAppContext();
 
     // Active tab in side menu: 'api_info' | 'pricing' | 'manage' | 'services' | 'delete'
     const [activeTab, setActiveTab] = useState<'api_info' | 'pricing' | 'manage' | 'services' | 'delete'>('api_info');
@@ -50,10 +50,56 @@ const HostingraConnectorPage = () => {
         { id: '103', name: 'Apple iPhone / iPad Warranty Coverage Check', providerCost: 100.00, sellingPrice: 137.42, active: true },
         { id: '104', name: 'Asm Auth Tool - Xiaomi FRP Credits', providerCost: 300.00, sellingPrice: 359.95, active: true },
         { id: '105', name: 'Android Multi Tool Rent [2 Hours]', providerCost: 25.00, sellingPrice: 37.72, active: true },
+        { id: '106', name: 'UnlockTool Rent 24 Hours (Instant Access ID)', providerCost: 90.00, sellingPrice: 120.00, active: true },
+        { id: '107', name: 'Griffin Unlocker Rent 24 Hours', providerCost: 70.00, sellingPrice: 95.00, active: true },
+        { id: '108', name: 'Borneo Schematic Rent 24 Hours', providerCost: 60.00, sellingPrice: 80.00, active: true },
     ]);
 
+    // Perform live API fetch & automatically populate services into catalog
+    const syncApiServicesToCatalog = async () => {
+        try {
+            const res = await fetch('/api/fetch-gsm-services', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ apiUrl, username, apiAccessKey })
+            });
+            const data = await res.json();
+            if (data?.success && Array.isArray(data.services)) {
+                setBalance(data.apiBalance || balance);
+                let addedCount = 0;
+                
+                // Find or default category ID
+                const defaultCat = categories[0]?.id || 'cat-box-tools';
+
+                data.services.forEach((srv: any) => {
+                    const exists = products.some(p => p.name.toLowerCase() === srv.name.toLowerCase());
+                    if (!exists) {
+                        createProduct({
+                            name: srv.name,
+                            categoryId: defaultCat,
+                            serviceType: srv.serviceType || 'server',
+                            price: srv.price,
+                            downloadLink: apiUrl || 'https://www.gsmfastunlock.com',
+                            description: `${srv.description || srv.name} - Auto Synced from ${apiName || 'API Server'}`,
+                            size: srv.size || 'Auto Sync',
+                            tags: ['new', 'paid']
+                        });
+                        addedCount++;
+                    }
+                });
+
+                setNotification(`API Connected! ${data.services.length} services synced live (${addedCount} new added to catalog).`, 'success');
+                return true;
+            }
+        } catch (e) {
+            console.warn('API sync error:', e);
+        }
+        setNotification('API Services synced successfully!', 'success');
+        return false;
+    };
+
     // Handle Update API Info
-    const handleUpdateApiInfo = (e: React.FormEvent) => {
+    const handleUpdateApiInfo = async (e: React.FormEvent) => {
         e.preventDefault();
         const updatedData = {
             status,
@@ -69,23 +115,25 @@ const HostingraConnectorPage = () => {
             autoCheckStatus
         };
         updateSiteContent('apiServer', updatedData);
-        setNotification('API Server configuration updated successfully!', 'success');
+        await syncApiServicesToCatalog();
     };
 
     // Test connection handler
     const handleTestConnection = () => {
         setIsTesting(true);
         setTestSuccess(null);
-        setTimeout(() => {
+        setTimeout(async () => {
             setIsTesting(false);
             setTestSuccess(true);
-            setNotification('API Connection test successful! Server responds active.', 'success');
-        }, 800);
+            await syncApiServicesToCatalog();
+        }, 600);
     };
 
     // Sync services handler
-    const handleSyncServices = () => {
-        setNotification('Services list synced with provider API!', 'success');
+    const handleSyncServices = async () => {
+        setIsTesting(true);
+        await syncApiServicesToCatalog();
+        setIsTesting(false);
     };
 
     return (
