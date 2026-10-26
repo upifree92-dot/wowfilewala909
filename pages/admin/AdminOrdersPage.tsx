@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useAppContext } from '../../context/AppContext';
 import type { AdminNotification, User } from '../../types';
 import { X, Search, Check, Hourglass, Clock, Ban } from 'lucide-react';
@@ -352,9 +353,28 @@ const AdminOrdersPage = () => {
         markAllAdminNotificationsAsRead();
     }, [markAllAdminNotificationsAsRead]);
 
-    // Default to 'approved' filter to display "Success - 35" exactly like image_bf0e3a18.png
-    const [filter, setFilter] = useState<'approved' | 'processing' | 'pending' | 'rejected' | 'all'>('approved');
+    const [searchParams, setSearchParams] = useSearchParams();
+    const initialStatus = searchParams.get('status');
+    const validStatuses = ['approved', 'processing', 'pending', 'rejected', 'all'];
+
+    const [filter, setFilter] = useState<'approved' | 'processing' | 'pending' | 'rejected' | 'all'>(
+        initialStatus && validStatuses.includes(initialStatus)
+            ? (initialStatus as any)
+            : 'approved'
+    );
     const [searchQuery, setSearchQuery] = useState('');
+
+    useEffect(() => {
+        const currentStatus = searchParams.get('status');
+        if (currentStatus && validStatuses.includes(currentStatus)) {
+            setFilter(currentStatus as any);
+        }
+    }, [searchParams]);
+
+    const handleFilterChange = (newFilter: 'approved' | 'processing' | 'pending' | 'rejected' | 'all') => {
+        setFilter(newFilter);
+        setSearchParams({ status: newFilter });
+    };
 
     // Modal state for the Reply / Customer Details dialog (image_5e411753.png)
     const [actionModalOrder, setActionModalOrder] = useState<AdminNotification | null>(null);
@@ -558,7 +578,7 @@ const AdminOrdersPage = () => {
             <div className="flex flex-wrap items-center gap-2 bg-white p-3 rounded-lg border border-slate-200/90 shadow-2xs">
                 <button
                     type="button"
-                    onClick={() => setFilter('approved')}
+                    onClick={() => handleFilterChange('approved')}
                     className={`px-3.5 py-1.5 text-xs font-bold rounded-md transition-all cursor-pointer ${
                         filter === 'approved'
                             ? 'bg-[#20a779] text-white shadow-xs'
@@ -569,7 +589,7 @@ const AdminOrdersPage = () => {
                 </button>
                 <button
                     type="button"
-                    onClick={() => setFilter('processing')}
+                    onClick={() => handleFilterChange('processing')}
                     className={`px-3.5 py-1.5 text-xs font-bold rounded-md transition-all cursor-pointer ${
                         filter === 'processing'
                             ? 'bg-[#d97706] text-white shadow-xs'
@@ -580,7 +600,7 @@ const AdminOrdersPage = () => {
                 </button>
                 <button
                     type="button"
-                    onClick={() => setFilter('pending')}
+                    onClick={() => handleFilterChange('pending')}
                     className={`px-3.5 py-1.5 text-xs font-bold rounded-md transition-all cursor-pointer ${
                         filter === 'pending'
                             ? 'bg-[#475569] text-white shadow-xs'
@@ -591,7 +611,7 @@ const AdminOrdersPage = () => {
                 </button>
                 <button
                     type="button"
-                    onClick={() => setFilter('rejected')}
+                    onClick={() => handleFilterChange('rejected')}
                     className={`px-3.5 py-1.5 text-xs font-bold rounded-md transition-all cursor-pointer ${
                         filter === 'rejected'
                             ? 'bg-[#dc2626] text-white shadow-xs'
@@ -602,7 +622,7 @@ const AdminOrdersPage = () => {
                 </button>
                 <button
                     type="button"
-                    onClick={() => setFilter('all')}
+                    onClick={() => handleFilterChange('all')}
                     className={`px-3.5 py-1.5 text-xs font-bold rounded-md transition-all cursor-pointer ${
                         filter === 'all'
                             ? 'bg-slate-800 text-white shadow-xs'

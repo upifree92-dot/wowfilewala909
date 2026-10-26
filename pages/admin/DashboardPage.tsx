@@ -71,7 +71,7 @@ const DashboardPage = () => {
             {/* 2. Top 4 Status Metric Cards (Horizontal Row) */}
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
                 {/* Card 1: Waiting Action */}
-                <div className="bg-[#eff3f8] border border-slate-200/70 rounded-xl p-4.5 flex items-center gap-4 transition-all hover:shadow-xs">
+                <Link to="/admin/orders?status=pending" className="bg-[#eff3f8] border border-slate-200/70 rounded-xl p-4.5 flex items-center gap-4 transition-all hover:shadow-md hover:scale-[1.01] cursor-pointer">
                     <div className="w-12 h-12 rounded-lg bg-[#475569] text-white flex items-center justify-center shrink-0 shadow-sm">
                         <Hourglass className="w-5 h-5 stroke-[2.2]" />
                     </div>
@@ -79,10 +79,10 @@ const DashboardPage = () => {
                         <p className="text-xs font-semibold text-slate-500">Waiting Action</p>
                         <p className="text-2xl font-black text-slate-800 mt-0.5">{pendingOrdersCount}</p>
                     </div>
-                </div>
+                </Link>
 
                 {/* Card 2: In Process */}
-                <div className="bg-[#fef9ed] border border-amber-200/60 rounded-xl p-4.5 flex items-center gap-4 transition-all hover:shadow-xs">
+                <Link to="/admin/orders?status=processing" className="bg-[#fef9ed] border border-amber-200/60 rounded-xl p-4.5 flex items-center gap-4 transition-all hover:shadow-md hover:scale-[1.01] cursor-pointer">
                     <div className="w-12 h-12 rounded-lg bg-[#f59e0b] text-white flex items-center justify-center shrink-0 shadow-sm">
                         <Clock className="w-5 h-5 stroke-[2.2]" />
                     </div>
@@ -90,10 +90,10 @@ const DashboardPage = () => {
                         <p className="text-xs font-semibold text-amber-700">In Process</p>
                         <p className="text-2xl font-black text-slate-800 mt-0.5">{processingOrdersCount}</p>
                     </div>
-                </div>
+                </Link>
 
                 {/* Card 3: Success */}
-                <div className="bg-[#ecfdf5] border border-emerald-200/60 rounded-xl p-4.5 flex items-center gap-4 transition-all hover:shadow-xs">
+                <Link to="/admin/orders?status=approved" className="bg-[#ecfdf5] border border-emerald-200/60 rounded-xl p-4.5 flex items-center gap-4 transition-all hover:shadow-md hover:scale-[1.01] cursor-pointer">
                     <div className="w-12 h-12 rounded-lg bg-[#10b981] text-white flex items-center justify-center shrink-0 shadow-sm">
                         <CheckCircle2 className="w-5 h-5 stroke-[2.2]" />
                     </div>
@@ -101,10 +101,10 @@ const DashboardPage = () => {
                         <p className="text-xs font-semibold text-emerald-700">Success</p>
                         <p className="text-2xl font-black text-slate-800 mt-0.5">{successOrdersCount}</p>
                     </div>
-                </div>
+                </Link>
 
                 {/* Card 4: Rejected */}
-                <div className="bg-[#fff1f2] border border-rose-200/60 rounded-xl p-4.5 flex items-center gap-4 transition-all hover:shadow-xs">
+                <Link to="/admin/orders?status=rejected" className="bg-[#fff1f2] border border-rose-200/60 rounded-xl p-4.5 flex items-center gap-4 transition-all hover:shadow-md hover:scale-[1.01] cursor-pointer">
                     <div className="w-12 h-12 rounded-lg bg-[#ef4444] text-white flex items-center justify-center shrink-0 shadow-sm">
                         <Ban className="w-5 h-5 stroke-[2.2]" />
                     </div>
@@ -112,7 +112,7 @@ const DashboardPage = () => {
                         <p className="text-xs font-semibold text-rose-700">Rejected</p>
                         <p className="text-2xl font-black text-slate-800 mt-0.5">{rejectedOrdersCount}</p>
                     </div>
-                </div>
+                </Link>
             </div>
 
             {/* 3. Middle Section: FINANCIAL + 4 Stats (Left) & THIS MONTH (Right) */}
@@ -135,14 +135,14 @@ const DashboardPage = () => {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100">
-                                    <tr className="hover:bg-slate-50/50 transition-colors">
+                                    <tr className="hover:bg-slate-50/50 transition-colors cursor-pointer">
                                         <td className="py-3">
-                                            <div className="flex items-center gap-2.5">
+                                            <Link to="/admin/users" className="flex items-center gap-2.5">
                                                 <span className="w-5 h-5 rounded-md bg-slate-100 text-slate-700 flex items-center justify-center font-bold text-xs shrink-0">
                                                     +
                                                 </span>
-                                                <span className="font-semibold text-slate-700">Customer Deposits</span>
-                                            </div>
+                                                <span className="font-semibold text-slate-700 hover:text-blue-600">Customer Deposits</span>
+                                            </Link>
                                         </td>
                                         <td className="py-3 text-right font-bold text-slate-800 pr-4">
                                             $ {totalDepositsUSD}
@@ -151,14 +151,14 @@ const DashboardPage = () => {
                                             ₹ {totalDepositsINR}
                                         </td>
                                     </tr>
-                                    <tr className="hover:bg-slate-50/50 transition-colors">
+                                    <tr className="hover:bg-slate-50/50 transition-colors cursor-pointer">
                                         <td className="py-3">
-                                            <div className="flex items-center gap-2.5">
+                                            <Link to="/admin/users" className="flex items-center gap-2.5">
                                                 <span className="w-5 h-5 rounded-md bg-slate-100 text-slate-700 flex items-center justify-center font-bold text-xs shrink-0">
                                                     -
                                                 </span>
-                                                <span className="font-semibold text-slate-700">Customer Due</span>
-                                            </div>
+                                                <span className="font-semibold text-slate-700 hover:text-blue-600">Customer Due</span>
+                                            </Link>
                                         </td>
                                         <td className="py-3 text-right font-bold text-slate-800 pr-4">
                                             $ 0
@@ -175,7 +175,7 @@ const DashboardPage = () => {
                     {/* 4 Stat Cards in 2x2 Grid */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         {/* 1. Customer */}
-                        <div className="bg-white rounded-xl border border-slate-200/90 p-5 flex items-center justify-between shadow-2xs hover:shadow-xs transition-all">
+                        <Link to="/admin/users" className="bg-white rounded-xl border border-slate-200/90 p-5 flex items-center justify-between shadow-2xs hover:shadow-md hover:scale-[1.01] transition-all cursor-pointer">
                             <div>
                                 <p className="text-2xl font-black text-slate-900 leading-tight">{totalCustomers}</p>
                                 <p className="text-xs text-slate-500 font-medium mt-1">Customer</p>
@@ -183,10 +183,10 @@ const DashboardPage = () => {
                             <div className="w-12 h-12 rounded-xl bg-[#ecfdf5] text-[#10b981] flex items-center justify-center shrink-0">
                                 <User className="w-5 h-5" />
                             </div>
-                        </div>
+                        </Link>
 
                         {/* 2. Service Group */}
-                        <div className="bg-white rounded-xl border border-slate-200/90 p-5 flex items-center justify-between shadow-2xs hover:shadow-xs transition-all">
+                        <Link to="/admin/categories" className="bg-white rounded-xl border border-slate-200/90 p-5 flex items-center justify-between shadow-2xs hover:shadow-md hover:scale-[1.01] transition-all cursor-pointer">
                             <div>
                                 <p className="text-2xl font-black text-slate-900 leading-tight">{totalCategories}</p>
                                 <p className="text-xs text-slate-500 font-medium mt-1">Service Group</p>
@@ -194,10 +194,10 @@ const DashboardPage = () => {
                             <div className="w-12 h-12 rounded-xl bg-[#e0f2fe] text-[#0284c7] flex items-center justify-center shrink-0">
                                 <Layers className="w-5 h-5" />
                             </div>
-                        </div>
+                        </Link>
 
                         {/* 3. Service */}
-                        <div className="bg-white rounded-xl border border-slate-200/90 p-5 flex items-center justify-between shadow-2xs hover:shadow-xs transition-all">
+                        <Link to="/admin/products" className="bg-white rounded-xl border border-slate-200/90 p-5 flex items-center justify-between shadow-2xs hover:shadow-md hover:scale-[1.01] transition-all cursor-pointer">
                             <div>
                                 <p className="text-2xl font-black text-slate-900 leading-tight">{totalProducts}</p>
                                 <p className="text-xs text-slate-500 font-medium mt-1">Service</p>
@@ -205,10 +205,10 @@ const DashboardPage = () => {
                             <div className="w-12 h-12 rounded-xl bg-[#fff7ed] text-[#ea580c] flex items-center justify-center shrink-0">
                                 <LayoutGrid className="w-5 h-5" />
                             </div>
-                        </div>
+                        </Link>
 
                         {/* 4. API Connected */}
-                        <div className="bg-white rounded-xl border border-slate-200/90 p-5 flex items-center justify-between shadow-2xs hover:shadow-xs transition-all">
+                        <Link to="/admin/hostinger" className="bg-white rounded-xl border border-slate-200/90 p-5 flex items-center justify-between shadow-2xs hover:shadow-md hover:scale-[1.01] transition-all cursor-pointer">
                             <div>
                                 <p className="text-2xl font-black text-slate-900 leading-tight">1</p>
                                 <p className="text-xs text-slate-500 font-medium mt-1">API Connected</p>
@@ -216,7 +216,7 @@ const DashboardPage = () => {
                             <div className="w-12 h-12 rounded-xl bg-[#f0fdf4] text-[#16a34a] flex items-center justify-center shrink-0">
                                 <RefreshCw className="w-5 h-5" />
                             </div>
-                        </div>
+                        </Link>
                     </div>
                 </div>
 
@@ -229,7 +229,7 @@ const DashboardPage = () => {
 
                         <div className="divide-y divide-slate-100">
                             {/* 1. Total Profit */}
-                            <div className="py-3.5 flex items-center justify-between first:pt-0">
+                            <Link to="/admin/orders?status=approved" className="py-3.5 flex items-center justify-between first:pt-0 hover:bg-slate-50 px-2 rounded-lg transition-colors cursor-pointer">
                                 <div className="flex items-center gap-3">
                                     <div className="w-10 h-10 rounded-lg bg-[#ecfdf5] text-[#10b981] flex items-center justify-center shrink-0">
                                         <DollarSign className="w-5 h-5 font-black" />
@@ -243,10 +243,10 @@ const DashboardPage = () => {
                                     <p className="font-bold text-sm text-slate-900">0</p>
                                     <p className="text-[10px] text-slate-400 font-semibold">USDT</p>
                                 </div>
-                            </div>
+                            </Link>
 
                             {/* 2. Invoice Paid */}
-                            <div className="py-3.5 flex items-center justify-between">
+                            <Link to="/admin/orders?status=approved" className="py-3.5 flex items-center justify-between hover:bg-slate-50 px-2 rounded-lg transition-colors cursor-pointer">
                                 <div className="flex items-center gap-3">
                                     <div className="w-10 h-10 rounded-lg bg-[#e0f2fe] text-[#0284c7] flex items-center justify-center shrink-0">
                                         <FileText className="w-5 h-5" />
@@ -260,10 +260,10 @@ const DashboardPage = () => {
                                     <p className="font-bold text-sm text-slate-900">0</p>
                                     <p className="text-[10px] text-slate-400 font-semibold">Invoice</p>
                                 </div>
-                            </div>
+                            </Link>
 
                             {/* 3. New Customer */}
-                            <div className="py-3.5 flex items-center justify-between">
+                            <Link to="/admin/users" className="py-3.5 flex items-center justify-between hover:bg-slate-50 px-2 rounded-lg transition-colors cursor-pointer">
                                 <div className="flex items-center gap-3">
                                     <div className="w-10 h-10 rounded-lg bg-[#fffbeb] text-[#f59e0b] flex items-center justify-center shrink-0">
                                         <User className="w-5 h-5" />
@@ -277,10 +277,10 @@ const DashboardPage = () => {
                                     <p className="font-bold text-sm text-slate-900">5</p>
                                     <p className="text-[10px] text-slate-400 font-semibold">Customer</p>
                                 </div>
-                            </div>
+                            </Link>
 
                             {/* 4. Order Success */}
-                            <div className="py-3.5 flex items-center justify-between">
+                            <Link to="/admin/orders?status=approved" className="py-3.5 flex items-center justify-between hover:bg-slate-50 px-2 rounded-lg transition-colors cursor-pointer">
                                 <div className="flex items-center gap-3">
                                     <div className="w-10 h-10 rounded-lg bg-[#f0fdf4] text-[#16a34a] flex items-center justify-center shrink-0">
                                         <ShoppingBag className="w-5 h-5" />
@@ -294,10 +294,10 @@ const DashboardPage = () => {
                                     <p className="font-bold text-sm text-slate-900">0</p>
                                     <p className="text-[10px] text-slate-400 font-semibold">Order</p>
                                 </div>
-                            </div>
+                            </Link>
 
                             {/* 5. Order Rejected */}
-                            <div className="py-3.5 flex items-center justify-between last:pb-0">
+                            <Link to="/admin/orders?status=rejected" className="py-3.5 flex items-center justify-between last:pb-0 hover:bg-slate-50 px-2 rounded-lg transition-colors cursor-pointer">
                                 <div className="flex items-center gap-3">
                                     <div className="w-10 h-10 rounded-lg bg-[#fff1f2] text-[#ef4444] flex items-center justify-center shrink-0">
                                         <ShoppingBag className="w-5 h-5" />
@@ -311,7 +311,7 @@ const DashboardPage = () => {
                                     <p className="font-bold text-sm text-slate-900">0</p>
                                     <p className="text-[10px] text-slate-400 font-semibold">Order</p>
                                 </div>
-                            </div>
+                            </Link>
                         </div>
                     </div>
                 </div>
