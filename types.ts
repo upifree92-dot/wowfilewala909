@@ -64,6 +64,7 @@ export interface UserNotification {
   adminReply?: string; // For admin replies to user notifications/orders
   type?: 'order' | 'general';
   orderId?: string;
+  orderDetails?: any;
   expiresAt?: string; // ISO string for when the notification should be hidden
 }
 

@@ -2684,6 +2684,13 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             status: 'pending',
             type: 'order',
             orderId,
+            orderDetails: {
+                ...formDetails,
+                quantity,
+                totalPrice,
+                price: pricePerUnit,
+                categoryName: title,
+            },
         };
 
         updatedUser.notifications = [newUserNotification, ...(updatedUser.notifications || [])];
@@ -2815,6 +2822,13 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             status: 'pending',
             type: 'order',
             orderId,
+            orderDetails: {
+                ...formDetails,
+                quantity: orderDetails.quantity,
+                totalPrice,
+                price: config.pricePerUnit,
+                categoryName: category.name,
+            },
         };
 
         if (!updatedUser.notifications) updatedUser.notifications = [];
@@ -3213,6 +3227,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           const existing = userOrderMap.get(an.orderId);
           if (existing) {
             existing.status = an.status || existing.status;
+            if (an.orderDetails) existing.orderDetails = an.orderDetails;
             if (an.status === 'approved') {
               existing.title = `Order #${an.orderId} Success`;
             } else if (an.status === 'rejected') {
@@ -3237,6 +3252,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
               status: an.status,
               type: 'order',
               orderId: an.orderId,
+              orderDetails: an.orderDetails,
               rejectionReason: an.rejectionReason,
               adminReply: an.adminReply,
             };

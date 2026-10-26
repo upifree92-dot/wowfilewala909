@@ -76,6 +76,9 @@ const ProfilePage = () => {
   // Invoice modal state
   const [selectedInvoice, setSelectedInvoice] = useState<Transaction | null>(null);
 
+  // Order history search state
+  const [orderSearchQuery, setOrderSearchQuery] = useState('');
+
   useEffect(() => {
     if (!user) {
       navigate('/login');
@@ -764,118 +767,268 @@ const ProfilePage = () => {
             )}
 
             {/* ========================================================================= */}
-            {/* VIEW 3: ORDERS */}
+            {/* VIEW 3: ORDERS (Exact match to uploaded image) */}
             {/* ========================================================================= */}
             {activeTab === 'orders' && (
-              <div className="space-y-6 animate-fadeIn">
-                <div className="border-b border-slate-200 dark:border-slate-800 pb-4">
-                  <h3 className="text-2xl font-black text-slate-800 dark:text-slate-200">
-                    My Service Orders
-                  </h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                    Track details, live progress timeline, and admin commentary of your custom flashing and IMEI requests.
-                  </p>
-                </div>
-
-              <div className="space-y-6">
+              <div className="space-y-5 animate-fadeIn">
                 {(() => {
-                  const orderNotifications = getUserNotifications().filter(n => n.type === 'order' || Boolean(n.orderId));
-                  if (orderNotifications.length === 0) {
-                    return (
-                      <div className="text-center py-12 text-slate-500 dark:text-slate-400 space-y-3 bg-slate-50 dark:bg-slate-800/20 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800">
-                        <p className="text-4xl">🏜️</p>
-                        <p className="text-sm font-bold">You have no active or completed orders yet.</p>
-                      </div>
-                    );
-                  }
+                  const allOrderNotifications = getUserNotifications().filter(n => n.type === 'order' || Boolean(n.orderId));
+                  
+                  // Filter by search query if any
+                  const filteredOrders = allOrderNotifications.filter(n => {
+                    if (!orderSearchQuery.trim()) return true;
+                    const q = orderSearchQuery.toLowerCase();
+                    const orderId = (n.orderId || '').toLowerCase();
+                    const title = (n.title || '').toLowerCase();
+                    const msg = (n.message || '').toLowerCase();
+                    const adminReply = (n.adminReply || '').toLowerCase();
+                    return orderId.includes(q) || title.includes(q) || msg.includes(q) || adminReply.includes(q);
+                  });
 
                   const StatusBadge: React.FC<{ status?: string }> = ({ status }) => {
-                    const baseClasses = 'px-3 py-1 text-xs font-bold rounded-lg capitalize inline-flex items-center gap-1.5 shadow-sm';
-                    if (status === 'approved') return <span className={`${baseClasses} bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-500/30`}><CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> Success</span>;
-                    if (status === 'rejected') return <span className={`${baseClasses} bg-rose-100 text-rose-800 dark:bg-rose-950/40 dark:text-rose-300 border border-rose-500/30`}>✕ Rejected & Refunded</span>;
-                    if (status === 'processing') return <span className={`${baseClasses} bg-orange-100 text-orange-800 dark:bg-orange-950/40 dark:text-orange-300 border border-orange-500/30`}>⏳ In Process</span>;
-                    return <span className={`${baseClasses} bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300 border border-amber-500/30`}>🕒 Pending</span>;
+                    if (status === 'approved') {
+                      return (
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#13a372] text-white font-bold text-xs rounded-lg shadow-sm whitespace-nowrap">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-white stroke-[2.5]" />
+                          <span>Success</span>
+                        </span>
+                      );
+                    }
+                    if (status === 'rejected') {
+                      return (
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#e11d48] text-white font-bold text-xs rounded-lg shadow-sm whitespace-nowrap">
+                          <span className="text-xs font-black">✕</span>
+                          <span>Rejected</span>
+                        </span>
+                      );
+                    }
+                    return (
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#eab308] text-white font-bold text-xs rounded-lg shadow-sm whitespace-nowrap">
+                        <span className="text-xs">🕒</span>
+                        <span>Pending</span>
+                      </span>
+                    );
+                  };
+
+                  const formatSubmittedOn = (timestamp: string) => {
+                    try {
+                      const d = new Date(timestamp);
+                      if (isNaN(d.getTime())) return '-';
+                      const day = String(d.getDate()).padStart(2, '0');
+                      const month = String(d.getMonth() + 1).padStart(2, '0');
+                      const year = d.getFullYear();
+                      const hours = String(d.getHours()).padStart(2, '0');
+                      const minutes = String(d.getMinutes()).padStart(2, '0');
+                      return `${day}-${month}-${year} ${hours}:${minutes}`;
+                    } catch {
+                      return '-';
+                    }
                   };
 
                   return (
-                    <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm bg-white dark:bg-slate-900/50">
-                      <table className="w-full text-left text-xs sm:text-sm">
-                        <thead className="bg-slate-50 dark:bg-slate-950 text-slate-500 dark:text-slate-400 uppercase text-[10px] tracking-wider border-b border-slate-200 dark:border-slate-800">
-                          <tr>
-                            <th className="p-4 font-black">STATUS</th>
-                            <th className="p-4 font-black">O.ID</th>
-                            <th className="p-4 font-black">TYPE</th>
-                            <th className="p-4 font-black">QNT</th>
-                            <th className="p-4 font-black">PRICE</th>
-                            <th className="p-4 font-black">SERVICE NAME</th>
-                            <th className="p-4 font-black">FIELD</th>
-                            <th className="p-4 font-black">ADMIN REPLY / CODE</th>
-                            <th className="p-4 font-black">SUBMITTED ON</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                          {[...orderNotifications]
-                            .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-                            .map(n => {
-                              // Basic parsing of message to get details (as per existing logic)
-                              const details = n.message.split('\n\nSubmitted Details:\n')[1] || '';
-                              
-                              // Extracting fields for the table - assuming a specific format from message
-                              const getField = (key: string) => {
-                                const regex = new RegExp(`${key}:\\s*(.*)`);
-                                const match = details.match(regex);
-                                return match ? match[1] : '-';
-                              };
-                              
-                              const type = getField('Order Type') || 'N/A';
-                              const qnt = getField('Quantity') || '1';
-                              const price = getField('Total Price') || '0';
-                              const field = getField('Username') || getField('IMEI') || '-'; // Simplified field extraction
-                              const serviceName = n.title.replace(`Order #${n.orderId} `, '');
+                    <div className="space-y-4">
+                      {/* Top Header & Breadcrumb & Search (Exact match to screenshot) */}
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-slate-200 dark:border-slate-800">
+                        <div>
+                          <h2 className="text-lg sm:text-xl font-bold tracking-tight text-slate-900 dark:text-slate-100 uppercase">
+                            ORDER HISTORY ({filteredOrders.length} {filteredOrders.length === 1 ? 'ORDER' : 'ORDERS'})
+                          </h2>
+                          <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 mt-1 font-medium">
+                            <Link to="/" className="hover:text-slate-800 dark:hover:text-slate-200 transition-colors">Home</Link>
+                            <span className="text-slate-400 text-[10px]">›</span>
+                            <button 
+                              type="button"
+                              onClick={() => handleNavClick('dashboard')} 
+                              className="hover:text-slate-800 dark:hover:text-slate-200 transition-colors"
+                            >
+                              Dashboard
+                            </button>
+                            <span className="text-slate-400 text-[10px]">›</span>
+                            <span className="text-slate-700 dark:text-slate-300 font-semibold">Order History</span>
+                          </div>
+                        </div>
 
-                              return (
-                                <tr key={n.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
-                                  <td className="p-4"><StatusBadge status={n.status} /></td>
-                                  <td className="p-4 font-mono font-bold text-slate-700 dark:text-slate-300">#{n.orderId || 'N/A'}</td>
-                                  <td className="p-4 text-slate-600 dark:text-slate-400 font-semibold">{type}</td>
-                                  <td className="p-4 text-slate-600 dark:text-slate-400">{qnt}</td>
-                                  <td className="p-4 font-bold text-slate-800 dark:text-slate-200">{price}</td>
-                                  <td className="p-4 font-semibold text-slate-800 dark:text-slate-200">{serviceName}</td>
-                                  <td className="p-4 text-slate-600 dark:text-slate-400 text-[11px] font-mono">{field}</td>
-                                  <td className="p-4">
-                                    {n.adminReply ? (
-                                      <div className={`p-2 rounded-lg border text-xs max-w-xs ${
-                                        n.status === 'approved' 
-                                          ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-700 dark:text-emerald-300' 
-                                          : n.status === 'rejected'
-                                          ? 'bg-rose-500/10 border-rose-500/20 text-rose-700 dark:text-rose-300'
-                                          : 'bg-cyan-500/10 border-cyan-500/20 text-cyan-700 dark:text-cyan-300'
-                                      }`}>
-                                        <div className="flex items-start justify-between gap-1.5">
-                                          <span className="font-mono break-all font-semibold select-all">{n.adminReply}</span>
-                                          <CopyButton textToCopy={n.adminReply} className="w-4 h-4 p-0.5 shrink-0" />
+                        {/* Search Input Box (Matching screenshot's top-right search box) */}
+                        <div className="w-full sm:w-56">
+                          <input
+                            type="text"
+                            placeholder="Search"
+                            value={orderSearchQuery}
+                            onChange={(e) => setOrderSearchQuery(e.target.value)}
+                            className="w-full px-3 py-1.5 text-xs sm:text-sm bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-md placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 text-slate-800 dark:text-slate-200 transition-all shadow-2xs"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Orders Table matching photo columns: STATUS | O.ID | TYPE | QNT | PRICE | SERVICE NAME | FIELD | SUBMITTED ON */}
+                      {filteredOrders.length === 0 ? (
+                        <div className="text-center py-12 text-slate-500 dark:text-slate-400 space-y-3 bg-slate-50 dark:bg-slate-800/20 rounded-xl border border-dashed border-slate-200 dark:border-slate-800">
+                          <p className="text-4xl">🏜️</p>
+                          <p className="text-sm font-bold">
+                            {orderSearchQuery ? `No orders found matching "${orderSearchQuery}"` : 'You have no active or completed orders yet.'}
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs">
+                          <table className="w-full text-left border-collapse text-xs sm:text-sm">
+                            <thead className="border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50">
+                              <tr className="text-slate-800 dark:text-slate-200 font-bold uppercase text-[11px] tracking-wider">
+                                <th className="py-3 px-4 font-black">STATUS</th>
+                                <th className="py-3 px-4 font-black">O.ID</th>
+                                <th className="py-3 px-4 font-black">TYPE</th>
+                                <th className="py-3 px-4 font-black">QNT</th>
+                                <th className="py-3 px-4 font-black">PRICE</th>
+                                <th className="py-3 px-4 font-black">SERVICE NAME</th>
+                                <th className="py-3 px-4 font-black">FIELD</th>
+                                <th className="py-3 px-4 font-black">SUBMITTED ON</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                              {filteredOrders.map(n => {
+                                // Extract clean order ID
+                                const cleanId = (n.orderId || n.id || '').replace(/^#/, '');
+
+                                // Quantity
+                                let qnt = n.orderDetails?.quantity;
+                                if (!qnt && n.message) {
+                                  const m = n.message.match(/Quantity:\s*([0-9]+)/i) || n.message.match(/Qty[=:]\s*([0-9]+)/i);
+                                  if (m) qnt = parseInt(m[1]);
+                                }
+                                if (!qnt) qnt = 1;
+
+                                // Price calculation & INR display format (like 283.56 INR)
+                                let priceVal = n.orderDetails?.totalPrice;
+                                if (priceVal === undefined && n.orderDetails?.price) {
+                                  priceVal = Number(n.orderDetails.price) * qnt;
+                                }
+                                if (priceVal === undefined && n.message) {
+                                  const m = n.message.match(/Total=₹?\s*([0-9.]+)/i) || n.message.match(/₹\s*([0-9.]+)/);
+                                  if (m) priceVal = parseFloat(m[1]);
+                                }
+                                const priceStr = priceVal !== undefined ? `${Number(priceVal).toFixed(2).replace(/\.00$/, '')} INR` : '0 INR';
+
+                                // Service Name
+                                let serviceName = n.orderDetails?.categoryName || '';
+                                if (!serviceName) {
+                                  serviceName = n.title
+                                    .replace(/Order\s*#[0-9a-zA-Z_-]+\s*/gi, '')
+                                    .replace(/Placed|Success|Pending|Rejected|Processing/gi, '')
+                                    .replace(/^-\s*/, '')
+                                    .trim();
+                                }
+                                if (!serviceName && n.message) {
+                                  const match = n.message.match(/for\s*["']([^"']+)["']/i) || n.message.match(/order for\s+([^,.\n]+)/i);
+                                  if (match) serviceName = match[1].trim();
+                                }
+                                if (!serviceName) serviceName = 'Service Order';
+
+                                // Type
+                                let type = 'SERVER';
+                                const lowerService = serviceName.toLowerCase();
+                                if (n.orderDetails?.orderType) {
+                                  type = String(n.orderDetails.orderType).toUpperCase();
+                                } else if (lowerService.includes('remote') || lowerService.includes('rent') || lowerService.includes('mrst')) {
+                                  type = 'REMOTE';
+                                } else if (lowerService.includes('server') || lowerService.includes('credits') || lowerService.includes('tool')) {
+                                  type = 'SERVER';
+                                } else if (lowerService.includes('imei') || lowerService.includes('unlock') || lowerService.includes('mdm')) {
+                                  type = 'IMEI';
+                                } else if (lowerService.includes('activation')) {
+                                  type = 'SERVER';
+                                }
+
+                                // Field extraction (AnyDesk ID, Username, Email, IMEI, etc.)
+                                let fieldVal = '';
+                                if (n.orderDetails && typeof n.orderDetails === 'object') {
+                                  const ignoreKeys = ['quantity', 'totalPrice', 'price', 'categoryName', 'orderType', 'title'];
+                                  for (const [k, v] of Object.entries(n.orderDetails)) {
+                                    if (!ignoreKeys.includes(k) && v && typeof v === 'string') {
+                                      fieldVal = v;
+                                      break;
+                                    }
+                                  }
+                                }
+                                if (!fieldVal && n.message) {
+                                  const lines = n.message.split('\n');
+                                  for (const line of lines) {
+                                    const trimmed = line.trim();
+                                    if (trimmed.startsWith('-') && !trimmed.toLowerCase().includes('quantity') && !trimmed.toLowerCase().includes('total')) {
+                                      const parts = trimmed.substring(1).split(':');
+                                      if (parts.length >= 2) {
+                                        fieldVal = parts.slice(1).join(':').trim();
+                                        break;
+                                      }
+                                    }
+                                  }
+                                }
+                                if (!fieldVal) fieldVal = '-';
+
+                                return (
+                                  <tr key={n.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
+                                    {/* STATUS */}
+                                    <td className="py-3.5 px-4 align-middle">
+                                      <StatusBadge status={n.status} />
+                                    </td>
+
+                                    {/* O.ID */}
+                                    <td className="py-3.5 px-4 font-bold text-slate-800 dark:text-slate-200 align-middle whitespace-nowrap">
+                                      #{cleanId}
+                                    </td>
+
+                                    {/* TYPE */}
+                                    <td className="py-3.5 px-4 font-semibold text-slate-700 dark:text-slate-300 uppercase align-middle whitespace-nowrap">
+                                      {type}
+                                    </td>
+
+                                    {/* QNT */}
+                                    <td className="py-3.5 px-4 text-slate-700 dark:text-slate-300 align-middle">
+                                      {qnt}
+                                    </td>
+
+                                    {/* PRICE */}
+                                    <td className="py-3.5 px-4 font-medium text-slate-800 dark:text-slate-200 align-middle whitespace-nowrap">
+                                      {priceStr}
+                                    </td>
+
+                                    {/* SERVICE NAME */}
+                                    <td className="py-3.5 px-4 font-medium text-slate-800 dark:text-slate-200 align-middle">
+                                      <span>{serviceName}</span>
+                                    </td>
+
+                                    {/* FIELD (AnyDesk ID / Email / Username) + Admin Reply Code if available */}
+                                    <td className="py-3.5 px-4 align-middle text-slate-700 dark:text-slate-300">
+                                      <div className="max-w-[160px] truncate font-medium" title={fieldVal}>
+                                        {fieldVal}
+                                      </div>
+                                      {/* If Admin replied or approved with Code / Note */}
+                                      {n.adminReply && (
+                                        <div className="mt-1 flex items-center gap-1 text-[11px] font-mono text-emerald-800 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-500/20 px-1.5 py-0.5 rounded max-w-fit shadow-2xs">
+                                          <span className="font-bold">Code:</span>
+                                          <span className="truncate max-w-[120px]">{n.adminReply}</span>
+                                          <CopyButton textToCopy={n.adminReply} className="w-3.5 h-3.5 p-0.5 shrink-0 hover:text-emerald-900" />
                                         </div>
-                                      </div>
-                                    ) : n.rejectionReason ? (
-                                      <div className="p-2 rounded-lg border bg-rose-500/10 border-rose-500/20 text-rose-700 dark:text-rose-300 text-xs max-w-xs">
-                                        <span className="font-semibold">{n.rejectionReason}</span>
-                                      </div>
-                                    ) : (
-                                      <span className="text-slate-400 text-xs italic">
-                                        {n.status === 'pending' ? 'Pending admin approval' : n.status === 'processing' ? 'Processing...' : '-'}
-                                      </span>
-                                    )}
-                                  </td>
-                                  <td className="p-4 text-slate-500 dark:text-slate-400 whitespace-nowrap">{new Date(n.timestamp).toLocaleString([], {day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute:'2-digit'})}</td>
-                                </tr>
-                              );
-                            })}
-                        </tbody>
-                      </table>
+                                      )}
+                                      {n.rejectionReason && (
+                                        <div className="mt-1 text-[10px] text-rose-600 dark:text-rose-400 font-medium">
+                                          {n.rejectionReason}
+                                        </div>
+                                      )}
+                                    </td>
+
+                                    {/* SUBMITTED ON */}
+                                    <td className="py-3.5 px-4 text-slate-600 dark:text-slate-400 text-xs align-middle whitespace-nowrap">
+                                      {formatSubmittedOn(n.timestamp)}
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
                     </div>
                   );
                 })()}
-              </div>
               </div>
             )}
 
