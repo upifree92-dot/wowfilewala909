@@ -208,19 +208,6 @@ const ImeiOrderPage = () => {
             <div className="max-w-2xl mx-auto bg-white/90 dark:bg-slate-800/90 backdrop-blur-lg p-6 sm:p-8 rounded-xl shadow-lg border border-slate-200/70 dark:border-slate-700/70">
                 <BackButton />
 
-                {/* API Provider Status Live Badge */}
-                <div className="mb-6 p-3 bg-slate-900 text-slate-100 rounded-xl border border-slate-800 flex flex-wrap items-center justify-between text-xs gap-2">
-                    <div className="flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-                        <span className="font-bold text-amber-400">API Connection Verified</span>
-                        <span className="text-slate-400 font-mono">({apiServer.apiUrl || 'https://www.gsmfastunlock.com'})</span>
-                    </div>
-                    <div className="flex items-center gap-2 font-mono">
-                        <span className="text-emerald-400 font-bold">Status: Active</span>
-                        <span className="text-slate-500">|</span>
-                        <span className="text-slate-300">Balance: ₹{apiServer.balance || '2778.068'}</span>
-                    </div>
-                </div>
 
                 {isAdmin && isEditMode && (
                     <div className="text-center mb-6 p-4 bg-blue-100 dark:bg-blue-900/30 border-2 border-dashed border-blue-400 dark:border-blue-600 rounded-lg">
