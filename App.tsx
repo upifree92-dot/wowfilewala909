@@ -151,17 +151,27 @@ const AppContent = () => {
 
   if (isAdminRoute) {
     return (
-       <div className="min-h-screen font-['Poppins',_sans-serif] dark bg-slate-950 text-slate-100 overflow-x-hidden">
+       <div className="min-h-screen font-['Poppins',_sans-serif] bg-[#f4f6fa] text-slate-800 overflow-x-hidden">
         {dynamicStyles}
         <Routes>
           <Route path="/admin" element={<AdminLayout />}>
             <Route index element={<DashboardPage />} />
             <Route path="dashboard" element={<DashboardPage />} />
             <Route path="products" element={<AdminProductsPage />} />
+            <Route path="services" element={<AdminProductsPage />} />
             <Route path="categories" element={<AdminCategoriesPage />} />
+            <Route path="groups" element={<AdminCategoriesPage />} />
             <Route path="orders" element={<AdminOrdersPage />} />
             <Route path="users" element={<AdminUsersPage />} />
             <Route path="settings" element={<AdminSettingsPage />} />
+            <Route path="invoices" element={<AdminOrdersPage />} />
+            <Route path="inventory" element={<AdminProductsPage />} />
+            <Route path="media" element={<AdminSettingsPage />} />
+            <Route path="cms" element={<AdminSettingsPage />} />
+            <Route path="automation" element={<HostingraConnectorPage />} />
+            <Route path="utilities" element={<HostingraConnectorPage />} />
+            <Route path="logs" element={<DashboardPage />} />
+            <Route path="theme" element={<AdminSettingsPage />} />
             <Route path="hostinger" element={<HostingraConnectorPage />} />
             <Route path="hostingra" element={<HostingraConnectorPage />} />
             <Route path="supabase" element={<Navigate to="/admin/hostinger" replace />} />
