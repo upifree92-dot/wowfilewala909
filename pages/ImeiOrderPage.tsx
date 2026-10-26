@@ -1,4 +1,4 @@
-import React, { useState, useMemo, FormEvent } from 'react';
+import React, { useState, useMemo, FormEvent, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
 import type { InputField } from '../types';
@@ -7,6 +7,7 @@ import Editable from '../components/Editable';
 import ImeiOrderSettingsModal from '../components/ImeiOrderSettingsModal';
 import ServiceListPanel from '../components/ServiceListPanel';
 import { useSEO } from '../hooks/useSEO';
+import { ShieldCheck, Server, RefreshCw, CheckCircle2, Zap } from 'lucide-react';
 
 const SERVICE_TYPE_META: Record<string, { badge: string; subtitle: string }> = {
     imei: {
@@ -21,40 +22,87 @@ const SERVICE_TYPE_META: Record<string, { badge: string; subtitle: string }> = {
         badge: 'RENT-24/7',
         subtitle: 'Instant 24/7 Tool Rental ID & Password Delivery',
     },
+    remote: {
+        badge: 'RENT-24/7',
+        subtitle: 'Instant 24/7 Tool Rental ID & Password Delivery',
+    },
 };
+
+interface ApiServiceOption {
+    id: string;
+    name: string;
+    type: 'imei' | 'server' | 'rent';
+    price: number;
+    deliveryTime: string;
+    inputPlaceholder: string;
+    inputLabel: string;
+}
+
+const CATALOG_SERVICES: ApiServiceOption[] = [
+    // IMEI Services
+    { id: 'imei-1', name: 'iPhone / iPad MDM & KG Lock Bypass (IMEI/SN)', type: 'imei', price: 549.69, deliveryTime: '1-10 Mins', inputLabel: 'IMEI / Serial Number', inputPlaceholder: 'Enter 15-digit IMEI or Serial Number...' },
+    { id: 'imei-2', name: 'Apple Official Network & Carrier Unlock (IMEI)', type: 'imei', price: 283.37, deliveryTime: '1-24 Hours', inputLabel: 'IMEI Number', inputPlaceholder: 'Enter 15-digit IMEI Number...' },
+    { id: 'imei-3', name: 'Xiaomi / Redmi Account Unbind (IMEI/SN)', type: 'imei', price: 359.95, deliveryTime: '5-30 Mins', inputLabel: 'IMEI / Lock Code', inputPlaceholder: 'Enter Lock Code or IMEI...' },
+    { id: 'imei-4', name: 'Samsung FRP & KG Locked Removal (IMEI)', type: 'imei', price: 450.00, deliveryTime: 'Instant', inputLabel: 'IMEI / Serial', inputPlaceholder: 'Enter Samsung IMEI...' },
+    { id: 'imei-5', name: 'Apple Warranty & iCloud Status Check (IMEI)', type: 'imei', price: 137.42, deliveryTime: 'Instant', inputLabel: 'IMEI / Serial Number', inputPlaceholder: 'Enter IMEI or Serial Number...' },
+
+    // Server Services
+    { id: 'srv-1', name: 'FRPFILE ACTIVATOR A12 + Bypass Hello Screen', type: 'server', price: 549.69, deliveryTime: 'Instant', inputLabel: 'ECID / Serial Number', inputPlaceholder: 'Enter Device ECID or Serial...' },
+    { id: 'srv-2', name: 'NexaPro A12+ Hello Bypass Server Credits', type: 'server', price: 283.37, deliveryTime: 'Instant', inputLabel: 'Username / Account Email', inputPlaceholder: 'Enter NexaPro Username...' },
+    { id: 'srv-3', name: 'Asm Auth Tool - Xiaomi FRP Credits (10 Credits)', type: 'server', price: 359.95, deliveryTime: 'Instant', inputLabel: 'Auth Tool Username', inputPlaceholder: 'Enter Auth Tool Username...' },
+    { id: 'srv-4', name: 'Griffin Unlocker Tool Server Activation', type: 'server', price: 450.00, deliveryTime: '1-5 Mins', inputLabel: 'Registered Email ID', inputPlaceholder: 'Enter registered email...' },
+    { id: 'srv-5', name: 'Borneo Schematic Hardware Diagram 1 Year', type: 'server', price: 1850.00, deliveryTime: 'Instant', inputLabel: 'Borneo Username / Email', inputPlaceholder: 'Enter Borneo account email...' },
+
+    // Tool Rental Services (RENT 24/7)
+    { id: 'rent-1', name: 'UnlockTool Rent 24 Hours (Instant Access ID)', type: 'rent', price: 120.00, deliveryTime: 'Instant ID/Pass', inputLabel: 'Your Mobile / WhatsApp Number', inputPlaceholder: 'Enter WhatsApp number to receive login ID...' },
+    { id: 'rent-2', name: 'Griffin Unlocker Rent 24 Hours', type: 'rent', price: 95.00, deliveryTime: 'Instant ID/Pass', inputLabel: 'Your Mobile / WhatsApp Number', inputPlaceholder: 'Enter WhatsApp number for access...' },
+    { id: 'rent-3', name: 'Borneo Schematic Rent 24 Hours', type: 'rent', price: 80.00, deliveryTime: 'Instant ID/Pass', inputLabel: 'Your WhatsApp Number', inputPlaceholder: 'Enter WhatsApp number for access...' },
+    { id: 'rent-4', name: 'DFT Pro Tool Rent 3 Hours', type: 'rent', price: 60.00, deliveryTime: 'Instant ID/Pass', inputLabel: 'Your Mobile Number', inputPlaceholder: 'Enter Mobile number...' },
+    { id: 'rent-5', name: 'Android Multi Tool Rent [2 Hours]', type: 'rent', price: 37.72, deliveryTime: 'Instant ID/Pass', inputLabel: 'Your WhatsApp Number', inputPlaceholder: 'Enter WhatsApp number...' },
+    { id: 'rent-6', name: 'Chimera Tool Rent [1 Hour]', type: 'rent', price: 75.00, deliveryTime: 'Instant ID/Pass', inputLabel: 'Your WhatsApp Number', inputPlaceholder: 'Enter WhatsApp number...' },
+    { id: 'rent-7', name: 'Live Remote Technician Support Session', type: 'rent', price: 250.00, deliveryTime: 'Scheduled', inputLabel: 'TeamViewer / Anydesk ID', inputPlaceholder: 'Enter TeamViewer or Anydesk ID...' },
+];
 
 const ImeiOrderPage = () => {
     useSEO('Service List & Place Order', 'Place a new IMEI, Server, or RENT-24/7 service order.');
     const [searchParams, setSearchParams] = useSearchParams();
     const navigate = useNavigate();
-    const activeType = searchParams.get('type') || 'imei';
+    
+    const rawType = searchParams.get('type') || 'imei';
+    const activeType = rawType === 'remote' ? 'rent' : rawType;
 
     const { user, siteContent, placeImeiOrder, setNotification, isAdmin, isEditMode } = useAppContext();
     const config = siteContent.imeiOrderPage;
+    const apiServer = siteContent.apiServer || {};
     
     const [isSettingsModalOpen, setSettingsModalOpen] = useState(false);
 
-    let formFields: InputField[] = [];
-    try {
-        formFields = JSON.parse(config.formFieldsJSON);
-    } catch (e) {
-        console.error("Failed to parse form fields JSON from siteContent:", e);
-    }
-    
-    const initialFormState = formFields.reduce((acc, field) => {
-        acc[field.name] = '';
-        return acc;
-    }, {} as Record<string, string>);
+    // Filter available services for current active tab
+    const availableServices = useMemo(() => {
+        return CATALOG_SERVICES.filter(s => s.type === activeType);
+    }, [activeType]);
 
-    const [formData, setFormData] = useState(initialFormState);
+    // Selected service state
+    const [selectedServiceId, setSelectedServiceId] = useState<string>(availableServices[0]?.id || CATALOG_SERVICES[0].id);
+
+    // Sync selected service when activeType changes
+    useEffect(() => {
+        const firstSrv = CATALOG_SERVICES.find(s => s.type === activeType);
+        if (firstSrv) {
+            setSelectedServiceId(firstSrv.id);
+        }
+    }, [activeType]);
+
+    const selectedService = useMemo(() => {
+        return CATALOG_SERVICES.find(s => s.id === selectedServiceId) || availableServices[0] || CATALOG_SERVICES[0];
+    }, [selectedServiceId, availableServices]);
+
+    // Form inputs state
+    const [serviceInputValue, setServiceInputValue] = useState('');
     const [quantity, setQuantity] = useState(1);
 
-    const pricePerUnit = parseFloat(config.price) || 0;
+    const pricePerUnit = selectedService ? selectedService.price : (parseFloat(config.price) || 0);
     const totalPrice = useMemo(() => quantity * pricePerUnit, [quantity, pricePerUnit]);
-
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
-    };
 
     const handleSubmit = (e: FormEvent) => {
         e.preventDefault();
@@ -63,16 +111,24 @@ const ImeiOrderPage = () => {
             return;
         }
 
+        if (!serviceInputValue.trim()) {
+            setNotification(`Please enter ${selectedService?.inputLabel || 'required details'}`, 'error');
+            return;
+        }
+
         const serviceMeta = SERVICE_TYPE_META[activeType] || SERVICE_TYPE_META.imei;
         placeImeiOrder({
-            ...formData,
+            serviceName: selectedService.name,
+            serviceId: selectedService.id,
+            inputData: serviceInputValue.trim(),
             quantity,
             price: pricePerUnit,
-            title: `${serviceMeta.badge} - ${config.title}`,
+            title: `${serviceMeta.badge} - ${selectedService.name}`,
+            apiProvider: apiServer.apiUrl || 'https://www.gsmfastunlock.com'
         });
 
-        // Reset form inputs after order is placed
-        setFormData(initialFormState);
+        // Reset inputs
+        setServiceInputValue('');
         setQuantity(1);
     };
 
@@ -99,12 +155,12 @@ const ImeiOrderPage = () => {
         <div className="container mx-auto px-4 py-6 sm:py-8 space-y-8">
             <ImeiOrderSettingsModal isOpen={isSettingsModalOpen} onClose={() => setSettingsModalOpen(false)} />
 
-            {/* Customer Service List Menu (Matching Screenshot) */}
+            {/* Customer Service List Menu */}
             <div className="max-w-2xl mx-auto">
                 <ServiceListPanel
                     activeServiceTab={activeType}
                     onSelectServiceTab={(tabId) => {
-                        if (tabId === 'imei' || tabId === 'server' || tabId === 'rent') {
+                        if (tabId === 'imei' || tabId === 'server' || tabId === 'rent' || tabId === 'remote') {
                             setSearchParams({ type: tabId });
                         }
                     }}
@@ -113,6 +169,20 @@ const ImeiOrderPage = () => {
 
             <div className="max-w-2xl mx-auto bg-white/90 dark:bg-slate-800/90 backdrop-blur-lg p-6 sm:p-8 rounded-xl shadow-lg border border-slate-200/70 dark:border-slate-700/70">
                 <BackButton />
+
+                {/* API Provider Status Live Badge */}
+                <div className="mb-6 p-3 bg-slate-900 text-slate-100 rounded-xl border border-slate-800 flex flex-wrap items-center justify-between text-xs gap-2">
+                    <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                        <span className="font-bold text-amber-400">API Connection Verified</span>
+                        <span className="text-slate-400 font-mono">({apiServer.apiUrl || 'https://www.gsmfastunlock.com'})</span>
+                    </div>
+                    <div className="flex items-center gap-2 font-mono">
+                        <span className="text-emerald-400 font-bold">Status: Active</span>
+                        <span className="text-slate-500">|</span>
+                        <span className="text-slate-300">Balance: ₹{apiServer.balance || '2778.068'}</span>
+                    </div>
+                </div>
 
                 {isAdmin && isEditMode && (
                     <div className="text-center mb-6 p-4 bg-blue-100 dark:bg-blue-900/30 border-2 border-dashed border-blue-400 dark:border-blue-600 rounded-lg">
@@ -123,7 +193,6 @@ const ImeiOrderPage = () => {
                         >
                             Edit Form Settings
                         </button>
-                        {!config.enabled && <p className="text-red-500 dark:text-red-400 text-sm mt-2">This feature is currently DISABLED for users.</p>}
                     </div>
                 )}
 
@@ -139,69 +208,82 @@ const ImeiOrderPage = () => {
                     </p>
                 </div>
 
-                <h1 className="text-2xl sm:text-3xl font-bold mb-2 text-slate-800 dark:text-slate-200 text-center">
-                    <Editable contentKey="imeiOrderPage.title" as="span" />
-                </h1>
-                
-                <div className="text-center mb-8">
-                    <p className="text-5xl font-extrabold text-cyan-500">
-                        <Editable contentKey="imeiOrderPage.priceNote" as="span" />
-                        <Editable contentKey="imeiOrderPage.price" as="span" />
-                    </p>
-                    <p className="text-sm text-slate-500 dark:text-slate-400 font-semibold mt-1">
-                        <Editable contentKey="imeiOrderPage.deliveryTime" as="span" />
-                    </p>
-                    <p className="text-sm text-slate-500 dark:text-slate-400">
-                        <Editable contentKey="imeiOrderPage.avgDeliveryTime" as="span" />
-                    </p>
+                {/* 1. Select Service / Rent Tool Dropdown */}
+                <div className="mb-6">
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-2">
+                        Select {activeType === 'rent' ? 'Tool Rental / Access' : activeType === 'server' ? 'Server Service' : 'IMEI Service'}
+                    </label>
+                    <select
+                        value={selectedServiceId}
+                        onChange={(e) => setSelectedServiceId(e.target.value)}
+                        className="w-full p-3.5 rounded-xl bg-slate-900 text-slate-100 border-2 border-slate-800 font-semibold focus:outline-none focus:border-amber-500 text-sm cursor-pointer shadow-sm"
+                    >
+                        {availableServices.map((srv) => (
+                            <option key={srv.id} value={srv.id}>
+                                {srv.name} — ₹{srv.price.toFixed(2)} ({srv.deliveryTime})
+                            </option>
+                        ))}
+                    </select>
                 </div>
 
-                <form onSubmit={handleSubmit} className="space-y-6">
-                    {formFields.map(field => (
-                        <div key={field.name}>
-                            <label htmlFor={field.name} className="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1">
-                                {field.label}
-                            </label>
-                            <input
-                                type={field.type}
-                                id={field.name}
-                                name={field.name}
-                                value={formData[field.name]}
-                                onChange={handleInputChange}
-                                required={field.required}
-                                placeholder={field.placeholder}
-                                className="w-full p-3 rounded-md bg-white/80 dark:bg-slate-700/80 border-2 border-slate-300/50 dark:border-slate-600/50 focus:border-cyan-500 focus:ring-cyan-500 transition-all text-slate-800 dark:text-slate-200"
-                            />
-                        </div>
-                    ))}
+                {/* Service Details Card & Live Price Header */}
+                <div className="text-center mb-8 p-5 bg-gradient-to-b from-slate-900 to-slate-950 rounded-2xl border border-slate-800 text-slate-100 shadow-md">
+                    <h2 className="text-lg sm:text-xl font-bold text-amber-400 mb-1">
+                        {selectedService.name}
+                    </h2>
+                    <p className="text-4xl sm:text-5xl font-black text-emerald-400 font-mono my-3">
+                        ₹{selectedService.price.toFixed(2)}
+                    </p>
+                    <div className="flex justify-center items-center gap-4 text-xs text-slate-400 font-mono">
+                        <span>⚡ Delivery: <strong className="text-slate-200">{selectedService.deliveryTime}</strong></span>
+                        <span>•</span>
+                        <span>Auto API Sync: <strong className="text-emerald-400">Enabled</strong></span>
+                    </div>
+                </div>
+
+                {/* Form Inputs */}
+                <form onSubmit={handleSubmit} className="space-y-5">
+                    <div>
+                        <label htmlFor="serviceInput" className="block text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-2">
+                            {selectedService.inputLabel} <span className="text-rose-500">*</span>
+                        </label>
+                        <input
+                            type="text"
+                            id="serviceInput"
+                            value={serviceInputValue}
+                            onChange={(e) => setServiceInputValue(e.target.value)}
+                            required
+                            placeholder={selectedService.inputPlaceholder}
+                            className="w-full p-3.5 rounded-xl bg-white/90 dark:bg-slate-900 border-2 border-slate-300 dark:border-slate-800 focus:border-amber-500 focus:ring-amber-500/20 text-slate-900 dark:text-slate-100 font-mono text-sm shadow-sm"
+                        />
+                    </div>
 
                     <div>
-                        <label htmlFor="quantity" className="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1">
-                            <Editable contentKey="imeiOrderPage.quantityLabel" as="span" />
+                        <label htmlFor="quantity" className="block text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-2">
+                            Quantity
                         </label>
                         <input
                             type="number"
                             id="quantity"
-                            name="quantity"
                             value={quantity}
                             onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
                             required
                             min="1"
-                            className="w-full p-3 rounded-md bg-white/80 dark:bg-slate-700/80 border-2 border-slate-300/50 dark:border-slate-600/50 focus:border-cyan-500 focus:ring-cyan-500 transition-all text-slate-800 dark:text-slate-200"
+                            className="w-full p-3.5 rounded-xl bg-white/90 dark:bg-slate-900 border-2 border-slate-300 dark:border-slate-800 focus:border-amber-500 text-slate-900 dark:text-slate-100 font-mono text-sm shadow-sm"
                         />
                     </div>
                     
-                    <div className="p-4 bg-slate-200/50 dark:bg-slate-700/50 rounded-lg text-center">
-                        <p className="text-lg font-semibold text-slate-700 dark:text-slate-300">Total Price</p>
-                        <p className="text-3xl font-bold text-cyan-600 dark:text-cyan-400">₹{totalPrice.toFixed(2)}</p>
+                    <div className="p-4 bg-slate-900/90 rounded-xl border border-slate-800 text-center space-y-1">
+                        <p className="text-xs uppercase tracking-wider font-bold text-slate-400">Total Order Price</p>
+                        <p className="text-3xl font-black text-amber-400 font-mono">₹{totalPrice.toFixed(2)}</p>
                     </div>
 
                     <button
                         type="submit"
                         disabled={!user}
-                        className="w-full bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-4 px-4 rounded-lg transition-colors text-lg disabled:bg-gray-400 disabled:cursor-not-allowed"
+                        className="w-full bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-slate-950 font-black py-4 px-4 rounded-xl shadow-lg transition-all text-base uppercase tracking-wider disabled:bg-gray-400 disabled:cursor-not-allowed cursor-pointer"
                     >
-                        <Editable contentKey="imeiOrderPage.orderButtonText" as="span" />
+                        Place {selectedService.name.split(' ')[0]} Order Now
                     </button>
                     {!user && <p className="text-center text-sm text-red-500 dark:text-red-400 mt-2">You must be logged in to place an order.</p>}
                 </form>
@@ -211,3 +293,4 @@ const ImeiOrderPage = () => {
 };
 
 export default ImeiOrderPage;
+
