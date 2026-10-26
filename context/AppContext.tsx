@@ -2890,7 +2890,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
                         read: false,
                         adminReply: replyMessage || "Order Approved",
                         timestamp: new Date().toISOString(),
-                        expiresAt: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
                     };
                 }
                 return un;
@@ -2992,7 +2991,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
         const updatedAdminNotifications = adminNotifications.map(n => 
             (n.id === notificationId || (notification.orderId && n.orderId === notification.orderId)) 
-                ? { ...n, status: 'rejected' as const, read: true, rejectionReason: actualReason } 
+                ? { ...n, status: 'rejected' as const, read: true, rejectionReason: actualReason, adminReply: actualReason } 
                 : n
         );
         setAdminNotifications(updatedAdminNotifications);
@@ -3022,9 +3021,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
                         title: `Order #${un.orderId || notification.orderId} Rejected`,
                         message: `Order #${un.orderId || notification.orderId} has been rejected. Reason: ${actualReason}.${priceToRefund > 0 ? ` ₹${priceToRefund.toFixed(2)} has been refunded to your wallet.` : ''}`,
                         rejectionReason: actualReason,
+                        adminReply: actualReason,
                         read: false,
                         timestamp: new Date().toISOString(),
-                        expiresAt: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
                     };
                 }
                 return un;

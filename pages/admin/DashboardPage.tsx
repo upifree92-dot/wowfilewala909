@@ -434,6 +434,16 @@ const DashboardPage = () => {
                                                         </button>
                                                     </div>
                                                 )}
+
+                                                {/* Delivered note for completed orders */}
+                                                {(order.status === 'approved' || order.status === 'rejected') && (order.adminReply || order.rejectionReason) && (
+                                                    <div className="mt-2.5 pt-2 border-t border-gray-200/50 text-[11px] text-gray-600 flex items-center gap-1.5">
+                                                        <span className="font-bold text-gray-500 uppercase text-[10px]">
+                                                            {order.status === 'approved' ? 'Note:' : 'Reason:'}
+                                                        </span>
+                                                        <span className="truncate">{order.adminReply || order.rejectionReason}</span>
+                                                    </div>
+                                                )}
                                             </div>
                                          )
                                     }) : <p className="text-gray-500 text-center py-8">No recent orders.</p>}

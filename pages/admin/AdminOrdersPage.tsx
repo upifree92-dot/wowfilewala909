@@ -84,9 +84,15 @@ const AdminOrdersPage = () => {
 
     const handleRejectSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        console.log("Rejecting order:", rejectingOrder?.id, "Reason:", rejectionReason);
         if (rejectingOrder) {
             rejectActivationOrder(rejectingOrder.id, rejectionReason);
+            if (rejectingOrder.id) {
+                setOrderComments(prev => {
+                    const next = { ...prev };
+                    delete next[rejectingOrder.id];
+                    return next;
+                });
+            }
             setRejectingOrder(null);
             setRejectionReason('');
         }
@@ -193,35 +199,75 @@ const AdminOrdersPage = () => {
                                          <td className="p-3 py-4">
                                             <StatusBadge status={order.status} />
                                         </td>
-                                        <td className="p-3 py-4 flex flex-col gap-1.5 min-w-[100px]">
-                                            <input 
-                                                type="text" 
-                                                placeholder="Reply..."
-                                                className="w-full text-[10px] p-1.5 rounded border border-slate-700 bg-slate-900 text-slate-200"
-                                                onChange={(e) => {
-                                                    setOrderComments(prev => ({ ...prev, [order.id]: e.target.value }));
-                                                }}
-                                            />
-                                            {order.status === 'pending' && (
-                                                <button onClick={() => processActivationOrder(order.id, orderComments[order.id] || '')} className="px-3 py-1.5 text-[10px] font-bold rounded-lg bg-orange-500/10 text-orange-400 border border-orange-500/20 hover:bg-orange-500/20 transition-all">Process</button>
-                                            )}
-                                            {order.status === 'processing' && (
-                                                <button onClick={() => approveActivationOrder(order.id, orderComments[order.id] || '')} className="px-3 py-1.5 text-[10px] font-bold rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20 transition-all">Success</button>
-                                            )}
-                                            {order.status !== 'rejected' && order.status !== 'approved' && (
-                                                <button 
-                                                    type="button" 
-                                                    onClick={() => {
-                                                        if (orderComments[order.id]) {
-                                                            setRejectionReason(orderComments[order.id]);
-                                                        }
-                                                        setRejectingOrder(order);
-                                                    }} 
-                                                    className="w-full px-2.5 py-1 text-[10px] font-bold rounded bg-rose-500/15 text-rose-300 border border-rose-500/30 hover:bg-rose-500/25 transition-all flex items-center justify-center gap-1 shadow-sm"
-                                                    title="Reject order and refund amount to customer wallet"
-                                                >
-                                                    Reject & Refund
-                                                </button>
+                                        <td className="p-3 py-4 flex flex-col gap-2 min-w-[140px]">
+                                            {order.status !== 'approved' && order.status !== 'rejected' ? (
+                                                <>
+                                                    <input 
+                                                        type="text" 
+                                                        placeholder="Reply / code / note..."
+                                                        value={orderComments[order.id] || ''}
+                                                        className="w-full text-xs p-2 rounded-lg border border-slate-700 bg-slate-950 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-amber-500/50"
+                                                        onChange={(e) => {
+                                                            setOrderComments(prev => ({ ...prev, [order.id]: e.target.value }));
+                                                        }}
+                                                    />
+                                                    <div className="flex flex-col gap-1.5">
+                                                        {order.status === 'pending' && (
+                                                            <button 
+                                                                onClick={() => {
+                                                                    processActivationOrder(order.id, orderComments[order.id] || 'Order is being processed');
+                                                                    setOrderComments(prev => ({ ...prev, [order.id]: '' }));
+                                                                }} 
+                                                                className="w-full px-3 py-1.5 text-xs font-bold rounded-lg bg-orange-500/15 text-orange-400 border border-orange-500/25 hover:bg-orange-500/25 transition-all text-center"
+                                                            >
+                                                                Process
+                                                            </button>
+                                                        )}
+                                                        {order.status === 'processing' && (
+                                                            <button 
+                                                                onClick={() => {
+                                                                    approveActivationOrder(order.id, orderComments[order.id] || 'Order completed successfully');
+                                                                    setOrderComments(prev => ({ ...prev, [order.id]: '' }));
+                                                                }} 
+                                                                className="w-full px-3 py-1.5 text-xs font-bold rounded-lg bg-emerald-500/15 text-emerald-400 border border-emerald-500/25 hover:bg-emerald-500/25 transition-all text-center"
+                                                            >
+                                                                Success
+                                                            </button>
+                                                        )}
+                                                        <button 
+                                                            type="button" 
+                                                            onClick={() => {
+                                                                if (orderComments[order.id]) {
+                                                                    setRejectionReason(orderComments[order.id]);
+                                                                }
+                                                                setRejectingOrder(order);
+                                                            }} 
+                                                            className="w-full px-2.5 py-1.5 text-xs font-bold rounded-lg bg-rose-500/15 text-rose-300 border border-rose-500/30 hover:bg-rose-500/25 transition-all flex items-center justify-center gap-1 shadow-sm"
+                                                            title="Reject order and refund amount to customer wallet"
+                                                        >
+                                                            Reject & Refund
+                                                        </button>
+                                                    </div>
+                                                </>
+                                            ) : (
+                                                /* Comment box and action buttons HIDE once Success or Rejected */
+                                                <div className="space-y-1.5 text-xs">
+                                                    {order.status === 'approved' ? (
+                                                        <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
+                                                            <span className="text-[10px] font-black uppercase text-emerald-400 tracking-wider block">Sent to Client:</span>
+                                                            <p className="text-[11px] text-slate-200 mt-1 break-words font-medium">
+                                                                {order.adminReply || 'Success - Order Completed'}
+                                                            </p>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/20">
+                                                            <span className="text-[10px] font-black uppercase text-rose-400 tracking-wider block">Refunded & Sent:</span>
+                                                            <p className="text-[11px] text-rose-200 mt-1 break-words font-medium">
+                                                                {order.rejectionReason || order.adminReply || 'Order Rejected & Refunded'}
+                                                            </p>
+                                                        </div>
+                                                    )}
+                                                </div>
                                             )}
                                         </td>
                                     </tr>

@@ -797,6 +797,7 @@ const ProfilePage = () => {
                             <th className="p-4 font-black">PRICE</th>
                             <th className="p-4 font-black">SERVICE NAME</th>
                             <th className="p-4 font-black">FIELD</th>
+                            <th className="p-4 font-black">ADMIN REPLY / CODE</th>
                             <th className="p-4 font-black">SUBMITTED ON</th>
                           </tr>
                         </thead>
@@ -829,6 +830,30 @@ const ProfilePage = () => {
                                   <td className="p-4 font-bold text-slate-800 dark:text-slate-200">{price}</td>
                                   <td className="p-4 font-semibold text-slate-800 dark:text-slate-200">{serviceName}</td>
                                   <td className="p-4 text-slate-600 dark:text-slate-400 text-[11px] font-mono">{field}</td>
+                                  <td className="p-4">
+                                    {n.adminReply ? (
+                                      <div className={`p-2 rounded-lg border text-xs max-w-xs ${
+                                        n.status === 'approved' 
+                                          ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-700 dark:text-emerald-300' 
+                                          : n.status === 'rejected'
+                                          ? 'bg-rose-500/10 border-rose-500/20 text-rose-700 dark:text-rose-300'
+                                          : 'bg-cyan-500/10 border-cyan-500/20 text-cyan-700 dark:text-cyan-300'
+                                      }`}>
+                                        <div className="flex items-start justify-between gap-1.5">
+                                          <span className="font-mono break-all font-semibold select-all">{n.adminReply}</span>
+                                          <CopyButton textToCopy={n.adminReply} className="w-4 h-4 p-0.5 shrink-0" />
+                                        </div>
+                                      </div>
+                                    ) : n.rejectionReason ? (
+                                      <div className="p-2 rounded-lg border bg-rose-500/10 border-rose-500/20 text-rose-700 dark:text-rose-300 text-xs max-w-xs">
+                                        <span className="font-semibold">{n.rejectionReason}</span>
+                                      </div>
+                                    ) : (
+                                      <span className="text-slate-400 text-xs italic">
+                                        {n.status === 'pending' ? 'Pending admin approval' : n.status === 'processing' ? 'Processing...' : '-'}
+                                      </span>
+                                    )}
+                                  </td>
                                   <td className="p-4 text-slate-500 dark:text-slate-400 whitespace-nowrap">{new Date(n.timestamp).toLocaleString([], {day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute:'2-digit'})}</td>
                                 </tr>
                               );
