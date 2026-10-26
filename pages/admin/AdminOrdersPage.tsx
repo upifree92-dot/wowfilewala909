@@ -519,47 +519,51 @@ const AdminOrdersPage = () => {
         return '-';
     };
 
-    // Open Action Modal with exact details from image_5e411753.png
+    // Open Action Modal
     const openActionModal = (order: AdminNotification, tab: 'overview' | 'success' | 'reject' | 'in_process' | 'waiting' | 'set_back_rejected' = 'overview') => {
         setActionModalOrder(order);
         setModalActiveTab(tab);
-        setModalComments(order.adminReply || order.rejectionReason || '');
+        setModalComments(''); // Plain / blank by default
     };
 
-    // Handle Modal Submissions
+    // Handle Modal Submissions - Only send what user types in comment box (or empty if left blank)
     const handleModalSuccess = (e: React.FormEvent) => {
         e.preventDefault();
         if (!actionModalOrder) return;
-        const msg = modalComments.trim() || 'Order completed successfully';
+        const msg = modalComments.trim();
         approveActivationOrder(actionModalOrder.id, msg);
-        setActionModalOrder(null);
+        setActionModalOrder(prev => prev ? { ...prev, status: 'approved', adminReply: msg } : null);
+        setModalActiveTab('overview');
         setModalComments('');
     };
 
     const handleModalReject = (e: React.FormEvent) => {
         e.preventDefault();
         if (!actionModalOrder) return;
-        const reason = modalComments.trim() || 'Order rejected by administrator';
+        const reason = modalComments.trim();
         rejectActivationOrder(actionModalOrder.id, reason);
-        setActionModalOrder(null);
+        setActionModalOrder(prev => prev ? { ...prev, status: 'rejected', rejectionReason: reason, adminReply: reason } : null);
+        setModalActiveTab('overview');
         setModalComments('');
     };
 
     const handleModalInProcess = (e: React.FormEvent) => {
         e.preventDefault();
         if (!actionModalOrder) return;
-        const msg = modalComments.trim() || 'In Process';
+        const msg = modalComments.trim();
         updateOrderStatusByAdmin(actionModalOrder.id, 'processing', msg);
-        setActionModalOrder(null);
+        setActionModalOrder(prev => prev ? { ...prev, status: 'processing', adminReply: msg } : null);
+        setModalActiveTab('overview');
         setModalComments('');
     };
 
     const handleModalWaiting = (e: React.FormEvent) => {
         e.preventDefault();
         if (!actionModalOrder) return;
-        const msg = modalComments.trim() || '';
+        const msg = modalComments.trim();
         updateOrderStatusByAdmin(actionModalOrder.id, 'pending', msg);
-        setActionModalOrder(null);
+        setActionModalOrder(prev => prev ? { ...prev, status: 'pending', adminReply: msg } : null);
+        setModalActiveTab('overview');
         setModalComments('');
     };
 
@@ -800,95 +804,53 @@ const AdminOrdersPage = () => {
                                     Order Overview
                                 </button>
 
-                                {actionModalOrder.status === 'approved' && (
-                                    <button
-                                        type="button"
-                                        onClick={() => setModalActiveTab('set_back_rejected')}
-                                        className={`px-4 py-3.5 text-xs text-left transition-colors cursor-pointer ${
-                                            modalActiveTab === 'set_back_rejected'
-                                                ? 'bg-white text-rose-600 font-extrabold border-l-4 border-rose-500 shadow-2xs'
-                                                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 font-semibold'
-                                        }`}
-                                    >
-                                        Set Back as Rejected
-                                    </button>
-                                )}
+                                <button
+                                    type="button"
+                                    onClick={() => setModalActiveTab('success')}
+                                    className={`px-4 py-3.5 text-xs text-left transition-colors cursor-pointer ${
+                                        modalActiveTab === 'success'
+                                            ? 'bg-white text-slate-900 font-extrabold border-l-4 border-[#20a779] shadow-2xs'
+                                            : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 font-semibold'
+                                    }`}
+                                >
+                                    Reply as Success
+                                </button>
 
-                                {actionModalOrder.status === 'rejected' && (
-                                    <>
-                                        <button
-                                            type="button"
-                                            onClick={() => setModalActiveTab('success')}
-                                            className={`px-4 py-3.5 text-xs text-left transition-colors cursor-pointer ${
-                                                modalActiveTab === 'success'
-                                                    ? 'bg-white text-slate-900 font-extrabold border-l-4 border-[#20a779] shadow-2xs'
-                                                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 font-semibold'
-                                            }`}
-                                        >
-                                            Reply as Success
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => setModalActiveTab('in_process')}
-                                            className={`px-4 py-3.5 text-xs text-left transition-colors cursor-pointer ${
-                                                modalActiveTab === 'in_process'
-                                                    ? 'bg-white text-slate-900 font-extrabold border-l-4 border-[#d97706] shadow-2xs'
-                                                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 font-semibold'
-                                            }`}
-                                        >
-                                            Set In Process
-                                        </button>
-                                    </>
-                                )}
+                                <button
+                                    type="button"
+                                    onClick={() => setModalActiveTab('reject')}
+                                    className={`px-4 py-3.5 text-xs text-left transition-colors cursor-pointer ${
+                                        modalActiveTab === 'reject'
+                                            ? 'bg-white text-slate-900 font-extrabold border-l-4 border-rose-500 shadow-2xs'
+                                            : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 font-semibold'
+                                    }`}
+                                >
+                                    Reply as Reject
+                                </button>
 
-                                {(actionModalOrder.status === 'pending' || actionModalOrder.status === 'processing') && (
-                                    <>
-                                        <button
-                                            type="button"
-                                            onClick={() => setModalActiveTab('success')}
-                                            className={`px-4 py-3.5 text-xs text-left transition-colors cursor-pointer ${
-                                                modalActiveTab === 'success'
-                                                    ? 'bg-white text-slate-900 font-extrabold border-l-4 border-[#20a779] shadow-2xs'
-                                                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 font-semibold'
-                                            }`}
-                                        >
-                                            Reply as Success
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => setModalActiveTab('reject')}
-                                            className={`px-4 py-3.5 text-xs text-left transition-colors cursor-pointer ${
-                                                modalActiveTab === 'reject'
-                                                    ? 'bg-white text-slate-900 font-extrabold border-l-4 border-rose-500 shadow-2xs'
-                                                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 font-semibold'
-                                            }`}
-                                        >
-                                            Reply as Reject
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => setModalActiveTab('in_process')}
-                                            className={`px-4 py-3.5 text-xs text-left transition-colors cursor-pointer ${
-                                                modalActiveTab === 'in_process'
-                                                    ? 'bg-white text-slate-900 font-extrabold border-l-4 border-[#d97706] shadow-2xs'
-                                                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 font-semibold'
-                                            }`}
-                                        >
-                                            Set In Process
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => setModalActiveTab('waiting')}
-                                            className={`px-4 py-3.5 text-xs text-left transition-colors cursor-pointer ${
-                                                modalActiveTab === 'waiting'
-                                                    ? 'bg-white text-slate-900 font-extrabold border-l-4 border-[#475569] shadow-2xs'
-                                                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 font-semibold'
-                                            }`}
-                                        >
-                                            Waiting Action
-                                        </button>
-                                    </>
-                                )}
+                                <button
+                                    type="button"
+                                    onClick={() => setModalActiveTab('in_process')}
+                                    className={`px-4 py-3.5 text-xs text-left transition-colors cursor-pointer ${
+                                        modalActiveTab === 'in_process'
+                                            ? 'bg-white text-slate-900 font-extrabold border-l-4 border-[#d97706] shadow-2xs'
+                                            : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 font-semibold'
+                                    }`}
+                                >
+                                    Set In Process
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={() => setModalActiveTab('waiting')}
+                                    className={`px-4 py-3.5 text-xs text-left transition-colors cursor-pointer ${
+                                        modalActiveTab === 'waiting'
+                                            ? 'bg-white text-slate-900 font-extrabold border-l-4 border-[#475569] shadow-2xs'
+                                            : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 font-semibold'
+                                    }`}
+                                >
+                                    Waiting Action
+                                </button>
                             </div>
 
                             {/* Right Content Area */}
@@ -922,7 +884,7 @@ const AdminOrdersPage = () => {
                                     ? `${procMins || 16} Min ${procSecs || 47} Sec`
                                     : (actionModalOrder.status === 'processing' ? `${procMins} Min ${procSecs} Sec (ongoing)` : 'Pending');
 
-                                const commentText = actionModalOrder.adminReply || actionModalOrder.rejectionReason || 'GRT6QE422HP4P43S';
+                                const commentText = actionModalOrder.adminReply || actionModalOrder.rejectionReason || '-';
 
                                 // Custom entries if any
                                 let details = actionModalOrder.orderDetails;
