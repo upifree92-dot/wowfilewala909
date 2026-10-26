@@ -67,26 +67,6 @@ const DashboardPage = () => {
 
     return (
         <div className="space-y-6 animate-fadeIn pb-10">
-            {/* 1. Red Alert Notice Banner (Exact match to screenshot) */}
-            <div className="border border-red-300 bg-red-50/70 rounded-lg p-5 text-red-600 space-y-3 shadow-2xs">
-                <div>
-                    <h4 className="font-bold text-xs sm:text-sm text-red-600">
-                        1. License Expiring Soon
-                    </h4>
-                    <p className="text-xs text-red-500 mt-0.5 leading-relaxed">
-                        Your system support &amp; update license expires in 17 day(s). Renew soon to avoid any interruption.
-                    </p>
-                </div>
-                <div>
-                    <h4 className="font-bold text-xs sm:text-sm text-red-600">
-                        2. Two-Factor Authentication Not Enabled
-                    </h4>
-                    <p className="text-xs text-red-500 mt-0.5 leading-relaxed">
-                        Your admin account does not have 2FA enabled, leaving your dashboard less secure. Go to{' '}
-                        <strong className="font-bold underline cursor-pointer">User &gt; Site Admin</strong> to enable it.
-                    </p>
-                </div>
-            </div>
 
             {/* 2. Top 4 Status Metric Cards (Horizontal Row) */}
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
