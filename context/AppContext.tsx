@@ -2885,8 +2885,14 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const approveActivationOrder = (notificationId: string, replyMessage: string) => {
         if (!isAdmin) return;
         
-        const notification = adminNotifications.find(n => n.id === notificationId);
+        const notification = adminNotifications.find(n => n.id === notificationId || n.orderId === notificationId);
         if (!notification || !notification.userId || !notification.orderId) return;
+
+        // Locking rule: once finalized, order cannot be changed
+        if (notification.status === 'approved' || notification.status === 'rejected') {
+            setNotification('Order is already finalized and locked.', 'error');
+            return;
+        }
 
         const updatedAdminNotifications = adminNotifications.map(n => (n.id === notificationId || n.orderId === notification.orderId) ? { ...n, status: 'approved' as const, read: true, adminReply: replyMessage || "Order Approved" } : n);
         setAdminNotifications(updatedAdminNotifications);
@@ -2940,6 +2946,12 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
         const notification = adminNotifications.find(n => n.id === notificationId || n.orderId === notificationId);
         if (!notification) return;
+
+        // Locking rule: once finalized, order cannot be changed
+        if (notification.status === 'approved' || notification.status === 'rejected') {
+            setNotification('Order is already finalized and locked.', 'error');
+            return;
+        }
 
         const actualReason = reason?.trim() || "Order rejected by administrator";
 
@@ -3110,6 +3122,14 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
     const updateOrderStatusByAdmin = (notificationId: string, newStatus: 'pending' | 'processing' | 'approved' | 'rejected', comment?: string) => {
         if (!isAdmin) return;
+        
+        // Locking rule: once finalized (Success or Rejected), order cannot be modified
+        const currentNotif = adminNotifications.find(n => n.id === notificationId || n.orderId === notificationId);
+        if (currentNotif && (currentNotif.status === 'approved' || currentNotif.status === 'rejected')) {
+            setNotification('Order is already finalized and locked. No further modifications allowed.', 'error');
+            return;
+        }
+
         if (newStatus === 'approved') {
             approveActivationOrder(notificationId, comment || 'Order completed successfully');
         } else if (newStatus === 'rejected') {

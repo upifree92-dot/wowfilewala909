@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useAppContext } from '../../context/AppContext';
 import type { AdminNotification, User } from '../../types';
-import { AlertCircle, X, Search, Hourglass, Clock, CheckCircle2, Ban } from 'lucide-react';
+import { AlertCircle, X, Search, Hourglass, Clock, CheckCircle2, Ban, Lock } from 'lucide-react';
 import CopyButton from '../../components/CopyButton';
 
 const AdminOrdersPage = () => {
@@ -336,102 +336,163 @@ const AdminOrdersPage = () => {
 
                                         {/* Actions Column: Direct Action Buttons for the 4 statuses */}
                                         <td className="p-3 py-4 flex flex-col gap-2 min-w-[280px]">
-                                            {/* Admin Reply / Activation Code Input */}
-                                            <input 
-                                                type="text" 
-                                                placeholder="Enter activation code, reply note..."
-                                                value={commentVal}
-                                                className="w-full text-xs p-2 rounded-lg border border-slate-700 bg-slate-950 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-amber-500/50"
-                                                onChange={(e) => {
-                                                    setOrderComments(prev => ({ ...prev, [order.id]: e.target.value }));
-                                                }}
-                                            />
+                                            {(() => {
+                                                const isLocked = order.status === 'approved' || order.status === 'rejected';
 
-                                            {/* 4 Clean Action Buttons */}
-                                            <div className="grid grid-cols-2 gap-1.5">
-                                                {/* Button 1: Waiting Action */}
-                                                <button 
-                                                    type="button" 
-                                                    onClick={() => {
-                                                        const msg = orderComments[order.id] !== undefined ? orderComments[order.id] : (order.adminReply || '');
-                                                        updateOrderStatusByAdmin(order.id, 'pending', msg);
-                                                    }} 
-                                                    className={`px-2.5 py-1.5 text-[11px] font-bold rounded-lg border transition-all text-center flex items-center justify-center gap-1 active:scale-95 ${
-                                                        order.status === 'pending' || !order.status
-                                                            ? 'bg-amber-500 text-slate-950 font-black border-amber-400 shadow-sm'
-                                                            : 'bg-slate-900/80 hover:bg-slate-800 text-amber-300 border-amber-500/30'
-                                                    }`}
-                                                    title="Set status to Waiting Action (Pending)"
-                                                >
-                                                    <Hourglass className="w-3 h-3 shrink-0" />
-                                                    <span>Waiting Action</span>
-                                                </button>
+                                                return (
+                                                    <>
+                                                        {/* Admin Reply / Activation Code Input */}
+                                                        <div className="relative">
+                                                            <input 
+                                                                type="text" 
+                                                                disabled={isLocked}
+                                                                placeholder={isLocked ? "Order finalized (no further changes allowed)" : "Enter activation code, reply note..."}
+                                                                value={commentVal}
+                                                                className={`w-full text-xs p-2 rounded-lg border transition-all ${
+                                                                    isLocked
+                                                                        ? 'border-slate-800 bg-slate-900/40 text-slate-400 cursor-not-allowed opacity-60 pr-8'
+                                                                        : 'border-slate-700 bg-slate-950 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-amber-500/50'
+                                                                }`}
+                                                                onChange={(e) => {
+                                                                    if (!isLocked) {
+                                                                        setOrderComments(prev => ({ ...prev, [order.id]: e.target.value }));
+                                                                    }
+                                                                }}
+                                                            />
+                                                            {isLocked && (
+                                                                <div className="absolute inset-y-0 right-0 pr-2.5 flex items-center pointer-events-none text-slate-500">
+                                                                    <Lock className="w-3.5 h-3.5" />
+                                                                </div>
+                                                            )}
+                                                        </div>
 
-                                                {/* Button 2: In Process */}
-                                                <button 
-                                                    type="button" 
-                                                    onClick={() => {
-                                                        const msg = orderComments[order.id] !== undefined ? orderComments[order.id] : (order.adminReply || 'In Process');
-                                                        updateOrderStatusByAdmin(order.id, 'processing', msg);
-                                                    }} 
-                                                    className={`px-2.5 py-1.5 text-[11px] font-bold rounded-lg border transition-all text-center flex items-center justify-center gap-1 active:scale-95 ${
-                                                        order.status === 'processing'
-                                                            ? 'bg-sky-500 text-slate-950 font-black border-sky-400 shadow-sm'
-                                                            : 'bg-slate-900/80 hover:bg-slate-800 text-sky-300 border-sky-500/30'
-                                                    }`}
-                                                    title="Set status to In Process"
-                                                >
-                                                    <Clock className="w-3 h-3 shrink-0" />
-                                                    <span>In Process</span>
-                                                </button>
+                                                        {/* 4 Clean Action Buttons */}
+                                                        <div className="grid grid-cols-2 gap-1.5">
+                                                            {/* Button 1: Waiting Action */}
+                                                            <button 
+                                                                type="button" 
+                                                                disabled={isLocked}
+                                                                onClick={() => {
+                                                                    if (isLocked) return;
+                                                                    const msg = orderComments[order.id] !== undefined ? orderComments[order.id] : (order.adminReply || '');
+                                                                    updateOrderStatusByAdmin(order.id, 'pending', msg);
+                                                                }} 
+                                                                className={`px-2.5 py-1.5 text-[11px] font-bold rounded-lg border transition-all text-center flex items-center justify-center gap-1 ${
+                                                                    isLocked
+                                                                        ? 'opacity-30 cursor-not-allowed bg-slate-950/60 border-slate-800/60 text-slate-600'
+                                                                        : order.status === 'pending' || !order.status
+                                                                        ? 'bg-amber-500 text-slate-950 font-black border-amber-400 shadow-sm active:scale-95'
+                                                                        : 'bg-slate-900/80 hover:bg-slate-800 text-amber-300 border-amber-500/30 active:scale-95'
+                                                                }`}
+                                                                title={isLocked ? "Order is finalized and locked" : "Set status to Waiting Action (Pending)"}
+                                                            >
+                                                                <Hourglass className="w-3 h-3 shrink-0" />
+                                                                <span>Waiting Action</span>
+                                                            </button>
 
-                                                {/* Button 3: Success */}
-                                                <button 
-                                                    type="button" 
-                                                    onClick={() => {
-                                                        const msg = orderComments[order.id] !== undefined ? orderComments[order.id] : (order.adminReply || 'Order completed successfully');
-                                                        approveActivationOrder(order.id, msg);
-                                                    }} 
-                                                    className={`px-2.5 py-1.5 text-[11px] font-bold rounded-lg border transition-all text-center flex items-center justify-center gap-1 active:scale-95 ${
-                                                        order.status === 'approved'
-                                                            ? 'bg-emerald-500 text-slate-950 font-black border-emerald-400 shadow-sm'
-                                                            : 'bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border-emerald-500/40'
-                                                    }`}
-                                                    title="Approve order as Success"
-                                                >
-                                                    <CheckCircle2 className="w-3 h-3 shrink-0" />
-                                                    <span>Success</span>
-                                                </button>
+                                                            {/* Button 2: In Process */}
+                                                            <button 
+                                                                type="button" 
+                                                                disabled={isLocked}
+                                                                onClick={() => {
+                                                                    if (isLocked) return;
+                                                                    const msg = orderComments[order.id] !== undefined ? orderComments[order.id] : (order.adminReply || 'In Process');
+                                                                    updateOrderStatusByAdmin(order.id, 'processing', msg);
+                                                                }} 
+                                                                className={`px-2.5 py-1.5 text-[11px] font-bold rounded-lg border transition-all text-center flex items-center justify-center gap-1 ${
+                                                                    isLocked
+                                                                        ? 'opacity-30 cursor-not-allowed bg-slate-950/60 border-slate-800/60 text-slate-600'
+                                                                        : order.status === 'processing'
+                                                                        ? 'bg-sky-500 text-slate-950 font-black border-sky-400 shadow-sm active:scale-95'
+                                                                        : 'bg-slate-900/80 hover:bg-slate-800 text-sky-300 border-sky-500/30 active:scale-95'
+                                                                }`}
+                                                                title={isLocked ? "Order is finalized and locked" : "Set status to In Process"}
+                                                            >
+                                                                <Clock className="w-3 h-3 shrink-0" />
+                                                                <span>In Process</span>
+                                                            </button>
 
-                                                {/* Button 4: Rejected */}
-                                                <button 
-                                                    type="button" 
-                                                    onClick={() => {
-                                                        const msg = orderComments[order.id] !== undefined ? orderComments[order.id] : (order.rejectionReason || order.adminReply || '');
-                                                        if (msg) {
-                                                            setRejectionReason(msg);
-                                                        }
-                                                        setRejectingOrder(order);
-                                                    }} 
-                                                    className={`px-2.5 py-1.5 text-[11px] font-bold rounded-lg border transition-all text-center flex items-center justify-center gap-1 active:scale-95 ${
-                                                        order.status === 'rejected'
-                                                            ? 'bg-rose-500 text-white font-black border-rose-400 shadow-sm'
-                                                            : 'bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border-rose-500/40'
-                                                    }`}
-                                                    title="Reject order and refund customer wallet"
-                                                >
-                                                    <Ban className="w-3 h-3 shrink-0" />
-                                                    <span>Rejected</span>
-                                                </button>
-                                            </div>
+                                                            {/* Button 3: Success */}
+                                                            <button 
+                                                                type="button" 
+                                                                disabled={isLocked}
+                                                                onClick={() => {
+                                                                    if (isLocked) return;
+                                                                    const msg = orderComments[order.id] !== undefined ? orderComments[order.id] : (order.adminReply || 'Order completed successfully');
+                                                                    approveActivationOrder(order.id, msg);
+                                                                }} 
+                                                                className={`px-2.5 py-1.5 text-[11px] font-bold rounded-lg border transition-all text-center flex items-center justify-center gap-1 ${
+                                                                    isLocked
+                                                                        ? order.status === 'approved'
+                                                                            ? 'opacity-90 bg-emerald-950/40 text-emerald-400 border-emerald-500/30 cursor-not-allowed font-black'
+                                                                            : 'opacity-30 cursor-not-allowed bg-slate-950/60 border-slate-800/60 text-slate-600'
+                                                                        : order.status === 'approved'
+                                                                        ? 'bg-emerald-500 text-slate-950 font-black border-emerald-400 shadow-sm active:scale-95'
+                                                                        : 'bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border-emerald-500/40 active:scale-95'
+                                                                }`}
+                                                                title={isLocked ? "Order is finalized and locked" : "Approve order as Success"}
+                                                            >
+                                                                <CheckCircle2 className="w-3 h-3 shrink-0" />
+                                                                <span>Success</span>
+                                                            </button>
 
-                                            {/* Delivered note preview chip */}
-                                            {(order.adminReply || order.rejectionReason) && (
-                                                <div className="text-[10px] font-mono bg-slate-950/70 px-2 py-1 rounded border border-slate-800 text-slate-400 flex items-center gap-1 truncate">
-                                                    <span className="font-bold text-slate-500 uppercase shrink-0">Note:</span>
-                                                    <span className="truncate select-all text-slate-300">{order.adminReply || order.rejectionReason}</span>
-                                                </div>
-                                            )}
+                                                            {/* Button 4: Rejected */}
+                                                            <button 
+                                                                type="button" 
+                                                                disabled={isLocked}
+                                                                onClick={() => {
+                                                                    if (isLocked) return;
+                                                                    const msg = orderComments[order.id] !== undefined ? orderComments[order.id] : (order.rejectionReason || order.adminReply || '');
+                                                                    if (msg) {
+                                                                        setRejectionReason(msg);
+                                                                    }
+                                                                    setRejectingOrder(order);
+                                                                }} 
+                                                                className={`px-2.5 py-1.5 text-[11px] font-bold rounded-lg border transition-all text-center flex items-center justify-center gap-1 ${
+                                                                    isLocked
+                                                                        ? order.status === 'rejected'
+                                                                            ? 'opacity-90 bg-rose-950/40 text-rose-400 border-rose-500/30 cursor-not-allowed font-black'
+                                                                            : 'opacity-30 cursor-not-allowed bg-slate-950/60 border-slate-800/60 text-slate-600'
+                                                                        : order.status === 'rejected'
+                                                                        ? 'bg-rose-500 text-white font-black border-rose-400 shadow-sm active:scale-95'
+                                                                        : 'bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border-rose-500/40 active:scale-95'
+                                                                }`}
+                                                                title={isLocked ? "Order is finalized and locked" : "Reject order and refund customer wallet"}
+                                                            >
+                                                                <Ban className="w-3 h-3 shrink-0" />
+                                                                <span>Rejected</span>
+                                                            </button>
+                                                        </div>
+
+                                                        {/* Locked notice badge */}
+                                                        {isLocked && (
+                                                            <div className={`px-2.5 py-1.5 rounded-lg border text-[11px] flex items-center justify-between gap-1.5 ${
+                                                                order.status === 'approved'
+                                                                    ? 'bg-emerald-500/10 border-emerald-500/25 text-emerald-300'
+                                                                    : 'bg-rose-500/10 border-rose-500/25 text-rose-300'
+                                                            }`}>
+                                                                <div className="flex items-center gap-1.5 font-bold">
+                                                                    <Lock className="w-3 h-3 shrink-0" />
+                                                                    <span>{order.status === 'approved' ? 'Success (Finalized & Locked)' : 'Rejected (Finalized & Locked)'}</span>
+                                                                </div>
+                                                                <span className="text-[9px] uppercase font-black px-1.5 py-0.5 rounded bg-black/40 text-slate-400 shrink-0">
+                                                                    No changes
+                                                                </span>
+                                                            </div>
+                                                        )}
+
+                                                        {/* Delivered note / reason preview chip */}
+                                                        {(order.adminReply || order.rejectionReason) && (
+                                                            <div className="text-[10px] font-mono bg-slate-950/80 px-2 py-1 rounded border border-slate-800 text-slate-400 flex items-center gap-1 truncate">
+                                                                <span className="font-bold text-slate-500 uppercase shrink-0">
+                                                                    {order.status === 'approved' ? 'Delivered:' : order.status === 'rejected' ? 'Reason:' : 'Note:'}
+                                                                </span>
+                                                                <span className="truncate select-all text-slate-300 font-semibold">{order.adminReply || order.rejectionReason}</span>
+                                                            </div>
+                                                        )}
+                                                    </>
+                                                );
+                                            })()}
                                         </td>
                                     </tr>
                                 );
