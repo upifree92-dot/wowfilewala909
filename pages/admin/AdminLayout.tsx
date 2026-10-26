@@ -43,13 +43,29 @@ const AdminLayout = () => {
         return <div className="h-screen w-screen flex items-center justify-center bg-black text-white">Access Denied</div>;
     }
 
+    const [servicesMenuOpen, setServicesMenuOpen] = useState(
+        location.pathname.startsWith('/admin/services')
+    );
+
     const unreadCount = getAdminNotifications().filter(n => !n.read).length;
 
     // Exact menu items matching the photo from user
     const navItems = [
         { to: "/admin", icon: <Gauge className="w-4 h-4 shrink-0" />, label: "Dashboard", hasSubmenu: false, end: true },
         { to: "/admin/orders", icon: <ShoppingBag className="w-4 h-4 shrink-0" />, label: "Order History", hasSubmenu: true, badge: unreadCount > 0 ? unreadCount : undefined },
-        { to: "/admin/services", icon: <Server className="w-4 h-4 shrink-0" />, label: "Services List", hasSubmenu: true },
+        { 
+            to: "/admin/services", 
+            icon: <Server className="w-4 h-4 shrink-0" />, 
+            label: "Services List", 
+            hasSubmenu: true,
+            isServicesList: true,
+            subItems: [
+                { to: "/admin/services?type=imei", label: "IMEI", icon: "📱" },
+                { to: "/admin/services?type=server", label: "Server", icon: "🖥️" },
+                { to: "/admin/services?type=remote", label: "Remote", icon: "⚡" },
+                { to: "/admin/services?type=file", label: "File", icon: "📁" },
+            ]
+        },
         { to: "/admin/groups", icon: <Layers className="w-4 h-4 shrink-0" />, label: "Services Group", hasSubmenu: true },
         { to: "/admin/invoices", icon: <FileText className="w-4 h-4 shrink-0" />, label: "Invoice", hasSubmenu: false },
         { to: "/admin/inventory", icon: <Briefcase className="w-4 h-4 shrink-0" />, label: "Inventory", hasSubmenu: false },
@@ -86,35 +102,92 @@ const AdminLayout = () => {
 
                 {/* Sidebar Navigation Items List */}
                 <nav className="flex-1 overflow-y-auto px-2.5 py-3 space-y-1 scrollbar-thin scrollbar-thumb-neutral-800">
-                    {navItems.map((item) => (
-                        <NavLink
-                            key={item.to}
-                            to={item.to}
-                            end={item.end}
-                            className={({ isActive }) =>
-                                `flex items-center justify-between px-3.5 py-2.5 rounded-lg text-xs font-semibold transition-all duration-150 ${
-                                    isActive
-                                        ? "bg-[#242424] text-white shadow-xs"
-                                        : "text-neutral-400 hover:text-white hover:bg-neutral-900/80"
-                                }`
-                            }
-                        >
-                            <div className="flex items-center gap-3">
-                                <span>{item.icon}</span>
-                                <span>{item.label}</span>
-                            </div>
-                            <div className="flex items-center gap-1.5">
-                                {item.badge !== undefined && item.badge > 0 && (
-                                    <span className="px-1.5 py-0.5 text-[10px] bg-red-600 text-white font-black rounded-full min-w-4 text-center">
-                                        {item.badge}
-                                    </span>
-                                )}
-                                {item.hasSubmenu && (
-                                    <ChevronRight className="w-3.5 h-3.5 text-neutral-600 group-hover:text-neutral-400" />
-                                )}
-                            </div>
-                        </NavLink>
-                    ))}
+                    {navItems.map((item) => {
+                        if (item.isServicesList) {
+                            const isCurrentActive = location.pathname.startsWith('/admin/services');
+                            return (
+                                <div key={item.to} className="space-y-1">
+                                    <div
+                                        onClick={() => setServicesMenuOpen(!servicesMenuOpen)}
+                                        className={`flex items-center justify-between px-3.5 py-2.5 rounded-lg text-xs font-semibold cursor-pointer transition-all duration-150 ${
+                                            isCurrentActive
+                                                ? "bg-[#242424] text-white shadow-xs"
+                                                : "text-neutral-400 hover:text-white hover:bg-neutral-900/80"
+                                        }`}
+                                    >
+                                        <NavLink
+                                            to={item.to}
+                                            onClick={(e) => e.stopPropagation()}
+                                            className="flex items-center gap-3 flex-1"
+                                        >
+                                            <span>{item.icon}</span>
+                                            <span>{item.label}</span>
+                                        </NavLink>
+                                        <ChevronRight
+                                            className={`w-3.5 h-3.5 text-neutral-500 transition-transform duration-200 ${
+                                                servicesMenuOpen ? 'rotate-90 text-amber-400' : ''
+                                            }`}
+                                        />
+                                    </div>
+
+                                    {/* Sub-menu items for Services List */}
+                                    {servicesMenuOpen && (
+                                        <div className="ml-4 pl-3 border-l border-neutral-800 space-y-1 py-1 animate-in fade-in duration-200">
+                                            {item.subItems.map((sub) => {
+                                                const searchType = new URLSearchParams(location.search).get('type');
+                                                const subType = sub.to.split('type=')[1];
+                                                const isSubActive = isCurrentActive && searchType === subType;
+                                                return (
+                                                    <Link
+                                                        key={sub.to}
+                                                        to={sub.to}
+                                                        className={`flex items-center gap-2.5 px-3 py-2 rounded-md text-[11px] font-medium transition-all ${
+                                                            isSubActive
+                                                                ? "bg-amber-500/20 text-amber-400 font-bold border border-amber-500/30"
+                                                                : "text-neutral-400 hover:text-slate-100 hover:bg-neutral-900"
+                                                        }`}
+                                                    >
+                                                        <span>{sub.icon}</span>
+                                                        <span>{sub.label}</span>
+                                                    </Link>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        }
+
+                        return (
+                            <NavLink
+                                key={item.to}
+                                to={item.to}
+                                end={item.end}
+                                className={({ isActive }) =>
+                                    `flex items-center justify-between px-3.5 py-2.5 rounded-lg text-xs font-semibold transition-all duration-150 ${
+                                        isActive
+                                            ? "bg-[#242424] text-white shadow-xs"
+                                            : "text-neutral-400 hover:text-white hover:bg-neutral-900/80"
+                                    }`
+                                }
+                            >
+                                <div className="flex items-center gap-3">
+                                    <span>{item.icon}</span>
+                                    <span>{item.label}</span>
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                    {item.badge !== undefined && item.badge > 0 && (
+                                        <span className="px-1.5 py-0.5 text-[10px] bg-red-600 text-white font-black rounded-full min-w-4 text-center">
+                                            {item.badge}
+                                        </span>
+                                    )}
+                                    {item.hasSubmenu && (
+                                        <ChevronRight className="w-3.5 h-3.5 text-neutral-600 group-hover:text-neutral-400" />
+                                    )}
+                                </div>
+                            </NavLink>
+                        );
+                    })}
                 </nav>
             </aside>
 
@@ -140,25 +213,62 @@ const AdminLayout = () => {
                             </button>
                         </div>
                         <nav className="flex-1 overflow-y-auto px-2.5 py-3 space-y-1">
-                            {navItems.map((item) => (
-                                <NavLink
-                                    key={item.to}
-                                    to={item.to}
-                                    end={item.end}
-                                    onClick={() => setMobileMenuOpen(false)}
-                                    className={({ isActive }) =>
-                                        `flex items-center justify-between px-3.5 py-2.5 rounded-lg text-xs font-semibold ${
-                                            isActive ? "bg-[#242424] text-white" : "text-neutral-400 hover:text-white"
-                                        }`
-                                    }
-                                >
-                                    <div className="flex items-center gap-3">
-                                        <span>{item.icon}</span>
-                                        <span>{item.label}</span>
-                                    </div>
-                                    {item.hasSubmenu && <ChevronRight className="w-3.5 h-3.5 text-neutral-600" />}
-                                </NavLink>
-                            ))}
+                            {navItems.map((item) => {
+                                if (item.isServicesList) {
+                                    return (
+                                        <div key={item.to} className="space-y-1">
+                                            <div
+                                                onClick={() => setServicesMenuOpen(!servicesMenuOpen)}
+                                                className="flex items-center justify-between px-3.5 py-2.5 rounded-lg text-xs font-semibold cursor-pointer text-neutral-400 hover:text-white"
+                                            >
+                                                <NavLink
+                                                    to={item.to}
+                                                    onClick={() => setMobileMenuOpen(false)}
+                                                    className="flex items-center gap-3 flex-1"
+                                                >
+                                                    <span>{item.icon}</span>
+                                                    <span>{item.label}</span>
+                                                </NavLink>
+                                                <ChevronRight className={`w-3.5 h-3.5 ${servicesMenuOpen ? 'rotate-90 text-amber-400' : ''}`} />
+                                            </div>
+                                            {servicesMenuOpen && (
+                                                <div className="ml-4 pl-3 border-l border-neutral-800 space-y-1 py-1">
+                                                    {item.subItems.map((sub) => (
+                                                        <Link
+                                                            key={sub.to}
+                                                            to={sub.to}
+                                                            onClick={() => setMobileMenuOpen(false)}
+                                                            className="flex items-center gap-2 px-3 py-2 rounded text-xs text-neutral-400 hover:text-white"
+                                                        >
+                                                            <span>{sub.icon}</span>
+                                                            <span>{sub.label}</span>
+                                                        </Link>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                }
+                                return (
+                                    <NavLink
+                                        key={item.to}
+                                        to={item.to}
+                                        end={item.end}
+                                        onClick={() => setMobileMenuOpen(false)}
+                                        className={({ isActive }) =>
+                                            `flex items-center justify-between px-3.5 py-2.5 rounded-lg text-xs font-semibold ${
+                                                isActive ? "bg-[#242424] text-white" : "text-neutral-400 hover:text-white"
+                                            }`
+                                        }
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <span>{item.icon}</span>
+                                            <span>{item.label}</span>
+                                        </div>
+                                        {item.hasSubmenu && <ChevronRight className="w-3.5 h-3.5 text-neutral-600" />}
+                                    </NavLink>
+                                );
+                            })}
                         </nav>
                     </div>
                 </div>

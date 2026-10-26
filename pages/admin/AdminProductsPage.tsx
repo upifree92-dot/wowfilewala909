@@ -1,4 +1,5 @@
 import React, { useState, useMemo, FormEvent, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useAppContext } from '../../context/AppContext';
 import type { Product, Category, ActivationFormConfig, ActivationCustomField } from '../../types';
 
@@ -432,11 +433,35 @@ const ProductModal = ({ product, isOpen, onClose }: ProductModalProps) => {
 // --- Main Component ---
 const AdminProductsPage = () => {
   const { products, categories, deleteProduct, deleteCategory, setNotification } = useAppContext();
+  const [searchParams, setSearchParams] = useSearchParams();
   
   const [activeTab, setActiveTab] = useState<'products' | 'categories'>('products');
   const [productQuery, setProductQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
-  const [serviceTypeFilter, setServiceTypeFilter] = useState<'all' | 'imei' | 'server' | 'remote' | 'file'>('all');
+
+  const typeParam = searchParams.get('type') as 'imei' | 'server' | 'remote' | 'file' | null;
+  const [serviceTypeFilter, setServiceTypeFilterState] = useState<'all' | 'imei' | 'server' | 'remote' | 'file'>(
+    typeParam || 'all'
+  );
+
+  useEffect(() => {
+    if (typeParam && ['imei', 'server', 'remote', 'file'].includes(typeParam)) {
+      setServiceTypeFilterState(typeParam);
+    } else if (!typeParam) {
+      setServiceTypeFilterState('all');
+    }
+  }, [typeParam]);
+
+  const setServiceTypeFilter = (val: 'all' | 'imei' | 'server' | 'remote' | 'file') => {
+    setServiceTypeFilterState(val);
+    const newParams = new URLSearchParams(searchParams);
+    if (val === 'all') {
+      newParams.delete('type');
+    } else {
+      newParams.set('type', val);
+    }
+    setSearchParams(newParams);
+  };
 
   // Modal controls
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
