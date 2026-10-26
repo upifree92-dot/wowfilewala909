@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useAppContext } from '../../context/AppContext';
 import type { AdminNotification, User } from '../../types';
 import { X, Search, Check, Hourglass, Clock, Ban } from 'lucide-react';

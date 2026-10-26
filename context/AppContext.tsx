@@ -2919,12 +2919,14 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         const userToNotify = allUsers[notification.userId];
         let newAllUsers = { ...allUsers };
         if (userToNotify) {
+            let matched = false;
             const updatedNotifications = (userToNotify.notifications || []).map((un): UserNotification => {
-                if (un.orderId === notification.orderId) {
+                if (un.orderId === notification.orderId || un.id === notification.id) {
+                    matched = true;
                     return {
                         ...un,
                         status: 'approved',
-                        title: `Order #${un.orderId} Success`,
+                        title: `Order #${un.orderId || notification.orderId} Success`,
                         read: false,
                         adminReply: replyMessage || "Order Approved",
                         timestamp: new Date().toISOString(),
@@ -2932,6 +2934,21 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
                 }
                 return un;
             });
+
+            if (!matched && notification.orderId) {
+                updatedNotifications.unshift({
+                    id: `user-notif-${Date.now()}`,
+                    title: `Order #${notification.orderId} Success`,
+                    message: `Order #${notification.orderId} completed successfully. Reply: ${replyMessage || 'Order Approved'}`,
+                    adminReply: replyMessage || 'Order Approved',
+                    read: false,
+                    timestamp: new Date().toISOString(),
+                    status: 'approved',
+                    type: 'order',
+                    orderId: notification.orderId,
+                    orderDetails: notification.orderDetails,
+                });
+            }
             
             const updatedUser = { ...userToNotify, notifications: updatedNotifications };
             newAllUsers = { ...allUsers, [userToNotify.id]: updatedUser };
