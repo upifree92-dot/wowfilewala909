@@ -209,7 +209,19 @@ const AdminOrdersPage = () => {
                                                 <button onClick={() => approveActivationOrder(order.id, orderComments[order.id] || '')} className="px-3 py-1.5 text-[10px] font-bold rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20 transition-all">Success</button>
                                             )}
                                             {order.status !== 'rejected' && order.status !== 'approved' && (
-                                                <button type="button" onClick={() => setRejectingOrder(order)} className="px-3 py-1.5 text-[10px] font-bold rounded-lg bg-rose-500/10 text-rose-400 border border-rose-500/20 hover:bg-rose-500/20 transition-all">Rejected</button>
+                                                <button 
+                                                    type="button" 
+                                                    onClick={() => {
+                                                        if (orderComments[order.id]) {
+                                                            setRejectionReason(orderComments[order.id]);
+                                                        }
+                                                        setRejectingOrder(order);
+                                                    }} 
+                                                    className="w-full px-2.5 py-1 text-[10px] font-bold rounded bg-rose-500/15 text-rose-300 border border-rose-500/30 hover:bg-rose-500/25 transition-all flex items-center justify-center gap-1 shadow-sm"
+                                                    title="Reject order and refund amount to customer wallet"
+                                                >
+                                                    Reject & Refund
+                                                </button>
                                             )}
                                         </td>
                                     </tr>

@@ -73,43 +73,7 @@ const AppContent = () => {
         --site-accent: ${themeColors.accentColor || '#f97316'};
       }
 
-      /* Admin portal high contrast text and input colors */
-      .admin-portal {
-        color: #f1f5f9 !important;
-      }
-      .admin-portal .text-slate-800,
-      .admin-portal .text-slate-900,
-      .admin-portal .text-gray-800,
-      .admin-portal .text-gray-900,
-      .admin-portal .text-slate-700,
-      .admin-portal .text-gray-700 {
-        color: #f1f5f9 !important;
-      }
-      .admin-portal .text-slate-400,
-      .admin-portal .text-gray-400,
-      .admin-portal .text-slate-300,
-      .admin-portal .text-gray-300 {
-        color: #cbd5e1 !important;
-      }
-      .admin-portal .text-slate-200,
-      .admin-portal .text-gray-200 {
-        color: #e2e8f0 !important;
-      }
-      .admin-portal .text-slate-500,
-      .admin-portal .text-gray-500 {
-        color: #94a3b8 !important;
-      }
-      .admin-portal input:not([type="checkbox"]):not([type="radio"]):not([type="color"]),
-      .admin-portal textarea,
-      .admin-portal select {
-        background-color: #0f172a !important;
-        color: #f8fafc !important;
-        border-color: #334155 !important;
-      }
-      .admin-portal input::placeholder,
-      .admin-portal textarea::placeholder {
-        color: #64748b !important;
-      }
+
 
       /* Light mode text color overrides (excluding admin portal and dark header/footer) */
       html:not(.dark) main .text-slate-800,

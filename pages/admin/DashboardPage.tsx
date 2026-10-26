@@ -1,8 +1,10 @@
 
 import React, { useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useAppContext } from '../../context/AppContext';
 import SalesChart from '../../components/SalesChart';
-import type { User, DownloadRecord } from '../../types';
+import type { User, DownloadRecord, AdminNotification } from '../../types';
+import { AlertCircle, X } from 'lucide-react';
 
 const StatCard = ({ title, value, icon, colorClass }: { title: string; value: string | number; icon: React.ReactNode; colorClass: string; }) => {
     return (
@@ -194,8 +196,18 @@ const SignUpsLineChart = ({ data }: { data: { date: string; count: number }[] })
 };
 
 const DashboardPage = () => {
-    const { getAllUsers, products, getAllOrders, getTotalSales, getSalesDataForLastNDays, user: currentUser, isAdmin } = useAppContext();
+    const { getAllUsers, products, getAllOrders, getTotalSales, getSalesDataForLastNDays, user: currentUser, isAdmin, approveActivationOrder, rejectActivationOrder } = useAppContext();
     const [activeTab, setActiveTab] = useState<'overview' | 'analytics'>('overview');
+    const [rejectingOrder, setRejectingOrder] = useState<AdminNotification | null>(null);
+    const [rejectionReason, setRejectionReason] = useState('Order could not be processed');
+
+    const handleRejectSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!rejectingOrder) return;
+        rejectActivationOrder(rejectingOrder.id, rejectionReason || 'Order could not be processed');
+        setRejectingOrder(null);
+        setRejectionReason('Order could not be processed');
+    };
 
     // Basic Metrics
     const users = useMemo(() => getAllUsers(), [getAllUsers]);
@@ -359,23 +371,73 @@ const DashboardPage = () => {
                             </h2>
                             <SalesChart data={salesData} />
                         </div>
-                        <div className="xl:col-span-2 bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-                            <h2 className="text-lg font-bold mb-4 text-gray-800">
-                                Recent Orders
-                            </h2>
-                            <div className="space-y-3.5">
-                                {recentOrders.length > 0 ? recentOrders.map(order => {
-                                     const user = findUser(order.userId);
-                                     return (
-                                        <div key={order.id} className="flex items-center justify-between p-3.5 bg-gray-50 hover:bg-gray-100 border border-gray-100 rounded-lg transition-all duration-200">
-                                            <div>
-                                                <p className="font-semibold text-sm text-gray-800">{order.orderDetails.categoryName}</p>
-                                                <p className="text-xs text-gray-500 mt-1">by {user?.profile.name || user?.email || 'Unknown'}</p>
+                        <div className="xl:col-span-2 bg-white p-6 rounded-xl border border-gray-200 shadow-sm flex flex-col justify-between">
+                            <div>
+                                <div className="flex items-center justify-between mb-4">
+                                    <h2 className="text-lg font-bold text-gray-800">
+                                        Recent Orders
+                                    </h2>
+                                    <Link 
+                                        to="/admin/orders" 
+                                        className="text-xs font-bold text-amber-600 hover:text-amber-700 hover:underline"
+                                    >
+                                        View All Orders &rarr;
+                                    </Link>
+                                </div>
+                                <div className="space-y-3.5">
+                                    {recentOrders.length > 0 ? recentOrders.map(order => {
+                                         const user = findUser(order.userId);
+                                         const cost = Number(order.orderDetails?.totalPrice || 0);
+                                         return (
+                                            <div key={order.id} className="p-3.5 bg-gray-50 hover:bg-gray-100/80 border border-gray-100 rounded-lg transition-all duration-200">
+                                                <div className="flex items-start justify-between gap-3">
+                                                    <div className="min-w-0 flex-1">
+                                                        <div className="flex items-center gap-2 flex-wrap">
+                                                            <p className="font-semibold text-sm text-gray-800 truncate">{order.orderDetails?.categoryName || 'Order'}</p>
+                                                            <span className={`px-2 py-0.5 text-[10px] font-bold rounded-full capitalize ${
+                                                                order.status === 'approved' ? 'bg-emerald-100 text-emerald-800 border border-emerald-300/40' :
+                                                                order.status === 'rejected' ? 'bg-rose-100 text-rose-800 border border-rose-300/40' :
+                                                                order.status === 'processing' ? 'bg-orange-100 text-orange-800 border border-orange-300/40' :
+                                                                'bg-amber-100 text-amber-800 border border-amber-300/40'
+                                                            }`}>
+                                                                {order.status === 'approved' ? 'Success' : (order.status || 'pending')}
+                                                            </span>
+                                                        </div>
+                                                        <p className="text-xs text-gray-500 mt-0.5 truncate">
+                                                            by {user?.profile?.name || user?.email || 'Unknown User'}
+                                                            {order.orderId ? ` • #${order.orderId}` : ''}
+                                                        </p>
+                                                    </div>
+                                                    <p className="font-bold text-sm text-gray-900 shrink-0">{formatCurrency(cost)}</p>
+                                                </div>
+
+                                                {/* Action buttons for pending/processing orders */}
+                                                {order.status !== 'approved' && order.status !== 'rejected' && (
+                                                    <div className="mt-3 pt-2.5 border-t border-gray-200/60 flex items-center justify-end gap-2">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => approveActivationOrder(order.id, 'Order approved by admin')}
+                                                            className="px-2.5 py-1 text-xs font-bold rounded-md bg-emerald-600 hover:bg-emerald-700 text-white transition-all shadow-sm active:scale-95"
+                                                        >
+                                                            Success
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                setRejectionReason('Order could not be processed');
+                                                                setRejectingOrder(order);
+                                                            }}
+                                                            className="px-2.5 py-1 text-xs font-bold rounded-md bg-rose-600 hover:bg-rose-700 text-white transition-all shadow-sm active:scale-95"
+                                                            title="Reject order and refund amount to customer wallet"
+                                                        >
+                                                            Reject & Refund
+                                                        </button>
+                                                    </div>
+                                                )}
                                             </div>
-                                            <p className="font-bold text-sm text-gray-800">{formatCurrency(order.orderDetails.totalPrice)}</p>
-                                        </div>
-                                     )
-                                }) : <p className="text-gray-500 text-center py-8">No recent orders.</p>}
+                                         )
+                                    }) : <p className="text-gray-500 text-center py-8">No recent orders.</p>}
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -473,6 +535,68 @@ const DashboardPage = () => {
                                 )}
                             </div>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Rejection & Refund Confirmation Modal */}
+            {rejectingOrder && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md animate-in fade-in duration-200">
+                    <div className="relative bg-white dark:bg-slate-950 rounded-2xl max-w-md w-full shadow-2xl border border-gray-200 dark:border-slate-800 animate-in zoom-in-95 duration-200 overflow-hidden">
+                        {/* Header */}
+                        <div className="flex items-center justify-between p-5 border-b border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-900/40">
+                            <div className="flex items-center gap-2.5">
+                                <div className="p-1.5 bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 rounded-lg">
+                                    <AlertCircle className="h-5 w-5" />
+                                </div>
+                                <h3 className="font-bold text-gray-900 dark:text-slate-100 text-base">Reject Order & Refund</h3>
+                            </div>
+                            <button
+                                onClick={() => setRejectingOrder(null)}
+                                className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-slate-200 rounded-lg transition-colors"
+                            >
+                                <X className="h-5 w-5" />
+                            </button>
+                        </div>
+
+                        {/* Body */}
+                        <form onSubmit={handleRejectSubmit}>
+                            <div className="p-6">
+                                <p className="text-xs sm:text-sm text-gray-600 dark:text-slate-300 leading-relaxed mb-4">
+                                    Are you sure you want to reject order <strong className="text-amber-600 dark:text-amber-400">#{rejectingOrder.orderId || rejectingOrder.id}</strong> ({rejectingOrder.orderDetails?.categoryName})?
+                                    <br />
+                                    The full amount of <span className="text-emerald-600 dark:text-emerald-400 font-bold font-mono">₹{Number(rejectingOrder.orderDetails?.totalPrice || 0).toFixed(2)}</span> will be <strong>refunded immediately</strong> to the customer's wallet balance.
+                                </p>
+                                <label className="block text-[11px] font-extrabold uppercase tracking-wider text-gray-500 dark:text-slate-400 mb-2">
+                                    Rejection Reason (Visible to Customer)
+                                </label>
+                                <textarea
+                                    required
+                                    value={rejectionReason}
+                                    onChange={(e) => setRejectionReason(e.target.value)}
+                                    placeholder="e.g. Invalid credentials, service temporarily down, or requested refund"
+                                    rows={3}
+                                    className="w-full px-3.5 py-2.5 text-sm bg-gray-50 dark:bg-slate-900 border border-gray-300 dark:border-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-500/40 text-gray-900 dark:text-slate-100 placeholder-gray-400 dark:placeholder-slate-500"
+                                />
+                            </div>
+
+                            {/* Footer */}
+                            <div className="flex items-center justify-end gap-2.5 px-6 py-4 bg-gray-50 dark:bg-slate-900/30 border-t border-gray-200 dark:border-slate-800">
+                                <button
+                                    type="button"
+                                    onClick={() => setRejectingOrder(null)}
+                                    className="px-4 py-2 text-xs font-bold text-gray-600 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-800 rounded-xl transition-all"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="px-4 py-2 text-xs font-bold bg-rose-600 hover:bg-rose-500 text-white rounded-xl transition-all shadow-md active:scale-95"
+                                >
+                                    Confirm Reject & Refund
+                                </button>
+                            </div>
+                        </form>
                     </div>
                 </div>
             )}

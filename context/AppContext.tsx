@@ -2974,24 +2974,53 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const rejectActivationOrder = (notificationId: string, reason: string) => {
         if (!isAdmin) return;
 
-        const notification = adminNotifications.find(n => n.id === notificationId);
-        if (!notification || !notification.userId || !notification.orderId) return;
+        const notification = adminNotifications.find(n => n.id === notificationId || n.orderId === notificationId);
+        if (!notification) return;
 
-        const actualReason = reason?.trim() || "No reason provided";
+        const actualReason = reason?.trim() || "Order rejected by administrator";
 
-        const updatedAdminNotifications = adminNotifications.map(n => (n.id === notificationId || n.orderId === notification.orderId) ? { ...n, status: 'rejected' as const, read: true, rejectionReason: actualReason } : n);
+        let priceToRefund = Number(notification.orderDetails?.totalPrice || 0);
+        if (!priceToRefund && notification.orderDetails?.price) {
+            priceToRefund = Number(notification.orderDetails.price) * Number(notification.orderDetails.quantity || 1);
+        }
+        if (!priceToRefund && typeof notification.message === 'string') {
+            const match = notification.message.match(/Total=₹\s*([0-9.]+)/i) || notification.message.match(/₹\s*([0-9.]+)/);
+            if (match && match[1]) {
+                priceToRefund = parseFloat(match[1]);
+            }
+        }
+
+        const updatedAdminNotifications = adminNotifications.map(n => 
+            (n.id === notificationId || (notification.orderId && n.orderId === notification.orderId)) 
+                ? { ...n, status: 'rejected' as const, read: true, rejectionReason: actualReason } 
+                : n
+        );
         setAdminNotifications(updatedAdminNotifications);
         setLocalStorage('adminNotifications', updatedAdminNotifications);
         
-        const userToNotify = allUsers[notification.userId];
+        const targetUserId = notification.userId;
         let newAllUsers = { ...allUsers };
-        if (userToNotify) {
+
+        if (targetUserId && allUsers[targetUserId]) {
+            const userToNotify = allUsers[targetUserId];
+            const currentBal = Number(userToNotify.wallet?.balance || 0);
+            const newBal = Number((currentBal + priceToRefund).toFixed(2));
+
+            const newTransaction: Transaction = {
+                id: `txn-${Date.now()}`,
+                timestamp: new Date().toISOString(),
+                type: 'refund',
+                amount: priceToRefund,
+                description: `Refund for rejected order #${notification.orderId || notification.id}: ${notification.orderDetails?.categoryName || 'Order'}`
+            };
+
             const updatedNotifications = (userToNotify.notifications || []).map((un): UserNotification => {
-                if (un.orderId === notification.orderId) {
+                if (un.orderId === notification.orderId || un.id === notification.id) {
                     return {
                         ...un,
                         status: 'rejected',
-                        title: `Order #${un.orderId} Rejected`,
+                        title: `Order #${un.orderId || notification.orderId} Rejected`,
+                        message: `Order #${un.orderId || notification.orderId} has been rejected. Reason: ${actualReason}.${priceToRefund > 0 ? ` ₹${priceToRefund.toFixed(2)} has been refunded to your wallet.` : ''}`,
                         rejectionReason: actualReason,
                         read: false,
                         timestamp: new Date().toISOString(),
@@ -3000,22 +3029,59 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
                 }
                 return un;
             });
+
+            // If notification didn't match existing, add a new user notification
+            const hasExisting = (userToNotify.notifications || []).some(un => un.orderId === notification.orderId);
+            if (!hasExisting && notification.orderId) {
+                updatedNotifications.unshift({
+                    id: `user-notif-${Date.now()}`,
+                    title: `Order #${notification.orderId} Rejected`,
+                    message: `Order #${notification.orderId} was rejected. Reason: ${actualReason}.${priceToRefund > 0 ? ` ₹${priceToRefund.toFixed(2)} has been refunded to your wallet.` : ''}`,
+                    rejectionReason: actualReason,
+                    read: false,
+                    timestamp: new Date().toISOString(),
+                    status: 'rejected',
+                    type: 'order',
+                    orderId: notification.orderId,
+                });
+            }
             
             const updatedUser = {
                 ...userToNotify,
-                notifications: updatedNotifications
+                wallet: {
+                    ...userToNotify.wallet,
+                    balance: newBal
+                },
+                notifications: updatedNotifications,
+                transactionHistory: priceToRefund > 0 
+                    ? [newTransaction, ...(userToNotify.transactionHistory || [])]
+                    : (userToNotify.transactionHistory || [])
             };
             
             newAllUsers = { ...allUsers, [userToNotify.id]: updatedUser };
             setAllUsers(newAllUsers);
             setLocalStorage('users', newAllUsers);
             
-            if(user && user.id === userToNotify.id) {
+            // Persist the refund balance to Hostinger MySQL registered_users table
+            saveRegisteredUser({
+                id: updatedUser.id,
+                email: updatedUser.email,
+                mobile_number: updatedUser.mobileNumber,
+                name: updatedUser.profile?.name || '',
+                bio: updatedUser.profile?.bio || '',
+                wallet_balance: updatedUser.wallet.balance
+            }).catch(err => console.warn('Persistence error to MySQL registered_users:', err));
+
+            if (user && user.id === userToNotify.id) {
                 setUser(updatedUser);
                 setLocalStorage('currentUser', updatedUser);
             }
-        }
 
+            // Record transaction in Hostinger MySQL wallet_transactions table
+            if (priceToRefund > 0) {
+                syncTransaction(userToNotify.id, userToNotify.email, newTransaction);
+            }
+        }
 
         // Push to server immediately so customer receives refund and rejected status live!
         pushServerSync({
@@ -3023,12 +3089,14 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             users: Object.values(newAllUsers)
         }, true).catch(err => console.warn('Sync reject error:', err));
 
-        updateOrderStatus(notification.orderId, 'rejected').catch(err => {
-            console.warn('Failed to update order status in Supabase (non-blocking):', err);
-        });
+        if (notification.orderId) {
+            updateOrderStatus(notification.orderId, 'rejected').catch(err => {
+                console.warn('Failed to update order status in MySQL (non-blocking):', err);
+            });
+        }
 
         playOrderRejectedSound();
-        setNotification('Order rejected, balance refunded, and user notified.');
+        setNotification(`Order rejected successfully. ₹${priceToRefund.toFixed(2)} has been refunded to customer's wallet.`, 'success');
     };
 
     const adminReplyToNotification = (notificationId: string, replyMessage: string) => {
