@@ -6,6 +6,7 @@ import BackButton from '../components/BackButton';
 import Editable from '../components/Editable';
 import ImeiOrderSettingsModal from '../components/ImeiOrderSettingsModal';
 import ServiceListPanel from '../components/ServiceListPanel';
+import RemoteToolRentOrder from '../components/RemoteToolRentOrder';
 import { useSEO } from '../hooks/useSEO';
 import { ShieldCheck, Server, RefreshCw, CheckCircle2, Zap } from 'lucide-react';
 
@@ -191,128 +192,136 @@ const ImeiOrderPage = () => {
                 />
             </div>
 
-            <div className="max-w-2xl mx-auto bg-white/90 dark:bg-slate-800/90 backdrop-blur-lg p-6 sm:p-8 rounded-xl shadow-lg border border-slate-200/70 dark:border-slate-700/70">
-                <BackButton />
+            {activeType === 'rent' ? (
+                <div className="max-w-6xl mx-auto">
+                    <div className="mb-4">
+                        <BackButton />
+                    </div>
+                    <RemoteToolRentOrder />
+                </div>
+            ) : (
+                <div className="max-w-2xl mx-auto bg-white/90 dark:bg-slate-800/90 backdrop-blur-lg p-6 sm:p-8 rounded-xl shadow-lg border border-slate-200/70 dark:border-slate-700/70">
+                    <BackButton />
 
+                    {isAdmin && isEditMode && (
+                        <div className="text-center mb-6 p-4 bg-blue-100 dark:bg-blue-900/30 border-2 border-dashed border-blue-400 dark:border-blue-600 rounded-lg">
+                            <p className="font-bold text-blue-800 dark:text-blue-200">Admin Controls</p>
+                            <button 
+                                onClick={() => setSettingsModalOpen(true)}
+                                className="mt-2 bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg"
+                            >
+                                Edit Form Settings
+                            </button>
+                        </div>
+                    )}
 
-                {isAdmin && isEditMode && (
-                    <div className="text-center mb-6 p-4 bg-blue-100 dark:bg-blue-900/30 border-2 border-dashed border-blue-400 dark:border-blue-600 rounded-lg">
-                        <p className="font-bold text-blue-800 dark:text-blue-200">Admin Controls</p>
-                        <button 
-                            onClick={() => setSettingsModalOpen(true)}
-                            className="mt-2 bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg"
+                    <div className="text-center mb-3">
+                        <span
+                            style={{ backgroundColor: '#0d7474', borderColor: '#2dd4bf' }}
+                            className="inline-block px-3.5 py-1 rounded-full border text-xs font-extrabold uppercase tracking-wider !text-white shadow-sm"
                         >
-                            Edit Form Settings
-                        </button>
-                    </div>
-                )}
-
-                <div className="text-center mb-3">
-                    <span
-                        style={{ backgroundColor: '#0d7474', borderColor: '#2dd4bf' }}
-                        className="inline-block px-3.5 py-1 rounded-full border text-xs font-extrabold uppercase tracking-wider !text-white shadow-sm"
-                    >
-                        {currentMeta.badge}
-                    </span>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5">
-                        {currentMeta.subtitle}
-                    </p>
-                </div>
-
-                {/* 1. Search Filter & Select Service / Rent Tool Dropdown */}
-                <div className="mb-6 space-y-2.5">
-                    <div className="flex justify-between items-center">
-                        <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">
-                            Select {activeType === 'rent' ? 'Remote Tool Rental' : activeType === 'server' ? 'Server Service' : 'IMEI Service'}
-                        </label>
-                        <span className="text-[11px] font-mono font-bold text-amber-500">
-                            {availableServices.length} Services Available
+                            {currentMeta.badge}
                         </span>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5">
+                            {currentMeta.subtitle}
+                        </p>
                     </div>
 
-                    <input
-                        type="text"
-                        value={filterQuery}
-                        onChange={(e) => setFilterQuery(e.target.value)}
-                        placeholder={`🔍 Search in ${availableServices.length} services (e.g. UnlockTool, AMT, Samsung, iPhone)...`}
-                        className="w-full p-3 rounded-xl bg-slate-900 border border-slate-700 text-slate-100 text-xs sm:text-sm focus:outline-none focus:border-amber-500 placeholder-slate-500"
-                    />
+                    {/* 1. Search Filter & Select Service / Rent Tool Dropdown */}
+                    <div className="mb-6 space-y-2.5">
+                        <div className="flex justify-between items-center">
+                            <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">
+                                Select {activeType === 'server' ? 'Server Service' : 'IMEI Service'}
+                            </label>
+                            <span className="text-[11px] font-mono font-bold text-amber-500">
+                                {availableServices.length} Services Available
+                            </span>
+                        </div>
 
-                    <select
-                        value={selectedServiceId}
-                        onChange={(e) => setSelectedServiceId(e.target.value)}
-                        className="w-full p-3.5 rounded-xl bg-slate-900 text-slate-100 border-2 border-slate-800 font-semibold focus:outline-none focus:border-amber-500 text-sm cursor-pointer shadow-sm"
-                    >
-                        {availableServices.map((srv) => (
-                            <option key={srv.id} value={srv.id}>
-                                {srv.name} — ₹{srv.price.toFixed(2)} ({srv.deliveryTime})
-                            </option>
-                        ))}
-                    </select>
-                </div>
-
-                {/* Service Details Card & Live Price Header */}
-                <div className="text-center mb-8 p-5 bg-gradient-to-b from-slate-900 to-slate-950 rounded-2xl border border-slate-800 text-slate-100 shadow-md">
-                    <h2 className="text-lg sm:text-xl font-bold text-amber-400 mb-1">
-                        {selectedService.name}
-                    </h2>
-                    <p className="text-4xl sm:text-5xl font-black text-emerald-400 font-mono my-3">
-                        ₹{selectedService.price.toFixed(2)}
-                    </p>
-                    <div className="flex justify-center items-center gap-4 text-xs text-slate-400 font-mono">
-                        <span>⚡ Delivery: <strong className="text-slate-200">{selectedService.deliveryTime}</strong></span>
-                        <span>•</span>
-                        <span>Auto API Sync: <strong className="text-emerald-400">Enabled</strong></span>
-                    </div>
-                </div>
-
-                {/* Form Inputs */}
-                <form onSubmit={handleSubmit} className="space-y-5">
-                    <div>
-                        <label htmlFor="serviceInput" className="block text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-2">
-                            {selectedService.inputLabel} <span className="text-rose-500">*</span>
-                        </label>
                         <input
                             type="text"
-                            id="serviceInput"
-                            value={serviceInputValue}
-                            onChange={(e) => setServiceInputValue(e.target.value)}
-                            required
-                            placeholder={selectedService.inputPlaceholder}
-                            className="w-full p-3.5 rounded-xl bg-white/90 dark:bg-slate-900 border-2 border-slate-300 dark:border-slate-800 focus:border-amber-500 focus:ring-amber-500/20 text-slate-900 dark:text-slate-100 font-mono text-sm shadow-sm"
+                            value={filterQuery}
+                            onChange={(e) => setFilterQuery(e.target.value)}
+                            placeholder={`🔍 Search in ${availableServices.length} services (e.g. UnlockTool, AMT, Samsung, iPhone)...`}
+                            className="w-full p-3 rounded-xl bg-slate-900 border border-slate-700 text-slate-100 text-xs sm:text-sm focus:outline-none focus:border-amber-500 placeholder-slate-500"
                         />
+
+                        <select
+                            value={selectedServiceId}
+                            onChange={(e) => setSelectedServiceId(e.target.value)}
+                            className="w-full p-3.5 rounded-xl bg-slate-900 text-slate-100 border-2 border-slate-800 font-semibold focus:outline-none focus:border-amber-500 text-sm cursor-pointer shadow-sm"
+                        >
+                            {availableServices.map((srv) => (
+                                <option key={srv.id} value={srv.id}>
+                                    {srv.name} — ₹{srv.price.toFixed(2)} ({srv.deliveryTime})
+                                </option>
+                            ))}
+                        </select>
                     </div>
 
-                    <div>
-                        <label htmlFor="quantity" className="block text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-2">
-                            Quantity
-                        </label>
-                        <input
-                            type="number"
-                            id="quantity"
-                            value={quantity}
-                            onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
-                            required
-                            min="1"
-                            className="w-full p-3.5 rounded-xl bg-white/90 dark:bg-slate-900 border-2 border-slate-300 dark:border-slate-800 focus:border-amber-500 text-slate-900 dark:text-slate-100 font-mono text-sm shadow-sm"
-                        />
-                    </div>
-                    
-                    <div className="p-4 bg-slate-900/90 rounded-xl border border-slate-800 text-center space-y-1">
-                        <p className="text-xs uppercase tracking-wider font-bold text-slate-400">Total Order Price</p>
-                        <p className="text-3xl font-black text-amber-400 font-mono">₹{totalPrice.toFixed(2)}</p>
+                    {/* Service Details Card & Live Price Header */}
+                    <div className="text-center mb-8 p-5 bg-gradient-to-b from-slate-900 to-slate-950 rounded-2xl border border-slate-800 text-slate-100 shadow-md">
+                        <h2 className="text-lg sm:text-xl font-bold text-amber-400 mb-1">
+                            {selectedService.name}
+                        </h2>
+                        <p className="text-4xl sm:text-5xl font-black text-emerald-400 font-mono my-3">
+                            ₹{selectedService.price.toFixed(2)}
+                        </p>
+                        <div className="flex justify-center items-center gap-4 text-xs text-slate-400 font-mono">
+                            <span>⚡ Delivery: <strong className="text-slate-200">{selectedService.deliveryTime}</strong></span>
+                            <span>•</span>
+                            <span>Auto API Sync: <strong className="text-emerald-400">Enabled</strong></span>
+                        </div>
                     </div>
 
-                    <button
-                        type="submit"
-                        disabled={!user}
-                        className="w-full bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-slate-950 font-black py-4 px-4 rounded-xl shadow-lg transition-all text-base uppercase tracking-wider disabled:bg-gray-400 disabled:cursor-not-allowed cursor-pointer"
-                    >
-                        Place {selectedService.name.split(' ')[0]} Order Now
-                    </button>
-                    {!user && <p className="text-center text-sm text-red-500 dark:text-red-400 mt-2">You must be logged in to place an order.</p>}
-                </form>
-            </div>
+                    {/* Form Inputs */}
+                    <form onSubmit={handleSubmit} className="space-y-5">
+                        <div>
+                            <label htmlFor="serviceInput" className="block text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-2">
+                                {selectedService.inputLabel} <span className="text-rose-500">*</span>
+                            </label>
+                            <input
+                                type="text"
+                                id="serviceInput"
+                                value={serviceInputValue}
+                                onChange={(e) => setServiceInputValue(e.target.value)}
+                                required
+                                placeholder={selectedService.inputPlaceholder}
+                                className="w-full p-3.5 rounded-xl bg-white/90 dark:bg-slate-900 border-2 border-slate-300 dark:border-slate-800 focus:border-amber-500 focus:ring-amber-500/20 text-slate-900 dark:text-slate-100 font-mono text-sm shadow-sm"
+                            />
+                        </div>
+
+                        <div>
+                            <label htmlFor="quantity" className="block text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-2">
+                                Quantity
+                            </label>
+                            <input
+                                type="number"
+                                id="quantity"
+                                value={quantity}
+                                onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+                                required
+                                min="1"
+                                className="w-full p-3.5 rounded-xl bg-white/90 dark:bg-slate-900 border-2 border-slate-300 dark:border-slate-800 focus:border-amber-500 text-slate-900 dark:text-slate-100 font-mono text-sm shadow-sm"
+                            />
+                        </div>
+                        
+                        <div className="p-4 bg-slate-900/90 rounded-xl border border-slate-800 text-center space-y-1">
+                            <p className="text-xs uppercase tracking-wider font-bold text-slate-400">Total Order Price</p>
+                            <p className="text-3xl font-black text-amber-400 font-mono">₹{totalPrice.toFixed(2)}</p>
+                        </div>
+
+                        <button
+                            type="submit"
+                            disabled={!user}
+                            className="w-full bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-slate-950 font-black py-4 px-4 rounded-xl shadow-lg transition-all text-base uppercase tracking-wider disabled:bg-gray-400 disabled:cursor-not-allowed cursor-pointer"
+                        >
+                            Place {selectedService.name.split(' ')[0]} Order Now
+                        </button>
+                        {!user && <p className="text-center text-sm text-red-500 dark:text-red-400 mt-2">You must be logged in to place an order.</p>}
+                    </form>
+                </div>
+            )}
         </div>
     );
 };
