@@ -1,5 +1,6 @@
 
 import type { Product, Category, BalancePackage } from './types';
+import { DEFAULT_SERVICES_CATALOG, DEFAULT_SERVICE_CATEGORIES } from './data/defaultServices';
 
 // This file now provides the INITIAL data for the application.
 // On first load, this data will be copied to localStorage to make it dynamic.
@@ -8,6 +9,7 @@ export const ADMIN_EMAIL = 'kgfilewala@gmail.com';
 
 // New, flat category structure with parentId for nesting
 export const INITIAL_CATEGORIES: Category[] = [
+  ...DEFAULT_SERVICE_CATEGORIES,
   // Top-level categories from the image
   { id: 'auth-files', name: 'Auth/Firehose/Preloader & DA Files', description: 'Download Auth/firehose & DA Files for Flashing', imageUrl: 'https://placehold.co/80x80/e3f2fd/3d5afe?text=AUTH' },
   { 
@@ -136,7 +138,7 @@ export const INITIAL_CATEGORIES: Category[] = [
 ];
 
 
-export const INITIAL_PRODUCTS: Product[] = [];
+export const INITIAL_PRODUCTS: Product[] = DEFAULT_SERVICES_CATALOG;
 
 
 export const INITIAL_BALANCE_PACKAGES: BalancePackage[] = [

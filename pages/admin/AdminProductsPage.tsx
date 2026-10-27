@@ -432,7 +432,7 @@ const ProductModal = ({ product, isOpen, onClose }: ProductModalProps) => {
 
 // --- Main Component ---
 const AdminProductsPage = () => {
-  const { products, categories, deleteProduct, deleteCategory, setNotification } = useAppContext();
+  const { products, categories, deleteProduct, deleteCategory, setNotification, resetToDefaultServices } = useAppContext();
   const [searchParams, setSearchParams] = useSearchParams();
   
   const [activeTab, setActiveTab] = useState<'products' | 'categories'>('products');
@@ -471,10 +471,16 @@ const AdminProductsPage = () => {
 
   const getProductServiceType = (p: Product): 'imei' | 'server' | 'remote' | 'file' => {
     if (p.serviceType) return p.serviceType;
-    const text = (p.name + ' ' + (p.description || '')).toLowerCase();
-    if (text.includes('imei') || text.includes('icloud') || text.includes('sn ') || text.includes('serial')) return 'imei';
-    if (text.includes('remote') || text.includes('teamviewer') || text.includes('flexihub') || text.includes('usb')) return 'remote';
-    if (text.includes('file') || text.includes('firmware') || text.includes('rom') || text.includes('dump') || text.includes('pdf')) return 'file';
+    const id = (p.id || '').toLowerCase();
+    if (id.startsWith('imei-')) return 'imei';
+    if (id.startsWith('srv-') || id.startsWith('server-')) return 'server';
+    if (id.startsWith('remote-') || id.startsWith('tool-')) return 'remote';
+    if (id.startsWith('file-') || id.startsWith('pkg-')) return 'file';
+
+    const text = (p.name + ' ' + (p.description || '') + ' ' + (p.categoryId || '')).toLowerCase();
+    if (text.includes('imei') || text.includes('icloud') || text.includes('sn ') || text.includes('serial') || text.includes('carrier') || text.includes('clean imei') || text.includes('network unlock')) return 'imei';
+    if (text.includes('remote') || text.includes('rent') || text.includes('teamviewer') || text.includes('flexihub') || text.includes('hours') || text.includes('login id')) return 'remote';
+    if (text.includes('file') || text.includes('firmware') || text.includes('rom') || text.includes('dump') || text.includes('setup') || text.includes('driver') || text.includes('iso') || text.includes('pinout') || text.includes('schematic') || text.includes('da ') || text.includes('flash tool')) return 'file';
     return 'server';
   };
 
@@ -546,6 +552,23 @@ const AdminProductsPage = () => {
               Categories
             </button>
           </div>
+
+          {resetToDefaultServices && (
+            <button
+              onClick={() => {
+                if (window.confirm("Reload all default IMEI, Server, Remote Tool Rent, and File services into catalog?")) {
+                  resetToDefaultServices();
+                }
+              }}
+              className="bg-slate-900 hover:bg-slate-800 text-teal-400 border border-teal-500/30 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-1.5 transition-all shadow-sm"
+              title="Restore all default services across all 4 categories"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              <span>Restore All Services</span>
+            </button>
+          )}
 
           <button
             onClick={() => {
@@ -765,8 +788,21 @@ const AdminProductsPage = () => {
                   );
                 }) : (
                   <tr>
-                    <td colSpan={7} className="text-center p-12 text-slate-500">
-                      No services found for selected filter.
+                    <td colSpan={7} className="text-center p-12 text-slate-400">
+                      <div className="flex flex-col items-center justify-center space-y-3">
+                        <div className="w-12 h-12 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center text-xl">
+                          🔍
+                        </div>
+                        <p className="text-sm font-medium text-slate-300">No services found for selected filter.</p>
+                        {resetToDefaultServices && (
+                          <button
+                            onClick={resetToDefaultServices}
+                            className="mt-2 px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-slate-950 font-bold rounded-xl text-xs shadow-lg transition-all"
+                          >
+                            ⚡ Load All IMEI, Server, Remote & File Services
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 )}

@@ -16,519 +16,956 @@
       "price": 1000
     }
   ],
-  "updatedAt": 1792825090424,
+  "updatedAt": 1793125304569,
   "products": [
     {
-      "id": "file-vivo-x200fe",
-      "name": "VIVO_X200FE_I SP_PINOUT_By_AYUB_GSM",
-      "subtitle": "VIVO X200FE ISP",
-      "categoryId": "schematic-diagrams",
-      "price": 0,
+      "id": "imei-srv-1",
+      "name": "Apple iPhone Warranty + Carrier + FMI + GSMA Checker (IMEI/SN)",
+      "categoryId": "imei-services",
+      "serviceType": "imei",
+      "price": 6,
       "downloadLink": "#",
-      "date": "2026-01-22",
-      "description": "VIVO X200FE ISP Pinout schematic and test point for flashing / emmc service.",
-      "size": "1.00 MB",
-      "views": 120,
-      "downloads": 85,
-      "rating": 5,
-      "tags": []
-    },
-    {
-      "id": "file-mtk-flash-tool-v6",
-      "name": "MTK_flash_tool_V6_SVC.zip",
-      "categoryId": "official-tools",
-      "price": 0,
-      "downloadLink": "#",
-      "date": "2025-03-15",
-      "description": "Official MTK Flash Tool V6 SVC for flashing all MediaTek smartphones.",
-      "size": "12.00 MB",
-      "views": 340,
-      "downloads": 215,
-      "rating": 5,
-      "tags": []
-    },
-    {
-      "id": "file-da-mt6765",
-      "name": "DA_MT6765.zip",
-      "categoryId": "auth-files",
-      "price": 0,
-      "downloadLink": "#",
-      "date": "2024-12-09",
-      "description": "Download Download Agent (DA) File for MT6765 chipset to flash or unlock.",
-      "size": "1.00 MB",
-      "views": 512,
-      "downloads": 304,
-      "rating": 5,
+      "size": "Instant Check",
+      "description": "Instant automated check for iPhone Carrier Lock, iCloud FMI status, SimLock, and warranty.",
       "tags": [
-        "featured"
-      ]
-    },
-    {
-      "id": "file-vivo-rpmb-parser",
-      "name": "Vivo_RPMB_Parser_and_Editor_V1.0.rar",
-      "categoryId": "dump-files",
-      "price": 0,
-      "downloadLink": "#",
-      "date": "2024-11-21",
-      "description": "Vivo RPMB Parser and Editor Tool V1.0 to repair RPMB partition.",
-      "size": "15.00 MB",
-      "views": 243,
-      "downloads": 128,
-      "rating": 5,
-      "tags": []
-    },
-    {
-      "id": "file-prog-emmc-ufs-firehose",
-      "name": "prog_emmc_ufs_firehose_Full Collection.zip",
-      "categoryId": "auth-files",
-      "price": 0,
-      "downloadLink": "#",
-      "date": "2024-07-30",
-      "description": "Full collection of Qualcomm EMMC and UFS prog_emmc_firehose loaders.",
-      "size": "70.00 MB",
-      "views": 820,
-      "downloads": 614,
-      "rating": 5,
-      "tags": []
-    },
-    {
-      "id": "file-free-vpn",
-      "name": "FREE VPN",
-      "categoryId": "free-tools",
-      "price": 0,
-      "downloadLink": "#",
-      "date": "2024-01-01",
-      "description": "Free secure VPN for PC to bypass regional IP blocks during flashing.",
-      "size": "7.00 MB",
-      "views": 980,
-      "downloads": 720,
-      "rating": 5,
-      "tags": []
-    },
-    {
-      "id": "file-qcn-edit-tool",
-      "name": "QCN edit Tool.rar",
-      "categoryId": "network-files",
-      "price": 0,
-      "downloadLink": "#",
-      "date": "2023-11-29",
-      "description": "Qualcomm Calibration Network (QCN) editor tool to edit IMEI and baseband.",
-      "size": "1.00 MB",
-      "views": 420,
-      "downloads": 289,
-      "rating": 5,
-      "tags": [
-        "featured"
-      ]
-    },
-    {
-      "id": "file-mi-diag-port-enabler",
-      "name": "Mi Diag_Port_Enabler_All_MiUi_Version.rar",
-      "categoryId": "network-files",
-      "price": 0,
-      "downloadLink": "#",
-      "date": "2023-10-24",
-      "description": "Enable diagnostic port on all Xiaomi MIUI versions without root.",
-      "size": "5.00 MB",
-      "views": 1120,
-      "downloads": 902,
-      "rating": 5,
-      "tags": [
-        "featured"
-      ]
-    },
-    {
-      "id": "file-ufi-all-ffu",
-      "name": "UFI All FFU Files",
-      "categoryId": "dump-files",
-      "price": 0,
-      "downloadLink": "#",
-      "date": "2023-08-16",
-      "description": "FFU firmware files collection for UFI Box EMMC firmware repair.",
-      "size": "38.32 MB",
-      "views": 630,
-      "downloads": 412,
-      "rating": 5,
-      "tags": [
-        "featured"
-      ]
-    },
-    {
-      "id": "file-idm-build-56",
-      "name": "Internet Download Manager 6.42 build 56 incl",
-      "categoryId": "windows-files",
-      "price": 0,
-      "downloadLink": "#",
-      "date": "2023-07-14",
-      "description": "Internet Download Manager (IDM) 6.42 build 56 with activator. Best downloader.",
-      "size": "16.00 MB",
-      "views": 2450,
-      "downloads": 1890,
-      "rating": 5,
-      "tags": [],
-      "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/e/ec/Internet_Download_Manager_logo.png"
-    },
-    {
-      "id": "file-vivo-latest-2022-da",
-      "name": "Vivo Latest 2022 DA File",
-      "categoryId": "auth-files",
-      "price": 0,
-      "downloadLink": "#",
-      "date": "2022-06-13",
-      "description": "Tested and working latest 2022 Download Agent (DA) file for Vivo devices.",
-      "size": "2.00 MB",
-      "views": 520,
+        "new",
+        "paid"
+      ],
+      "views": 450,
       "downloads": 310,
       "rating": 5,
+      "date": "2026-03-01"
+    },
+    {
+      "id": "imei-srv-2",
+      "name": "Apple iPhone/iPad Sold By / Replacement / Case History Checker (IMEI/SN)",
+      "categoryId": "imei-services",
+      "serviceType": "imei",
+      "price": 46,
+      "downloadLink": "#",
+      "size": "Instant Check",
+      "description": "Find original purchase country, Sold by company, and Apple replacement history.",
       "tags": [
-        "featured"
-      ]
-    },
-    {
-      "id": "file-da-mtk-all-bin",
-      "name": "DA_6765_6785_6768_6873_6885_6853.bin",
-      "subtitle": "MTK Download",
-      "categoryId": "auth-files",
-      "price": 0,
-      "downloadLink": "#",
-      "date": "2021-07-22",
-      "description": "MTK All-In-One Download Agent file supporting MT6765, MT6785, MT6768, MT6873, MT6885, MT6853 chipsets.",
-      "size": "3.70 MB",
-      "views": 780,
-      "downloads": 540,
+        "paid"
+      ],
+      "views": 320,
+      "downloads": 180,
       "rating": 5,
-      "tags": []
+      "date": "2026-03-01"
     },
     {
-      "id": "prod-zhizhen-demo",
-      "name": "Zhizhen Schematics Demo File (PAID)",
-      "categoryId": "schematic-diagrams",
-      "price": 15,
+      "id": "imei-srv-3",
+      "name": "Alcatel Network Unlock Code WorldWide - [100% Success]",
+      "categoryId": "imei-services",
+      "serviceType": "imei",
+      "price": 1432,
       "downloadLink": "#",
-      "date": "2025-11-01",
-      "description": "This is a paid demo product for the schematics category to test purchasing functionality.",
-      "size": "1.5 MB",
-      "views": 10,
-      "downloads": 2,
-      "rating": 0,
+      "size": "1-24 Hours",
+      "description": "Permanent NCK / Network Unlock Code for all Alcatel models worldwide.",
       "tags": [
         "paid",
         "featured"
-      ]
+      ],
+      "views": 195,
+      "downloads": 42,
+      "rating": 5,
+      "date": "2026-03-02"
     },
     {
-      "id": "prod-realme-n55",
-      "name": "Realme Narzo N55 RMX3710_14.0.0.1200(EX01) Rollback Realme UI 5.0 Android 15 to Android 14 Downgrade OTA Firmware",
-      "categoryId": "readed-firmware",
-      "price": 0,
+      "id": "imei-srv-4",
+      "name": "Alcatel Network Unlock Code Worldwide All Model - [Clean Imei Supported]",
+      "categoryId": "imei-services",
+      "serviceType": "imei",
+      "price": 120,
       "downloadLink": "#",
-      "date": "2025-10-31",
-      "description": "Download Realme Narzo N55 RMX3710 Downgrade OTA Firmware",
-      "size": "6.66 GB",
-      "views": 4,
-      "downloads": 1,
-      "rating": 0,
-      "tags": [
-        "new",
-        "featured"
-      ]
-    },
-    {
-      "id": "prod-cph2691",
-      "name": "CPH2691 ONE PLUS 13R OS 15 Full UFS Dump F64 Box Readed By Filewale Team.zip",
-      "categoryId": "dump-files",
-      "price": 10,
-      "downloadLink": "#",
-      "date": "2025-10-30",
-      "description": "Download OnePlus 13R CPH2691 Dump File",
-      "size": "11.81 GB",
-      "views": 44,
-      "downloads": 0,
-      "rating": 0,
+      "size": "1-24 Hours",
+      "description": "Clean IMEI supported network unlock code for Alcatel devices.",
       "tags": [
         "paid"
-      ]
+      ],
+      "views": 140,
+      "downloads": 28,
+      "rating": 5,
+      "date": "2026-03-02"
     },
     {
-      "id": "prod-infinix-hot-50",
-      "name": "Infinix Hot 50 X6882B-H8915STU-U-OP-250311V392.zip",
-      "categoryId": "infinix-auth",
-      "price": 0,
+      "id": "imei-srv-5",
+      "name": "AT&T USA iPhone All Models [Clean IMEI Premium Unlock]",
+      "categoryId": "imei-services",
+      "serviceType": "imei",
+      "price": 99,
       "downloadLink": "#",
-      "date": "2025-10-30",
-      "description": "Download Infinix Hot 50 X6882B Flash File/Stock ROM",
-      "size": "8.27 GB",
-      "views": 11,
-      "downloads": 0,
-      "rating": 0,
+      "size": "1-24 Hours",
+      "description": "Official factory unlock for AT&T USA iPhones (Clean IMEI only).",
       "tags": [
+        "paid",
         "featured"
-      ]
+      ],
+      "views": 890,
+      "downloads": 512,
+      "rating": 5,
+      "date": "2026-03-03"
     },
     {
-      "id": "prod-infinix-hot-50-pro",
-      "name": "Infinix Hot 50 Pro+ X6880-15.1.108(OP001PF001AZ).zip",
-      "categoryId": "infinix-auth",
-      "price": 0,
+      "id": "imei-srv-6",
+      "name": "Cricket USA - iPhone & Generic All Models Supported (Clean IMEI)",
+      "categoryId": "imei-services",
+      "serviceType": "imei",
+      "price": 155,
       "downloadLink": "#",
-      "date": "2025-10-30",
-      "description": "Download Infinix Hot 50 Pro+ X6880 Flash File/Stock ROM",
-      "size": "8.19 GB",
-      "views": 13,
-      "downloads": 2,
-      "rating": 0,
+      "size": "1-48 Hours",
+      "description": "Factory unlock for Cricket USA carrier locked devices.",
       "tags": [
-        "featured"
-      ]
+        "paid"
+      ],
+      "views": 260,
+      "downloads": 94,
+      "rating": 5,
+      "date": "2026-03-04"
     },
     {
-      "id": "prod-infinix-gt-30",
-      "name": "Infinix GT 30 5G X6876-15.1.2.121(IN001PF001AZ).zip",
-      "categoryId": "infinix-auth",
-      "price": 0,
+      "id": "imei-srv-7",
+      "name": "Samsung Worldwide Network Unlock Service (Exynos / Qualcomm)",
+      "categoryId": "imei-services",
+      "serviceType": "imei",
+      "price": 499,
       "downloadLink": "#",
-      "date": "2025-10-30",
-      "description": "Download Infinix GT 30 5G X6876 Flash File/Stock ROM",
-      "size": "6.89 GB",
-      "views": 7,
-      "downloads": 0,
-      "rating": 0,
+      "size": "1-12 Hours",
+      "description": "NCK & MCK network unlock codes for Samsung Galaxy smartphones worldwide.",
       "tags": [
+        "paid",
         "featured"
-      ]
+      ],
+      "views": 740,
+      "downloads": 380,
+      "rating": 5,
+      "date": "2026-03-05"
     },
     {
-      "id": "prod-infinix-zero-40",
-      "name": "Infinix ZERO 40 5G X6861-15.1.2.109SP02(OP001PF001AZ).zip",
-      "categoryId": "infinix-auth",
-      "price": 0,
+      "id": "imei-srv-8",
+      "name": "T-Mobile USA Unlock Eligibility Checker (App/Network Lock)",
+      "categoryId": "imei-services",
+      "serviceType": "imei",
+      "price": 15,
       "downloadLink": "#",
-      "date": "2025-10-30",
-      "description": "Download Infinix ZERO 40 5G X6861 Flash File/Stock ROM",
-      "size": "9.49 GB",
-      "views": 4,
-      "downloads": 0,
-      "rating": 0,
+      "size": "Instant Check",
+      "description": "Check T-Mobile Device Unlock App eligibility status and financed status.",
       "tags": [
-        "featured"
-      ]
+        "paid"
+      ],
+      "views": 210,
+      "downloads": 115,
+      "rating": 5,
+      "date": "2026-03-05"
     },
     {
-      "id": "prod-infinix-zero-40-2",
-      "name": "Infinix ZERO 40 5G X6861-15.1.2.109SP02(IN001PF001AZ).zip",
-      "categoryId": "infinix-auth",
-      "price": 0,
+      "id": "imei-srv-9",
+      "name": "Xiaomi Mi Account Clean/Lost Status Official Checker",
+      "categoryId": "imei-services",
+      "serviceType": "imei",
+      "price": 18,
       "downloadLink": "#",
-      "date": "2025-10-30",
-      "description": "Download Infinix ZERO 40 5G X6861 Flash File/Stock ROM",
-      "size": "8.64 GB",
-      "views": 8,
-      "downloads": 0,
-      "rating": 0,
+      "size": "Instant Check",
+      "description": "Verify if Xiaomi Mi Account lock is Clean or Lost before requesting reset.",
       "tags": [
-        "featured"
-      ]
+        "paid"
+      ],
+      "views": 480,
+      "downloads": 290,
+      "rating": 5,
+      "date": "2026-03-06"
     },
     {
-      "id": "prod-infinix-zero-40-3",
-      "name": "Infinix ZERO 40 X6860-15.1.2.122(OP001PF001AZ).zip",
-      "categoryId": "infinix-auth",
-      "price": 0,
+      "id": "imei-srv-10",
+      "name": "Motorola Network Unlock Code Worldwide (All Models)",
+      "categoryId": "imei-services",
+      "serviceType": "imei",
+      "price": 350,
       "downloadLink": "#",
-      "date": "2025-10-30",
-      "description": "Download Infinix ZERO 40 X6860 Flash File/Stock ROM",
-      "size": "8.54 GB",
-      "views": 5,
-      "downloads": 1,
-      "rating": 0,
+      "size": "1-6 Hours",
+      "description": "Factory SIM network unlock pin for Moto G, Edge, Razr series.",
       "tags": [
-        "featured"
-      ]
+        "paid"
+      ],
+      "views": 180,
+      "downloads": 67,
+      "rating": 5,
+      "date": "2026-03-07"
     },
     {
-      "id": "prod-infinix-note-50",
-      "name": "Infinix Note 50x 5G X6857B-15.1.2.128SP02(IN001PF001AZ).zip",
-      "categoryId": "infinix-auth",
-      "price": 0,
+      "id": "imei-srv-11",
+      "name": "AU KDDI Japan - iPhone & Generic (All Models Supported) Clean",
+      "categoryId": "imei-services",
+      "serviceType": "imei",
+      "price": 7,
       "downloadLink": "#",
-      "date": "2025-10-30",
-      "description": "Download Infinix Note 50x 5G X6857B Flash File/Stock ROM",
-      "size": "7.31 GB",
-      "views": 8,
-      "downloads": 1,
-      "rating": 0,
+      "size": "Instant Auto API",
+      "description": "Instant carrier unlock script check for AU KDDI Japan devices.",
       "tags": [
-        "featured"
-      ]
+        "paid"
+      ],
+      "views": 130,
+      "downloads": 45,
+      "rating": 5,
+      "date": "2026-03-07"
     },
     {
-      "id": "prod-infinix-note-50-2",
-      "name": "Infinix Note 50x 5G X6857-15.1.2.128SP02(OP001PF001AZ).zip",
-      "categoryId": "infinix-auth",
-      "price": 0,
+      "id": "imei-srv-12",
+      "name": "Canada Rogers/Fido - Generic NCK Unlock (All Models)",
+      "categoryId": "imei-services",
+      "serviceType": "imei",
+      "price": 180,
       "downloadLink": "#",
-      "date": "2025-10-30",
-      "description": "Download Infinix Note 50x 5G X6857 Flash File/Stock ROM",
-      "size": "8.39 GB",
-      "views": 9,
-      "downloads": 2,
-      "rating": 0,
+      "size": "1-24 Hours",
+      "description": "Network Code Key (NCK) factory unlock for Canadian network devices.",
       "tags": [
-        "featured"
-      ]
+        "paid"
+      ],
+      "views": 95,
+      "downloads": 30,
+      "rating": 5,
+      "date": "2026-03-08"
     },
     {
-      "id": "prod-infinix-note-50-pro",
-      "name": "Infinix Note 50 Pro Plus 5G X6856-15.1.0.155(OP001PF001AZ).zip",
-      "categoryId": "infinix-auth",
-      "price": 0,
+      "id": "srv-act-1",
+      "name": "UnlockTool 3 Months License Activation [Digital License]",
+      "categoryId": "server-services",
+      "serviceType": "server",
+      "price": 1850,
       "downloadLink": "#",
-      "date": "2025-10-30",
-      "description": "Download Infinix Note 50 Pro Plus 5G X6856 Flash File/Stock ROM",
-      "size": "10.14 GB",
-      "views": 4,
-      "downloads": 2,
-      "rating": 0,
+      "size": "3 Months License",
+      "description": "Instant 3 Months digital activation for UnlockTool. Supports Xiaomi, Samsung, MTK, Qualcomm.",
       "tags": [
-        "featured"
-      ]
+        "featured",
+        "paid"
+      ],
+      "views": 1250,
+      "downloads": 840,
+      "rating": 5,
+      "date": "2026-03-01"
     },
     {
-      "id": "prod-infinix-note-40-5g",
-      "name": "Infinix Note 40 5G X6852-15.1.0.138SP06(OP001PF001AZ).zip",
-      "categoryId": "infinix-auth",
-      "price": 0,
+      "id": "srv-act-2",
+      "name": "UnlockTool 6 Months License Activation [Digital License]",
+      "categoryId": "server-services",
+      "serviceType": "server",
+      "price": 2950,
       "downloadLink": "#",
-      "date": "2025-10-30",
-      "description": "Download Infinix Note 40 5G X6852 Flash File/Stock ROM",
-      "size": "8.27 GB",
-      "views": 6,
-      "downloads": 1,
-      "rating": 0,
+      "size": "6 Months License",
+      "description": "Instant 6 Months official digital activation for UnlockTool.",
       "tags": [
-        "featured"
-      ]
+        "featured",
+        "paid"
+      ],
+      "views": 920,
+      "downloads": 610,
+      "rating": 5,
+      "date": "2026-03-01"
     },
     {
-      "id": "prod-infinix-note-40-pro",
-      "name": "Infinix Note 40 Pro Plus X6851B-15.1.0.138SP11(OP001PF001AZ).zip",
-      "categoryId": "infinix-auth",
-      "price": 0,
+      "id": "srv-act-3",
+      "name": "UnlockTool 12 Months (1 Year) License Activation [Digital License]",
+      "categoryId": "server-services",
+      "serviceType": "server",
+      "price": 4350,
       "downloadLink": "#",
-      "date": "2025-10-30",
-      "description": "Download Infinix Note 40 Pro Plus X6851B Flash File/Stock ROM",
-      "size": "8.11 GB",
-      "views": 4,
-      "downloads": 2,
-      "rating": 0,
+      "size": "1 Year License",
+      "description": "Instant 1 Year full digital activation for UnlockTool without any hardware dongle needed.",
       "tags": [
-        "featured"
-      ]
+        "featured",
+        "paid",
+        "new"
+      ],
+      "views": 2100,
+      "downloads": 1450,
+      "rating": 5,
+      "date": "2026-03-01"
     },
     {
-      "id": "prod-x695c",
-      "name": "X695C-H854JK-R-GL-241203V1878.zip",
-      "categoryId": "infinix-auth",
-      "price": 0,
+      "id": "srv-act-4",
+      "name": "Android Multi Tool [AMT] Activation [12 Months]",
+      "categoryId": "server-services",
+      "serviceType": "server",
+      "price": 2420,
       "downloadLink": "#",
-      "date": "2025-10-30",
-      "description": "Download Infinix Note 10 Pro X695C Flash File/Stock ROM",
-      "size": "4.04 GB",
-      "views": 4,
-      "downloads": 0,
-      "rating": 0,
+      "size": "12 Months License",
+      "description": "Full 1-year activation for Android Multi Tool (AMT). Instant automated delivery.",
       "tags": [
-        "featured"
-      ]
+        "paid"
+      ],
+      "views": 430,
+      "downloads": 215,
+      "rating": 5,
+      "date": "2026-03-02"
     },
     {
-      "id": "prod-x650d",
-      "name": "X650D-H6113KLN-P-210716V168.zip",
-      "categoryId": "infinix-auth",
-      "price": 0,
+      "id": "srv-act-5",
+      "name": "Android Multi Tool [AMT] Credits - [Instant - Auto API 24x7]",
+      "categoryId": "server-services",
+      "serviceType": "server",
+      "price": 81,
       "downloadLink": "#",
-      "date": "2025-10-30",
-      "description": "Download Infinix Hot 8 X650D Flash File/Stock ROM",
-      "size": "2.2 GB",
-      "views": 4,
-      "downloads": 0,
-      "rating": 0,
+      "size": "Server Credit",
+      "description": "Auto API credit for AMT tool for Xiaomi/Vivo/Oppo auth flashing and reset operations.",
       "tags": [
+        "paid",
+        "new"
+      ],
+      "views": 610,
+      "downloads": 390,
+      "rating": 5,
+      "date": "2026-03-02"
+    },
+    {
+      "id": "srv-act-6",
+      "name": "DFT Pro 1 Year Activation [New User]",
+      "categoryId": "server-services",
+      "serviceType": "server",
+      "price": 7180,
+      "downloadLink": "#",
+      "size": "1 Year License",
+      "description": "Official 1-year new user digital activation for DFT Pro Tool.",
+      "tags": [
+        "paid",
         "featured"
-      ]
+      ],
+      "views": 870,
+      "downloads": 410,
+      "rating": 5,
+      "date": "2026-03-03"
     },
     {
-      "id": "prod-cph2349",
-      "name": "CPH2349export_11_A.15_2022090321050000.zip",
-      "categoryId": "oppo-firmware",
-      "price": 0,
+      "id": "srv-act-7",
+      "name": "DFT Pro 1 Year Renew [Old User]",
+      "categoryId": "server-services",
+      "serviceType": "server",
+      "price": 7175,
       "downloadLink": "#",
-      "date": "2025-10-30",
-      "description": "Download Oppo A16K CPH2349 Flash File/Stock ROM",
-      "size": "8.33 GB",
-      "views": 0,
-      "downloads": 0,
-      "rating": 0,
-      "tags": []
+      "size": "1 Year Renewal",
+      "description": "Renew existing DFT Pro account for another 365 days instantly.",
+      "tags": [
+        "paid"
+      ],
+      "views": 650,
+      "downloads": 380,
+      "rating": 5,
+      "date": "2026-03-03"
     },
     {
-      "id": "prod-cph2185",
-      "name": "CPH2185export_11_C.31_2021080919370064.zip",
-      "categoryId": "oppo-firmware",
-      "price": 0,
+      "id": "srv-act-8",
+      "name": "Borneo Schematics Hardware Tool - [12 Months - 1 PC]",
+      "categoryId": "server-services",
+      "serviceType": "server",
+      "price": 3425,
       "downloadLink": "#",
-      "date": "2025-10-30",
-      "description": "Download Oppo A15 CPH2185 Flash File/Stock ROM",
-      "size": "7.39 GB",
-      "views": 3,
-      "downloads": 0,
-      "rating": 0,
-      "tags": []
+      "size": "1 Year (1 PC)",
+      "description": "Official activation code for Borneo Schematics circuit diagram and hardware solutions.",
+      "tags": [
+        "paid",
+        "featured"
+      ],
+      "views": 980,
+      "downloads": 540,
+      "rating": 5,
+      "date": "2026-03-04"
     },
     {
-      "id": "prod-cph2161",
-      "name": "CPH2161export_11_F.32_2023052911000210.zip",
-      "categoryId": "oppo-firmware",
-      "price": 0,
+      "id": "srv-act-9",
+      "name": "Borneo Schematics Hardware Tool - [12 Months - 2 PC]",
+      "categoryId": "server-services",
+      "serviceType": "server",
+      "price": 4965,
       "downloadLink": "#",
-      "date": "2025-10-30",
-      "description": "Download Oppo A73 5G CPH2161 Flash File/Stock ROM",
-      "size": "6.63 GB",
-      "views": 1,
-      "downloads": 0,
-      "rating": 0,
-      "tags": []
+      "size": "1 Year (2 PC)",
+      "description": "Borneo Schematics 1 Year activation valid for 2 PC simultaneous access.",
+      "tags": [
+        "paid"
+      ],
+      "views": 520,
+      "downloads": 290,
+      "rating": 5,
+      "date": "2026-03-04"
     },
     {
-      "id": "prod-cph2159",
-      "name": "CPH2159export_11_F.38_2025012115280207.zip",
-      "categoryId": "oppo-firmware",
-      "price": 0,
+      "id": "srv-act-10",
+      "name": "Cheetah Tool Pro Activation (12 Months)",
+      "categoryId": "server-services",
+      "serviceType": "server",
+      "price": 4905,
       "downloadLink": "#",
-      "date": "2025-10-30",
-      "description": "Download Oppo Reno 5 CPH2159 Flash File/Stock ROM",
-      "size": "18.4 GB",
-      "views": 0,
-      "downloads": 0,
-      "rating": 0,
-      "tags": []
+      "size": "12 Months License",
+      "description": "1 Year digital license for Cheetah Tool Pro with full features.",
+      "tags": [
+        "paid"
+      ],
+      "views": 310,
+      "downloads": 140,
+      "rating": 5,
+      "date": "2026-03-05"
     },
     {
-      "id": "prod-cph2139",
-      "name": "CPH2139export_11_F.97_2024040318110000.zip",
-      "categoryId": "oppo-firmware",
-      "price": 0,
+      "id": "srv-act-11",
+      "name": "Chimera Tool-[Professional]-License Activation-[1500 Device 1 Year]",
+      "categoryId": "server-services",
+      "serviceType": "server",
+      "price": 14815,
       "downloadLink": "#",
-      "date": "2025-10-30",
-      "description": "Download Oppo A53/A53s CPH2139 Flash File/Stock ROM",
-      "size": "6.49 GB",
-      "views": 2,
-      "downloads": 1,
-      "rating": 0,
-      "tags": []
+      "size": "1 Year Pro License",
+      "description": "Official ChimeraTool Professional license for 1500 phones per year.",
+      "tags": [
+        "paid",
+        "featured"
+      ],
+      "views": 450,
+      "downloads": 190,
+      "rating": 5,
+      "date": "2026-03-05"
+    },
+    {
+      "id": "srv-act-12",
+      "name": "SM Auth Tool Realme OTP - [One Click Instant OTP]",
+      "categoryId": "server-services",
+      "serviceType": "server",
+      "price": 367,
+      "downloadLink": "#",
+      "size": "Instant OTP",
+      "description": "Instant OTP auth credit for Realme & Oppo flash/unlock.",
+      "tags": [
+        "paid",
+        "new"
+      ],
+      "views": 680,
+      "downloads": 410,
+      "rating": 5,
+      "date": "2026-03-06"
+    },
+    {
+      "id": "srv-act-13",
+      "name": "Xiaomi Mi UBL FRP Credits [xmubl.com]",
+      "categoryId": "server-services",
+      "serviceType": "server",
+      "price": 109,
+      "downloadLink": "#",
+      "size": "1-5 Minutes",
+      "description": "Xiaomi Bootloader Unlock & FRP bypass server credits.",
+      "tags": [
+        "paid",
+        "new"
+      ],
+      "views": 590,
+      "downloads": 360,
+      "rating": 5,
+      "date": "2026-03-06"
+    },
+    {
+      "id": "srv-act-14",
+      "name": "Refox Schematics-[BitMap]-Hardware Tool-[1 Year]-[Instant-Auto API 24x7]",
+      "categoryId": "server-services",
+      "serviceType": "server",
+      "price": 5764,
+      "downloadLink": "#",
+      "size": "1 Year License",
+      "description": "Refox Schematics Bitmap hardware tool activation code for 1 year.",
+      "tags": [
+        "paid"
+      ],
+      "views": 290,
+      "downloads": 110,
+      "rating": 5,
+      "date": "2026-03-07"
+    },
+    {
+      "id": "srv-act-15",
+      "name": "DZKJ PhoneRepair Tools Activation [1 Year 1 PC]",
+      "categoryId": "server-services",
+      "serviceType": "server",
+      "price": 2069,
+      "downloadLink": "#",
+      "size": "1 Year (1 PC)",
+      "description": "DZKJ phone repair schematics tool activation for 1 PC 365 days.",
+      "tags": [
+        "paid"
+      ],
+      "views": 340,
+      "downloads": 160,
+      "rating": 5,
+      "date": "2026-03-07"
+    },
+    {
+      "id": "srv-act-16",
+      "name": "EFT Pro Tool Activation-[1 Year]-[New Activation]-[Digital License]",
+      "categoryId": "server-services",
+      "serviceType": "server",
+      "price": 5070,
+      "downloadLink": "#",
+      "size": "1 Year License",
+      "description": "EFT Pro Tool digital activation without dongle. Instant delivery.",
+      "tags": [
+        "paid"
+      ],
+      "views": 410,
+      "downloads": 185,
+      "rating": 5,
+      "date": "2026-03-08"
+    },
+    {
+      "id": "remote-rent-1",
+      "name": "UnlockTool Rent 24 Hours [Instant Access ID & Password]",
+      "categoryId": "remote-tool-rent",
+      "serviceType": "remote",
+      "price": 120,
+      "downloadLink": "#",
+      "size": "24 Hours Login ID",
+      "description": "24 Hours full access login username & password for UnlockTool. Instant automated delivery.",
+      "tags": [
+        "featured",
+        "paid",
+        "new"
+      ],
+      "views": 1890,
+      "downloads": 1240,
+      "rating": 5,
+      "date": "2026-03-01"
+    },
+    {
+      "id": "remote-rent-2",
+      "name": "UnlockTool Rent 6 Hours [Instant Access ID]",
+      "categoryId": "remote-tool-rent",
+      "serviceType": "remote",
+      "price": 65,
+      "downloadLink": "#",
+      "size": "6 Hours Login ID",
+      "description": "6 Hours instant login credentials for UnlockTool. Quick phone unlocks and FRP bypass.",
+      "tags": [
+        "paid",
+        "featured"
+      ],
+      "views": 1120,
+      "downloads": 820,
+      "rating": 5,
+      "date": "2026-03-01"
+    },
+    {
+      "id": "remote-rent-3",
+      "name": "Android Multi Tool Rent [2 Hours]-[instant-Auto API 24x7] ✅",
+      "categoryId": "remote-tool-rent",
+      "serviceType": "remote",
+      "price": 33,
+      "downloadLink": "#",
+      "size": "2 Hours Login ID",
+      "description": "2 Hours instant access login for Android Multi Tool (AMT). 24x7 automated system.",
+      "tags": [
+        "paid",
+        "new"
+      ],
+      "views": 1420,
+      "downloads": 980,
+      "rating": 5,
+      "date": "2026-03-02"
+    },
+    {
+      "id": "remote-rent-4",
+      "name": "360 Tool Rent [6 Hours]-[instant-Auto API 24x7] ✅",
+      "categoryId": "remote-tool-rent",
+      "serviceType": "remote",
+      "price": 105,
+      "downloadLink": "#",
+      "size": "6 Hours Login ID",
+      "description": "Instant 6 Hours login session for 360 Tool. Auto API 24x7 active.",
+      "tags": [
+        "paid"
+      ],
+      "views": 450,
+      "downloads": 210,
+      "rating": 5,
+      "date": "2026-03-02"
+    },
+    {
+      "id": "remote-rent-5",
+      "name": "AndroidWinTool-[AWT]-Rent [6 Hours]-[instant-Auto API 24x7] ✅",
+      "categoryId": "remote-tool-rent",
+      "serviceType": "remote",
+      "price": 125,
+      "downloadLink": "#",
+      "size": "6 Hours Login ID",
+      "description": "6 Hours full access login for AndroidWinTool (AWT).",
+      "tags": [
+        "paid"
+      ],
+      "views": 310,
+      "downloads": 160,
+      "rating": 5,
+      "date": "2026-03-03"
+    },
+    {
+      "id": "remote-rent-6",
+      "name": "DFT Pro Tool Rent [48 Hours]-[instant-Auto API 24x7] ✅",
+      "categoryId": "remote-tool-rent",
+      "serviceType": "remote",
+      "price": 161,
+      "downloadLink": "#",
+      "size": "48 Hours Login ID",
+      "description": "48 Hours full access account credentials for DFT Pro Tool.",
+      "tags": [
+        "paid",
+        "featured"
+      ],
+      "views": 890,
+      "downloads": 510,
+      "rating": 5,
+      "date": "2026-03-03"
+    },
+    {
+      "id": "remote-rent-7",
+      "name": "EFT Pro Digital Login Rent [48 Hours]-[instant-Auto API 24x7] ✅",
+      "categoryId": "remote-tool-rent",
+      "serviceType": "remote",
+      "price": 130,
+      "downloadLink": "#",
+      "size": "48 Hours Login ID",
+      "description": "48 Hours direct login for EFT Pro Tool. No dongle needed.",
+      "tags": [
+        "paid"
+      ],
+      "views": 520,
+      "downloads": 310,
+      "rating": 5,
+      "date": "2026-03-04"
+    },
+    {
+      "id": "remote-rent-8",
+      "name": "Galaxy Multi Tool Rent [2 Hours]-[instant-Auto API 24x7] ✅",
+      "categoryId": "remote-tool-rent",
+      "serviceType": "remote",
+      "price": 65,
+      "downloadLink": "#",
+      "size": "2 Hours Login ID",
+      "description": "2 Hours instant rental session for Galaxy Multi Tool.",
+      "tags": [
+        "paid"
+      ],
+      "views": 390,
+      "downloads": 190,
+      "rating": 5,
+      "date": "2026-03-04"
+    },
+    {
+      "id": "remote-rent-9",
+      "name": "Griffin-Unlocker Tool Rent [With Premium Pack]-[5 Hours] ✅",
+      "categoryId": "remote-tool-rent",
+      "serviceType": "remote",
+      "price": 168,
+      "downloadLink": "#",
+      "size": "5 Hours Login ID",
+      "description": "5 Hours full rental with premium pack for Griffin Unlocker.",
+      "tags": [
+        "paid",
+        "new"
+      ],
+      "views": 430,
+      "downloads": 240,
+      "rating": 5,
+      "date": "2026-03-05"
+    },
+    {
+      "id": "remote-rent-10",
+      "name": "Cheetah Tool Pro Rent [24 Hours Full Access]",
+      "categoryId": "remote-tool-rent",
+      "serviceType": "remote",
+      "price": 99,
+      "downloadLink": "#",
+      "size": "24 Hours Login ID",
+      "description": "24 Hours instant login ID & password for Cheetah Tool Pro.",
+      "tags": [
+        "paid"
+      ],
+      "views": 380,
+      "downloads": 180,
+      "rating": 5,
+      "date": "2026-03-05"
+    },
+    {
+      "id": "remote-rent-11",
+      "name": "Chimera Tool Remote Session Rent [6 Hours]",
+      "categoryId": "remote-tool-rent",
+      "serviceType": "remote",
+      "price": 180,
+      "downloadLink": "#",
+      "size": "6 Hours Session",
+      "description": "6 Hours remote tool rental for Chimera Tool Pro operations.",
+      "tags": [
+        "paid"
+      ],
+      "views": 490,
+      "downloads": 270,
+      "rating": 5,
+      "date": "2026-03-06"
+    },
+    {
+      "id": "remote-rent-12",
+      "name": "TFM Tool Pro Rent [24 Hours Instant ID]",
+      "categoryId": "remote-tool-rent",
+      "serviceType": "remote",
+      "price": 85,
+      "downloadLink": "#",
+      "size": "24 Hours Login ID",
+      "description": "24 Hours full access account for TFM Tool Pro MTK & Qualcomm.",
+      "tags": [
+        "paid"
+      ],
+      "views": 320,
+      "downloads": 150,
+      "rating": 5,
+      "date": "2026-03-07"
+    },
+    {
+      "id": "file-srv-1",
+      "name": "Official MTK Flash Tool V6 SVC Setup Installer",
+      "categoryId": "box-tools",
+      "serviceType": "file",
+      "price": 0,
+      "downloadLink": "https://drive.google.com/uc?export=download&id=official-mtk-v6",
+      "size": "48.5 MB",
+      "description": "Official MediaTek SP Flash Tool V6 SVC for flashing all MTK CPU Android smartphones.",
+      "tags": [
+        "free",
+        "featured"
+      ],
+      "views": 1540,
+      "downloads": 980,
+      "rating": 5,
+      "date": "2026-03-01"
+    },
+    {
+      "id": "file-srv-2",
+      "name": "DA MT6765 Download Agent Auth File [100% Tested]",
+      "categoryId": "auth-files",
+      "serviceType": "file",
+      "price": 49,
+      "downloadLink": "https://mega.nz/file/da-mt6765-auth-tested",
+      "size": "1.2 MB",
+      "description": "Tested DA file for MT6765 chipset to flash or unlock FRP without auth error.",
+      "tags": [
+        "paid",
+        "new"
+      ],
+      "views": 920,
+      "downloads": 480,
+      "rating": 5,
+      "date": "2026-03-02"
+    },
+    {
+      "id": "file-srv-3",
+      "name": "Samsung Odin Tool v3.14.4 Official Latest [Patched Included]",
+      "categoryId": "box-tools",
+      "serviceType": "file",
+      "price": 0,
+      "downloadLink": "https://odindownload.com/download/Odin3_v3.14.4.zip",
+      "size": "3.8 MB",
+      "description": "Latest official Samsung Odin flash tool with patched version for custom binaries.",
+      "tags": [
+        "free",
+        "featured"
+      ],
+      "views": 2840,
+      "downloads": 2100,
+      "rating": 5,
+      "date": "2026-03-02"
+    },
+    {
+      "id": "file-srv-4",
+      "name": "Qualcomm QDLoader 9008 Driver (32/64 Bit WHQL Signed)",
+      "categoryId": "usb-drivers",
+      "serviceType": "file",
+      "price": 0,
+      "downloadLink": "https://drive.google.com/uc?export=download&id=qualcomm-9008-whql",
+      "size": "22.4 MB",
+      "description": "Official signed QDLoader 9008 USB drivers for Qualcomm EDL mode flashing.",
+      "tags": [
+        "free"
+      ],
+      "views": 1820,
+      "downloads": 1420,
+      "rating": 5,
+      "date": "2026-03-03"
+    },
+    {
+      "id": "file-srv-5",
+      "name": "MediaTek All-in-One USB VCOM Drivers Win 10/11 [Auto Installer]",
+      "categoryId": "usb-drivers",
+      "serviceType": "file",
+      "price": 0,
+      "downloadLink": "https://drive.google.com/uc?export=download&id=mtk-vcom-driver",
+      "size": "18.2 MB",
+      "description": "1-Click auto installer for MTK Preloader & VCOM USB drivers on Windows 10/11 64-bit.",
+      "tags": [
+        "free"
+      ],
+      "views": 1650,
+      "downloads": 1190,
+      "rating": 5,
+      "date": "2026-03-03"
+    },
+    {
+      "id": "file-srv-6",
+      "name": "VIVO X200FE ISP Pinout Schematic & Test Point",
+      "categoryId": "schematic-diagrams",
+      "serviceType": "file",
+      "price": 99,
+      "downloadLink": "https://mega.nz/file/vivo-x200fe-isp-pinout",
+      "size": "2.5 MB",
+      "description": "High-resolution Vivo X200FE ISP Pinout schematic and test point diagram for EMMC/UFS repair.",
+      "tags": [
+        "paid",
+        "new"
+      ],
+      "views": 620,
+      "downloads": 240,
+      "rating": 5,
+      "date": "2026-03-04"
+    },
+    {
+      "id": "file-srv-7",
+      "name": "EMMC UFS RPMB Dumps Package for Samsung & Oppo",
+      "categoryId": "dump-files",
+      "serviceType": "file",
+      "price": 199,
+      "downloadLink": "https://mega.nz/file/emmc-ufs-rpmb-dumps-pack",
+      "size": "512 MB",
+      "description": "Clean RPMB and boot partition dumps for dead boot repair on Samsung & Oppo devices.",
+      "tags": [
+        "paid",
+        "featured"
+      ],
+      "views": 480,
+      "downloads": 180,
+      "rating": 5,
+      "date": "2026-03-04"
+    },
+    {
+      "id": "file-srv-8",
+      "name": "QCN Network Calibration Repair Files Pack (Multi-Brand)",
+      "categoryId": "dump-files",
+      "serviceType": "file",
+      "price": 149,
+      "downloadLink": "https://mega.nz/file/qcn-network-repair-pack",
+      "size": "85 MB",
+      "description": "Tested QCN calibration files to fix No Service, Unknown Baseband, and Null IMEI.",
+      "tags": [
+        "paid"
+      ],
+      "views": 530,
+      "downloads": 210,
+      "rating": 5,
+      "date": "2026-03-05"
+    },
+    {
+      "id": "file-srv-9",
+      "name": "Xiaomi MiFlash 2024 Global Setup Tool [Fastboot Flashing]",
+      "categoryId": "box-tools",
+      "serviceType": "file",
+      "price": 0,
+      "downloadLink": "https://drive.google.com/uc?export=download&id=miflash-2024-global",
+      "size": "64.0 MB",
+      "description": "Latest official Xiaomi MiFlash tool for EDL and Fastboot ROM installation.",
+      "tags": [
+        "free"
+      ],
+      "views": 1290,
+      "downloads": 870,
+      "rating": 5,
+      "date": "2026-03-06"
+    },
+    {
+      "id": "file-srv-10",
+      "name": "Windows 11 Pro 64-Bit Optimized Flashing Workstation ISO",
+      "categoryId": "windows-files",
+      "serviceType": "file",
+      "price": 299,
+      "downloadLink": "https://mega.nz/file/win11-pro-gsm-workstation",
+      "size": "4.8 GB",
+      "description": "Pre-configured Windows 11 ISO with test mode, driver signature disabled, and all GSM runtimes.",
+      "tags": [
+        "paid",
+        "featured"
+      ],
+      "views": 780,
+      "downloads": 320,
+      "rating": 5,
+      "date": "2026-03-07"
     }
   ],
   "categories": [
+    {
+      "id": "imei-services",
+      "name": "IMEI Services",
+      "description": "Instant IMEI Carrier Unlock, Network Check, iCloud & FMI Services",
+      "imageUrl": "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=300&auto=format&fit=crop&q=60",
+      "serviceType": "imei"
+    },
+    {
+      "id": "server-services",
+      "name": "Server Services & Activations",
+      "description": "Software License Activations, Credits & Digital Dongle Key Subscriptions",
+      "imageUrl": "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=300&auto=format&fit=crop&q=60",
+      "serviceType": "server"
+    },
+    {
+      "id": "remote-tool-rent",
+      "name": "Remote Tool Rentals",
+      "description": "Instant 2 to 48 Hours Login ID & Password for Popular GSM Repair Tools",
+      "imageUrl": "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=300&auto=format&fit=crop&q=60",
+      "serviceType": "remote"
+    },
+    {
+      "id": "box-tools",
+      "name": "Box & Tools Setup",
+      "description": "Download Various Box & Tools Setup Installers",
+      "imageUrl": "https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=300&auto=format&fit=crop&q=60",
+      "serviceType": "file"
+    },
+    {
+      "id": "firmware-major",
+      "name": "Firmware (Major)",
+      "description": "Download Full Working And 100% Original Flash Files",
+      "imageUrl": "https://images.unsplash.com/photo-1518770660439-4636190af475?w=300&auto=format&fit=crop&q=60",
+      "serviceType": "file"
+    },
+    {
+      "id": "auth-files",
+      "name": "Auth/Firehose/Preloader & DA Files",
+      "description": "Download Auth/firehose & DA Files for Flashing",
+      "imageUrl": "https://images.unsplash.com/photo-1563770660941-20978e870e26?w=300&auto=format&fit=crop&q=60",
+      "serviceType": "file"
+    },
+    {
+      "id": "dump-files",
+      "name": "Dump Files ENG/EMMC/UFS/FFU/RPMB Files",
+      "description": "Download Dump Files for various chipsets",
+      "imageUrl": "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?w=300&auto=format&fit=crop&q=60",
+      "serviceType": "file"
+    },
+    {
+      "id": "usb-drivers",
+      "name": "USB Drivers",
+      "description": "Download All Usb Drivers And Fix Drivers Related Problems",
+      "imageUrl": "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=300&auto=format&fit=crop&q=60",
+      "serviceType": "file"
+    },
+    {
+      "id": "schematic-diagrams",
+      "name": "Schematic Diagrams And Test Points",
+      "description": "Simplify Your Mobile Repairing Experience with Circuit Diagrams",
+      "imageUrl": "https://images.unsplash.com/photo-1581092335397-9583fe92d232?w=300&auto=format&fit=crop&q=60",
+      "serviceType": "file"
+    },
+    {
+      "id": "windows-files",
+      "name": "Windows ISO/Software/Exe files",
+      "description": "Download Windows ISO Files/Softwares For Your PC Flashing Station",
+      "imageUrl": "https://images.unsplash.com/photo-1629654297299-c8506221ca97?w=300&auto=format&fit=crop&q=60",
+      "serviceType": "file"
+    },
     {
       "id": "auth-files",
       "name": "Auth/Firehose/Preloader & DA Files",

@@ -147,6 +147,9 @@ interface AppContextType {
   // Wipe/Reset all data for fresh start
   adminResetAllData: () => Promise<{ success: boolean }>;
 
+  // Services Catalog Management
+  resetToDefaultServices: () => void;
+
   // HWID Mismatch & Self Reset
   hwidMismatchInfo: { email: string; currentHWID: string; registeredHWID: string; userId?: string; userObj?: User } | null;
   setHwidMismatchInfo: (info: { email: string; currentHWID: string; registeredHWID: string; userId?: string; userObj?: User } | null) => void;
@@ -208,17 +211,53 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [user, setUser] = useState<User | null>(getLocalStorage('currentUser', null));
   const [cart, setCart] = useState<CartItem[]>(getLocalStorage('cart', []));
   const [products, setProducts] = useState<Product[]>(() => {
-    const loaded = getLocalStorage('products', []);
-    // Permanently remove all sample/demo files
-    const cleanProducts = loaded.filter((p: Product) => 
-      !p.id.startsWith('file-') && 
-      !p.id.startsWith('prod-') &&
-      !['file-vivo-x200fe', 'file-mtk-flash-tool-v6', 'file-da-mt6765', 'file-vivo-rpmb-parser', 'file-prog-emmc-ufs-firehose', 'file-free-vpn', 'file-qcn-edit-tool', 'file-mi-diag-port-enabler', 'file-ufi-all-ffu', 'file-idm-build-56', 'file-vivo-latest-2022-da', 'file-da-mtk-all-bin', 'prod-zhizhen-demo', 'prod-realme-n55', 'prod-cph2691', 'prod-infinix-hot-50'].includes(p.id)
-    );
-    setLocalStorage('products', cleanProducts);
-    return cleanProducts;
+    const loaded = getLocalStorage<Product[]>('products', []);
+    const validLoaded = Array.isArray(loaded)
+      ? loaded.filter((p: Product) => p && p.id && !['prod-zhizhen-demo', 'prod-realme-n55', 'prod-cph2691', 'prod-infinix-hot-50'].includes(p.id))
+      : [];
+
+    if (validLoaded.length === 0) {
+      setLocalStorage('products', INITIAL_PRODUCTS);
+      return INITIAL_PRODUCTS;
+    }
+
+    const hasImei = validLoaded.some(p => p.serviceType === 'imei' || (p.id && p.id.startsWith('imei-')));
+    const hasServer = validLoaded.some(p => p.serviceType === 'server' || (p.id && p.id.startsWith('srv-')));
+    const hasRemote = validLoaded.some(p => p.serviceType === 'remote' || (p.id && p.id.startsWith('remote-')));
+    const hasFile = validLoaded.some(p => p.serviceType === 'file' || (p.id && p.id.startsWith('file-')));
+
+    if (!hasImei || !hasServer || !hasRemote || !hasFile) {
+      const existingIds = new Set(validLoaded.map(p => p.id));
+      const merged = [...validLoaded];
+      for (const p of INITIAL_PRODUCTS) {
+        if (!existingIds.has(p.id)) {
+          merged.push(p);
+          existingIds.add(p.id);
+        }
+      }
+      setLocalStorage('products', merged);
+      return merged;
+    }
+
+    return validLoaded;
   });
-  const [categories, setCategories] = useState<Category[]>(() => getLocalStorage('categories', INITIAL_CATEGORIES));
+  const [categories, setCategories] = useState<Category[]>(() => {
+    const loaded = getLocalStorage<Category[]>('categories', INITIAL_CATEGORIES);
+    if (!Array.isArray(loaded) || loaded.length === 0) {
+      setLocalStorage('categories', INITIAL_CATEGORIES);
+      return INITIAL_CATEGORIES;
+    }
+    const existingIds = new Set(loaded.map(c => c.id));
+    const merged = [...loaded];
+    for (const initC of INITIAL_CATEGORIES) {
+      if (!existingIds.has(initC.id)) {
+        merged.push(initC);
+        existingIds.add(initC.id);
+      }
+    }
+    setLocalStorage('categories', merged);
+    return merged;
+  });
   const [balancePackages, setBalancePackages] = useState<BalancePackage[]>(() => getLocalStorage('balancePackages', INITIAL_BALANCE_PACKAGES));
   const [anonymousRecents, setAnonymousRecents] = useState<string[]>(() => getLocalStorage('anonymousRecents', []));
   const [allUsers, setAllUsers] = useState<Record<string, User>>(() => getLocalStorage('users', {}));
@@ -435,12 +474,14 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       setSiteContent(loadedCloudContent);
       setLocalStorage('siteContent', loadedCloudContent);
     }
-    if (Array.isArray(snapshot.products)) {
+    if (Array.isArray(snapshot.products) && snapshot.products.length > 0) {
       const cleanProducts = snapshot.products.filter((p: any) => 
-        p && p.id && !p.id.startsWith('file-') && !p.id.startsWith('prod-')
+        p && p.id && !['prod-zhizhen-demo', 'prod-realme-n55', 'prod-cph2691', 'prod-infinix-hot-50'].includes(p.id)
       );
-      setProducts(cleanProducts);
-      setLocalStorage('products', cleanProducts);
+      if (cleanProducts.length > 0) {
+        setProducts(cleanProducts);
+        setLocalStorage('products', cleanProducts);
+      }
     }
     if (Array.isArray(snapshot.categories)) {
       setCategories(snapshot.categories);
@@ -3659,6 +3700,25 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
 
+  const resetToDefaultServices = useCallback(() => {
+    setProducts(INITIAL_PRODUCTS);
+    setLocalStorage('products', INITIAL_PRODUCTS);
+    
+    const existingCatIds = new Set(categories.map(c => c.id));
+    const mergedCats = [...categories];
+    for (const initC of INITIAL_CATEGORIES) {
+      if (!existingCatIds.has(initC.id)) {
+        mergedCats.push(initC);
+        existingCatIds.add(initC.id);
+      }
+    }
+    setCategories(mergedCats);
+    setLocalStorage('categories', mergedCats);
+
+    pushServerSync({ products: INITIAL_PRODUCTS, categories: mergedCats }, true);
+    setNotification('All IMEI, Server, Remote Tool Rent & File Services loaded successfully!', 'success');
+  }, [categories, pushServerSync]);
+
   const value = {
     user, isAdmin, products, categories,
     login, logout, register, checkUserExists, updateProfile,
@@ -3685,6 +3745,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     autoWalletNewUser, updateAutoWalletNewUser,
     syncUsersFromSupabase,
     adminResetAllData,
+    resetToDefaultServices,
     hwidMismatchInfo,
     setHwidMismatchInfo,
     performSelfHwidReset
