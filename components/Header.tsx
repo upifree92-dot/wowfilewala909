@@ -6,7 +6,6 @@ import { getUserLoyaltyTier } from "../lib/loyalty";
 import Editable from "./Editable";
 import NavItemEditModal from "./NavItemEditModal";
 import LanguageSelector from "./LanguageSelector";
-import ServiceListPanel from "./ServiceListPanel";
 import type { AdminNotification } from "../types";
 import {
   LayoutDashboard,
@@ -63,7 +62,6 @@ const Header = () => {
   const [isCurrencyDropdownOpen, setCurrencyDropdownOpen] = useState(false);
   const [isLanguageDropdownOpen, setLanguageDropdownOpen] = useState(false);
   const [isHelpModalOpen, setHelpModalOpen] = useState(false);
-  const [isServiceListOpen, setServiceListOpen] = useState(false);
   const currencyRef = useRef<HTMLDivElement>(null);
   const languageRef = useRef<HTMLDivElement>(null);
 
@@ -537,20 +535,6 @@ const Header = () => {
       <header className="bg-[#2a2d34] dark:bg-[#32363e] text-white shadow-lg relative z-50 w-full">
         <div className="container mx-auto px-3 sm:px-4 flex flex-wrap justify-between items-center gap-2 py-2.5">
           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-            <button
-              type="button"
-              onClick={() => setServiceListOpen(true)}
-              style={{ backgroundColor: "#0d7474", borderColor: "#2dd4bf" }}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-white font-bold text-xs sm:text-sm shadow-md hover:brightness-110 active:scale-95 transition-all cursor-pointer"
-              title="Open Service List"
-            >
-              <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.3}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-              <span className="!text-white tracking-wider uppercase text-[11px] sm:text-xs font-extrabold">
-                Service List
-              </span>
-            </button>
             {logoUrl ? (
               <Link to="/">
                 <img
@@ -1110,19 +1094,6 @@ const Header = () => {
                 </div>
               </div>
             )}
-            {!user && (
-              <Link
-                to="/login"
-                style={{ backgroundColor: "#0d7474", borderColor: "#2dd4bf" }}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border !text-white font-semibold text-xs sm:text-sm shadow hover:brightness-110 transition-all"
-              >
-                <svg className="w-4 h-4 !text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <circle cx="12" cy="8" r="4" />
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M5.5 20a6.5 6.5 0 0 1 13 0" />
-                </svg>
-                <span className="!text-white">Login | Register</span>
-              </Link>
-            )}
           </div>
         </div>
 
@@ -1178,17 +1149,6 @@ const Header = () => {
           )}
         </div>
       </header>
-
-      {isServiceListOpen && (
-        <ServiceListPanel
-          isModal
-          onClose={() => setServiceListOpen(false)}
-          onOpenHelp={() => {
-            setServiceListOpen(false);
-            setHelpModalOpen(true);
-          }}
-        />
-      )}
 
       {/* GitHub Real-time Cloud Sync Modal */}
       {showSyncModal && (
