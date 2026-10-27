@@ -17,6 +17,7 @@ import RecentPage from './pages/RecentPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import Notification from './components/Notification';
 import OrderSuccessModal from './components/OrderSuccessModal';
+import ImportantNoticeModal from './components/ImportantNoticeModal';
 import EditModal from './components/EditModal';
 import WhatsAppButton from './components/WhatsAppButton';
 import BackToTop from './components/BackToTop';
@@ -220,6 +221,7 @@ const AppContent = () => {
       <Footer />
       <Notification />
       <OrderSuccessModal />
+      <ImportantNoticeModal />
       <EditModal />
       <WhatsAppButton />
       <BackToTop />

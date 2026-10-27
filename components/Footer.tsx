@@ -155,9 +155,17 @@ const Footer = () => {
 
           </div>
 
-          {/* Copyright bar */}
-          <div className="border-t border-slate-700 mt-12 pt-6 text-center text-sm">
+          {/* Copyright bar & Notice */}
+          <div className="border-t border-slate-700 mt-12 pt-6 flex flex-col sm:flex-row items-center justify-between text-xs sm:text-sm text-gray-400 gap-2">
             <Editable as="p" contentKey="footer.copyright" />
+            <button
+              onClick={() => window.dispatchEvent(new CustomEvent('open-important-notice'))}
+              className="text-amber-400 hover:text-amber-300 transition-colors font-medium cursor-pointer inline-flex items-center gap-1.5 px-3 py-1 bg-amber-500/10 border border-amber-500/20 rounded-md"
+              title="View Important Notice & Terms"
+            >
+              <span>⚠️</span>
+              <span>Important Notice &amp; Terms</span>
+            </button>
           </div>
         </div>
       </footer>
