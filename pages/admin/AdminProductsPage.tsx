@@ -791,15 +791,27 @@ const AdminProductsPage = () => {
                     <td colSpan={7} className="text-center p-12 text-slate-400">
                       <div className="flex flex-col items-center justify-center space-y-3">
                         <div className="w-12 h-12 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center text-xl">
-                          🔍
+                          {serviceTypeFilter === 'file' ? '📁' : '🔍'}
                         </div>
-                        <p className="text-sm font-medium text-slate-300">No services found for selected filter.</p>
-                        {resetToDefaultServices && (
+                        <p className="text-sm font-medium text-slate-300">
+                          {serviceTypeFilter === 'file'
+                            ? 'No file services uploaded yet.'
+                            : 'No services found for selected filter.'}
+                        </p>
+                        <p className="text-xs text-slate-500 max-w-sm">
+                          {serviceTypeFilter === 'file'
+                            ? 'Aapne abhi tak koi files nahi daali hain. Nayi file upload ya add karne ke liye upar "+ Add Service" par click karein.'
+                            : 'Search query ya category filter change karein.'}
+                        </p>
+                        {serviceTypeFilter === 'file' && (
                           <button
-                            onClick={resetToDefaultServices}
+                            onClick={() => {
+                              setSelectedProduct(null);
+                              setIsProductModalOpen(true);
+                            }}
                             className="mt-2 px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-slate-950 font-bold rounded-xl text-xs shadow-lg transition-all"
                           >
-                            ⚡ Load All IMEI, Server, Remote & File Services
+                            + Add File Service
                           </button>
                         )}
                       </div>

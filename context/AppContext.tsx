@@ -212,31 +212,14 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [cart, setCart] = useState<CartItem[]>(getLocalStorage('cart', []));
   const [products, setProducts] = useState<Product[]>(() => {
     const loaded = getLocalStorage<Product[]>('products', []);
+    // Remove any previous dummy files (file-srv-, etc.) so only user-provided items exist
     const validLoaded = Array.isArray(loaded)
-      ? loaded.filter((p: Product) => p && p.id && !['prod-zhizhen-demo', 'prod-realme-n55', 'prod-cph2691', 'prod-infinix-hot-50'].includes(p.id))
+      ? loaded.filter((p: Product) => p && p.id && !p.id.startsWith('file-srv-') && !['prod-zhizhen-demo', 'prod-realme-n55', 'prod-cph2691', 'prod-infinix-hot-50'].includes(p.id))
       : [];
 
-    if (validLoaded.length === 0) {
+    if (validLoaded.length === 0 || !validLoaded.some(p => p.id && p.id.startsWith('gsm-'))) {
       setLocalStorage('products', INITIAL_PRODUCTS);
       return INITIAL_PRODUCTS;
-    }
-
-    const hasImei = validLoaded.some(p => p.serviceType === 'imei' || (p.id && p.id.startsWith('imei-')));
-    const hasServer = validLoaded.some(p => p.serviceType === 'server' || (p.id && p.id.startsWith('srv-')));
-    const hasRemote = validLoaded.some(p => p.serviceType === 'remote' || (p.id && p.id.startsWith('remote-')));
-    const hasFile = validLoaded.some(p => p.serviceType === 'file' || (p.id && p.id.startsWith('file-')));
-
-    if (!hasImei || !hasServer || !hasRemote || !hasFile) {
-      const existingIds = new Set(validLoaded.map(p => p.id));
-      const merged = [...validLoaded];
-      for (const p of INITIAL_PRODUCTS) {
-        if (!existingIds.has(p.id)) {
-          merged.push(p);
-          existingIds.add(p.id);
-        }
-      }
-      setLocalStorage('products', merged);
-      return merged;
     }
 
     return validLoaded;
