@@ -265,11 +265,14 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         heroAsAny.backgroundImages = [heroAsAny.backgroundImage];
         delete heroAsAny.backgroundImage;
     }
-    // Ensure Book Support option is removed from active nav items and header nav matches updated services
+    // Ensure Book Support is removed and header nav matches updated services
     if (storedContent && Array.isArray(storedContent.nav)) {
-        storedContent.nav = storedContent.nav.filter((n: any) => n.path !== '/appointment-booking' && n.id !== 'nav-booking');
-        const hasServerService = storedContent.nav.some((n: any) => n.path?.includes('type=server') || n.text?.toLowerCase().includes('server service'));
-        if (!hasServerService) {
+        storedContent.nav = storedContent.nav.filter((n: any) => 
+            n.path !== '/appointment-booking' && 
+            n.id !== 'nav-booking'
+        );
+        const hasGroupService = storedContent.nav.some((n: any) => n.id === 'nav-group-srv' || n.path === '/tools');
+        if (!hasGroupService) {
             storedContent.nav = INITIAL_SITE_CONTENT.nav;
         }
     }

@@ -18,6 +18,7 @@ import {
   LogOut,
   Download,
 } from "lucide-react";
+import ServiceListPanel from "./ServiceListPanel";
 
 const MotionLink = motion.create(Link);
 
@@ -55,6 +56,7 @@ const Header = () => {
 
   const [isNavModalOpen, setNavModalOpen] = useState(false);
   const [editingNavItem, setEditingNavItem] = useState(null);
+  const [showServiceListModal, setShowServiceListModal] = useState(false);
 
   // Custom states and refs for Currency, Language, and Help Center
   const [currency, setCurrency] = useState("INR");
@@ -754,7 +756,7 @@ const Header = () => {
               </div>
             )}
 
-            {user && (
+            {user ? (
               <div className="flex items-center gap-1.5 sm:gap-3" ref={dropdownRef}>
                 {/* 1. Wallet Pill */}
                 <MotionLink
@@ -1093,6 +1095,30 @@ const Header = () => {
                   )}
                 </div>
               </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowServiceListModal(true)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#0d7474] hover:bg-[#0f8b8b] text-white font-extrabold text-xs uppercase tracking-wide border border-[#2dd4bf]/40 shadow-sm transition-all cursor-pointer"
+                  title="Open Service List"
+                >
+                  <svg className="w-4 h-4 stroke-[2.5]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+                  </svg>
+                  <span>SERVICE LIST</span>
+                </button>
+
+                <Link
+                  to="/login"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#0d7474] hover:bg-[#0f8b8b] text-white font-extrabold text-xs tracking-wide border border-[#2dd4bf]/40 shadow-sm transition-all"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+                  </svg>
+                  <span>Login | Register</span>
+                </Link>
+              </div>
             )}
           </div>
         </div>
@@ -1100,6 +1126,14 @@ const Header = () => {
         {/* Mobile & Tablet Secondary Bar: Navigation Links + Admin Quick Controls */}
         <div className="lg:hidden border-t border-slate-700/70 bg-[#23262c] px-3 py-2 flex flex-wrap items-center justify-between gap-2 overflow-x-auto">
           <nav className="flex items-center flex-nowrap sm:flex-wrap gap-1 text-xs font-semibold overflow-x-auto py-0.5">
+            <button
+              type="button"
+              onClick={() => setShowServiceListModal(true)}
+              className="px-2.5 py-1 rounded-md transition-colors whitespace-nowrap shrink-0 text-xs font-bold bg-[#0d7474] text-white border border-[#2dd4bf]/40 flex items-center gap-1"
+            >
+              <span>☰</span>
+              <span>SERVICES</span>
+            </button>
             {(siteContent?.nav || []).map((item: any, index: number) => {
               if (item.requiresNoUser && user) return null;
               const active = isItemActive(item.path);
@@ -1149,6 +1183,11 @@ const Header = () => {
           )}
         </div>
       </header>
+
+      {/* Service List Popup Modal */}
+      {showServiceListModal && (
+        <ServiceListPanel isModal={true} onClose={() => setShowServiceListModal(false)} />
+      )}
 
       {/* GitHub Real-time Cloud Sync Modal */}
       {showSyncModal && (
