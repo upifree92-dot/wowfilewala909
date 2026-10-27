@@ -7,6 +7,7 @@ import Editable from '../components/Editable';
 import ImeiOrderSettingsModal from '../components/ImeiOrderSettingsModal';
 import ServiceListPanel from '../components/ServiceListPanel';
 import RemoteToolRentOrder from '../components/RemoteToolRentOrder';
+import ServerServiceOrder from '../components/ServerServiceOrder';
 import { useSEO } from '../hooks/useSEO';
 import { ShieldCheck, Server, RefreshCw, CheckCircle2, Zap } from 'lucide-react';
 
@@ -198,6 +199,13 @@ const ImeiOrderPage = () => {
                         <BackButton />
                     </div>
                     <RemoteToolRentOrder />
+                </div>
+            ) : activeType === 'server' ? (
+                <div className="max-w-6xl mx-auto">
+                    <div className="mb-4">
+                        <BackButton />
+                    </div>
+                    <ServerServiceOrder />
                 </div>
             ) : (
                 <div className="max-w-2xl mx-auto bg-white/90 dark:bg-slate-800/90 backdrop-blur-lg p-6 sm:p-8 rounded-xl shadow-lg border border-slate-200/70 dark:border-slate-700/70">
