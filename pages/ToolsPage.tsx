@@ -1,14 +1,12 @@
 import React, { useState } from 'react';
 import { useAppContext } from '../context/AppContext';
 import CategoryCard from '../components/CategoryCard';
-import ServiceListPanel from '../components/ServiceListPanel';
 import { useSEO } from '../hooks/useSEO';
 
 const ToolsPage = () => {
   useSEO('Service List & Tools', 'Browse all GSM services, IMEI services, server activations, RENT-24/7, and file services.');
   const { categories } = useAppContext();
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeServiceTab, setActiveServiceTab] = useState<string>('group');
 
   const filteredTopLevelCategories = categories
     .filter(c => !c.parentId)
@@ -19,14 +17,6 @@ const ToolsPage = () => {
 
   return (
     <div className="container mx-auto px-4 py-6 sm:py-8 space-y-8">
-      {/* Customer Service List View matching GSM Portal design */}
-      <div className="max-w-2xl mx-auto">
-        <ServiceListPanel
-          activeServiceTab={activeServiceTab}
-          onSelectServiceTab={(tabId) => setActiveServiceTab(tabId)}
-        />
-      </div>
-
       {/* All Service Groups & Categories */}
       <div className="bg-white dark:bg-slate-800 p-6 sm:p-8 rounded-xl shadow-lg">
         <div className="text-center mb-8">

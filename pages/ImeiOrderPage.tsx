@@ -5,7 +5,6 @@ import type { InputField } from '../types';
 import BackButton from '../components/BackButton';
 import Editable from '../components/Editable';
 import ImeiOrderSettingsModal from '../components/ImeiOrderSettingsModal';
-import ServiceListPanel from '../components/ServiceListPanel';
 import RemoteToolRentOrder from '../components/RemoteToolRentOrder';
 import ServerServiceOrder from '../components/ServerServiceOrder';
 import ImeiServiceOrder from '../components/ImeiServiceOrder';
@@ -162,12 +161,6 @@ const ImeiOrderPage = () => {
     if (!config.enabled && !(isAdmin && isEditMode)) {
         return (
             <div className="container mx-auto px-4 py-8 space-y-6">
-                <div className="max-w-2xl mx-auto">
-                    <ServiceListPanel
-                        activeServiceTab={activeType}
-                        onSelectServiceTab={(tabId) => setSearchParams({ type: tabId })}
-                    />
-                </div>
                 <div className="max-w-2xl mx-auto text-center p-8 bg-white/70 dark:bg-slate-800/70 rounded-xl shadow-lg">
                     <h2 className="text-2xl font-bold">Service Not Available</h2>
                     <p className="text-slate-600 dark:text-slate-400 mt-2">This service is currently unavailable. Please check back later.</p>
@@ -181,18 +174,6 @@ const ImeiOrderPage = () => {
     return (
         <div className="container mx-auto px-4 py-6 sm:py-8 space-y-8">
             <ImeiOrderSettingsModal isOpen={isSettingsModalOpen} onClose={() => setSettingsModalOpen(false)} />
-
-            {/* Customer Service List Menu */}
-            <div className="max-w-2xl mx-auto">
-                <ServiceListPanel
-                    activeServiceTab={activeType}
-                    onSelectServiceTab={(tabId) => {
-                        if (tabId === 'imei' || tabId === 'server' || tabId === 'rent' || tabId === 'remote') {
-                            setSearchParams({ type: tabId });
-                        }
-                    }}
-                />
-            </div>
 
             {activeType === 'rent' ? (
                 <div className="max-w-6xl mx-auto">
