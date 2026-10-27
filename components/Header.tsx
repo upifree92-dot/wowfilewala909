@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, ChangeEvent } from "react";
-import { NavLink, useNavigate, Link } from "react-router-dom";
+import { NavLink, useNavigate, Link, useLocation } from "react-router-dom";
 import { motion } from "motion/react";
 import { useAppContext } from "../context/AppContext";
 import { getUserLoyaltyTier } from "../lib/loyalty";
@@ -49,6 +49,7 @@ const Header = () => {
   } = useAppContext();
 
   const navigate = useNavigate();
+  const location = useLocation();
   const [isDropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -336,6 +337,23 @@ const Header = () => {
   const activeLinkClass = "text-cyan-400 font-semibold";
   const inactiveLinkClass = "text-gray-300 hover:text-white";
   const linkBaseClass = "px-3 py-2 transition-colors duration-300";
+
+  const isItemActive = (itemPath: string) => {
+    if (itemPath === '/') {
+      return location.pathname === '/' && !location.search;
+    }
+    if (itemPath.includes('?')) {
+      const [path, query] = itemPath.split('?');
+      if (location.pathname !== path) return false;
+      const urlParams = new URLSearchParams(query);
+      const locParams = new URLSearchParams(location.search);
+      for (const [key, val] of urlParams.entries()) {
+        if (locParams.get(key) !== val) return false;
+      }
+      return true;
+    }
+    return location.pathname === itemPath;
+  };
 
   const logoUrl = siteContent?.header?.logoUrl;
   const adminNotifications = getAdminNotifications();
@@ -627,30 +645,33 @@ const Header = () => {
           </div>
 
           <nav
-            className="hidden lg:flex items-center space-x-1 text-sm font-medium"
+            className="hidden lg:flex items-center gap-1 xl:gap-2.5 text-xs xl:text-sm font-semibold"
             onDrop={handleDrop}
             onDragOver={handleDragOver}
             onDragEnd={handleDragEnd}
           >
             {(siteContent?.nav || []).map((item: any, index: number) => {
               if (item.requiresNoUser && user) return null;
+              const active = isItemActive(item.path);
 
               return (
                 <div
                   key={item.id}
-                  className={`relative group flex items-center rounded-md transition-all ${isEditMode ? "cursor-move" : ""}`}
+                  className={`relative group flex items-center rounded-lg transition-all ${isEditMode ? "cursor-move" : ""}`}
                   draggable={isEditMode}
                   onDragStart={(e) => handleDragStart(e, index)}
                   onDragEnter={(e) => handleDragEnter(e, index)}
                 >
-                  <NavLink
+                  <Link
                     to={item.path}
-                    className={({ isActive }) =>
-                      `${linkBaseClass} ${isActive ? activeLinkClass : inactiveLinkClass}`
-                    }
+                    className={`px-3 py-1.5 rounded-lg transition-all duration-200 text-xs xl:text-sm font-semibold flex items-center gap-1.5 whitespace-nowrap ${
+                      active
+                        ? "text-cyan-400 font-bold bg-white/10 shadow-sm"
+                        : "text-white/90 hover:text-white hover:bg-white/10"
+                    }`}
                   >
                     <Editable contentKey={`nav.${index}.text`} as="span" />
-                  </NavLink>
+                  </Link>
                   {isEditMode && (
                     <div className="flex items-center ml-1 opacity-0 group-hover:opacity-100 transition-opacity absolute -right-8 top-1/2 -translate-y-1/2 bg-[#3b3e47] p-1 rounded-md">
                       <motion.button
@@ -1106,24 +1127,23 @@ const Header = () => {
         </div>
 
         {/* Mobile & Tablet Secondary Bar: Navigation Links + Admin Quick Controls */}
-        <div className="lg:hidden border-t border-slate-700/70 bg-[#23262c] px-3 py-2 flex flex-wrap items-center justify-between gap-2">
-          <nav className="flex items-center flex-wrap gap-1 text-xs font-semibold">
+        <div className="lg:hidden border-t border-slate-700/70 bg-[#23262c] px-3 py-2 flex flex-wrap items-center justify-between gap-2 overflow-x-auto">
+          <nav className="flex items-center flex-nowrap sm:flex-wrap gap-1 text-xs font-semibold overflow-x-auto py-0.5">
             {(siteContent?.nav || []).map((item: any, index: number) => {
               if (item.requiresNoUser && user) return null;
+              const active = isItemActive(item.path);
               return (
-                <NavLink
+                <Link
                   key={item.id}
                   to={item.path}
-                  className={({ isActive }) =>
-                    `px-2.5 py-1 rounded-md transition-colors ${
-                      isActive
-                        ? "bg-orange-500/20 text-orange-400 font-bold"
-                        : "text-gray-300 hover:text-white hover:bg-slate-700/50"
-                    }`
-                  }
+                  className={`px-2.5 py-1 rounded-md transition-colors whitespace-nowrap shrink-0 text-xs font-semibold ${
+                    active
+                      ? "bg-cyan-500/20 text-cyan-400 font-bold border border-cyan-500/30"
+                      : "text-gray-300 hover:text-white hover:bg-slate-700/50"
+                  }`}
                 >
                   <Editable contentKey={`nav.${index}.text`} as="span" />
-                </NavLink>
+                </Link>
               );
             })}
           </nav>

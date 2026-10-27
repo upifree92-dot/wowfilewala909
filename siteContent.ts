@@ -30,19 +30,34 @@ export const INITIAL_SITE_CONTENT = {
       "path": "/"
     },
     {
-      "id": "nav-2",
-      "text": "Tools",
+      "id": "nav-server-srv",
+      "text": "Server Service",
+      "path": "/imei-order?type=server"
+    },
+    {
+      "id": "nav-imei-srv",
+      "text": "🌍 IMEI Service",
+      "path": "/imei-order?type=imei"
+    },
+    {
+      "id": "nav-remote-rent",
+      "text": "🚀 Rent Service & Remote Service",
+      "path": "/imei-order?type=remote"
+    },
+    {
+      "id": "nav-file-srv",
+      "text": "📁 File service",
+      "path": "/downloads"
+    },
+    {
+      "id": "nav-group-srv",
+      "text": "🖥️ Service By Group",
       "path": "/tools"
     },
     {
-      "id": "nav-3",
+      "id": "nav-add-funds",
       "text": "Add Funds",
       "path": "/pricing"
-    },
-    {
-      "id": "nav-our-users",
-      "text": "Our Users",
-      "path": "/our-users"
     },
     {
       "id": "nav-5",
