@@ -40,27 +40,13 @@ interface ApiServiceOption {
 
 const CATALOG_SERVICES: ApiServiceOption[] = [
     // IMEI Services
-    { id: 'imei-1', name: 'iPhone / iPad MDM & KG Lock Bypass (IMEI/SN)', type: 'imei', price: 549.69, deliveryTime: '1-10 Mins', inputLabel: 'IMEI / Serial Number', inputPlaceholder: 'Enter 15-digit IMEI or Serial Number...' },
-    { id: 'imei-2', name: 'Apple Official Network & Carrier Unlock (IMEI)', type: 'imei', price: 283.37, deliveryTime: '1-24 Hours', inputLabel: 'IMEI Number', inputPlaceholder: 'Enter 15-digit IMEI Number...' },
-    { id: 'imei-3', name: 'Xiaomi / Redmi Account Unbind (IMEI/SN)', type: 'imei', price: 359.95, deliveryTime: '5-30 Mins', inputLabel: 'IMEI / Lock Code', inputPlaceholder: 'Enter Lock Code or IMEI...' },
-    { id: 'imei-4', name: 'Samsung FRP & KG Locked Removal (IMEI)', type: 'imei', price: 450.00, deliveryTime: 'Instant', inputLabel: 'IMEI / Serial', inputPlaceholder: 'Enter Samsung IMEI...' },
-    { id: 'imei-5', name: 'Apple Warranty & iCloud Status Check (IMEI)', type: 'imei', price: 137.42, deliveryTime: 'Instant', inputLabel: 'IMEI / Serial Number', inputPlaceholder: 'Enter IMEI or Serial Number...' },
+    { id: 'imei-1', name: 'iMEi Service', type: 'imei', price: 0, deliveryTime: 'Instant', inputLabel: 'IMEI / Serial Number', inputPlaceholder: 'Enter 15-digit IMEI or Serial Number...' },
 
     // Server Services
-    { id: 'srv-1', name: 'FRPFILE ACTIVATOR A12 + Bypass Hello Screen', type: 'server', price: 549.69, deliveryTime: 'Instant', inputLabel: 'ECID / Serial Number', inputPlaceholder: 'Enter Device ECID or Serial...' },
-    { id: 'srv-2', name: 'NexaPro A12+ Hello Bypass Server Credits', type: 'server', price: 283.37, deliveryTime: 'Instant', inputLabel: 'Username / Account Email', inputPlaceholder: 'Enter NexaPro Username...' },
-    { id: 'srv-3', name: 'Asm Auth Tool - Xiaomi FRP Credits (10 Credits)', type: 'server', price: 359.95, deliveryTime: 'Instant', inputLabel: 'Auth Tool Username', inputPlaceholder: 'Enter Auth Tool Username...' },
-    { id: 'srv-4', name: 'Griffin Unlocker Tool Server Activation', type: 'server', price: 450.00, deliveryTime: '1-5 Mins', inputLabel: 'Registered Email ID', inputPlaceholder: 'Enter registered email...' },
-    { id: 'srv-5', name: 'Borneo Schematic Hardware Diagram 1 Year', type: 'server', price: 1850.00, deliveryTime: 'Instant', inputLabel: 'Borneo Username / Email', inputPlaceholder: 'Enter Borneo account email...' },
+    { id: 'srv-1', name: 'Server Service', type: 'server', price: 0, deliveryTime: 'Instant', inputLabel: 'Username / Account ID', inputPlaceholder: 'Enter Account / Username...' },
 
-    // Tool Rental Services (RENT 24/7)
-    { id: 'rent-1', name: 'UnlockTool Rent 24 Hours (Instant Access ID)', type: 'rent', price: 120.00, deliveryTime: 'Instant ID/Pass', inputLabel: 'Your Mobile / WhatsApp Number', inputPlaceholder: 'Enter WhatsApp number to receive login ID...' },
-    { id: 'rent-2', name: 'Griffin Unlocker Rent 24 Hours', type: 'rent', price: 95.00, deliveryTime: 'Instant ID/Pass', inputLabel: 'Your Mobile / WhatsApp Number', inputPlaceholder: 'Enter WhatsApp number for access...' },
-    { id: 'rent-3', name: 'Borneo Schematic Rent 24 Hours', type: 'rent', price: 80.00, deliveryTime: 'Instant ID/Pass', inputLabel: 'Your WhatsApp Number', inputPlaceholder: 'Enter WhatsApp number for access...' },
-    { id: 'rent-4', name: 'DFT Pro Tool Rent 3 Hours', type: 'rent', price: 60.00, deliveryTime: 'Instant ID/Pass', inputLabel: 'Your Mobile Number', inputPlaceholder: 'Enter Mobile number...' },
-    { id: 'rent-5', name: 'Android Multi Tool Rent [2 Hours]', type: 'rent', price: 37.72, deliveryTime: 'Instant ID/Pass', inputLabel: 'Your WhatsApp Number', inputPlaceholder: 'Enter WhatsApp number...' },
-    { id: 'rent-6', name: 'Chimera Tool Rent [1 Hour]', type: 'rent', price: 75.00, deliveryTime: 'Instant ID/Pass', inputLabel: 'Your WhatsApp Number', inputPlaceholder: 'Enter WhatsApp number...' },
-    { id: 'rent-7', name: 'Live Remote Technician Support Session', type: 'rent', price: 250.00, deliveryTime: 'Scheduled', inputLabel: 'TeamViewer / Anydesk ID', inputPlaceholder: 'Enter TeamViewer or Anydesk ID...' },
+    // Tool Rental Services
+    { id: 'rent-1', name: 'Remote/ Tool-Rent', type: 'rent', price: 0, deliveryTime: 'Instant', inputLabel: 'Your Mobile / WhatsApp Number', inputPlaceholder: 'Enter WhatsApp number to receive tool access...' },
 ];
 
 const ImeiOrderPage = () => {

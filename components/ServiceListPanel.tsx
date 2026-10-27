@@ -31,13 +31,6 @@ const ServiceListPanel: React.FC<ServiceListPanelProps> = ({
       id: 'imei',
       label: 'iMEi Service',
       path: '/imei-order?type=imei',
-      subItems: [
-        { name: 'Place New IMEI Order', path: '/imei-order?type=imei', badge: 'Instant' },
-        { name: 'iPhone & iPad Warranty / Carrier / iCloud Check', path: '/imei-order?type=imei', badge: 'Fast' },
-        { name: 'FRPFILE & iRemoval PRO Hello Bypass', path: '/imei-order?type=imei', badge: 'A12+' },
-        { name: 'Samsung / Xiaomi / Vivo FRP & Network Unlock', path: '/imei-order?type=imei', badge: '24/7' },
-        { name: 'Official Network & Carrier Unlock Codes', path: '/imei-order?type=imei', badge: 'Official' },
-      ],
       icon: (
         <svg className="w-5 h-5 text-white shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9">
           <circle cx="12" cy="12" r="9" />
@@ -50,12 +43,6 @@ const ServiceListPanel: React.FC<ServiceListPanelProps> = ({
       id: 'server',
       label: 'Server Service',
       path: '/imei-order?type=server',
-      subItems: [
-        { name: 'Box & Dongle Activations & Credits', path: '/imei-order?type=server', badge: 'Auto' },
-        { name: 'Borneo / JCID / DZKJ Hardware Schematics', path: '/imei-order?type=server', badge: 'Pro' },
-        { name: 'UnlockTool / Chimera / DFT Pro Server Credits', path: '/imei-order?type=server', badge: 'Instant' },
-        { name: 'Xiaomi Auth / OTP Flashing Tool', path: '/imei-order?type=server', badge: '24/7' },
-      ],
       icon: (
         <svg className="w-5 h-5 text-white shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9">
           <circle cx="9" cy="20" r="1.5" fill="currentColor" />
@@ -68,14 +55,6 @@ const ServiceListPanel: React.FC<ServiceListPanelProps> = ({
       id: 'remote',
       label: 'Remote/ Tool-Rent',
       path: '/imei-order?type=remote',
-      subItems: [
-        { name: 'UnlockTool Rent 24/7 (Instant Access ID)', path: '/imei-order?type=rent', badge: 'Instant ID' },
-        { name: 'Griffin Unlocker / Pandora Tool Rent', path: '/imei-order?type=rent', badge: 'Online' },
-        { name: 'DFT Pro / Chimera / AMT Tool Rent', path: '/imei-order?type=rent', badge: 'Auto ID' },
-        { name: 'Android Multi Tool / EFT Pro Rent', path: '/imei-order?type=rent', badge: '24/7' },
-        { name: 'TFM / TSM / UAT / Hydra / KG Killer Rent', path: '/imei-order?type=rent', badge: 'Tool Rent' },
-        { name: 'All 20+ Remote Tool Rentals Available', path: '/imei-order?type=rent', badge: 'Rent All' },
-      ],
       icon: (
         <svg className="w-5 h-5 text-white shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9">
           <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z" />
@@ -89,15 +68,6 @@ const ServiceListPanel: React.FC<ServiceListPanelProps> = ({
       id: 'file',
       label: 'File service',
       path: '/',
-      subItems: [
-        { name: 'Auth / Firehose / Preloader & DA Files', path: '/category/cat-auth-da', badge: 'Auth' },
-        { name: 'Dump Files ENG / EMMC / UFS / FFU / RPMB', path: '/category/cat-dump-files', badge: 'Dump' },
-        { name: 'Schematic Diagrams And Test Points', path: '/category/cat-schematics', badge: 'Diagram' },
-        { name: 'Network Files NvData / NvRam / EFS / QCN', path: '/category/cat-network-files', badge: 'QCN' },
-        { name: 'Official / Flashing Tools & Free Tools', path: '/category/cat-free-tools', badge: 'Tools' },
-        { name: 'Readed Firmware & Infinix Auth Files', path: '/category/cat-infinix-auth', badge: 'Firmware' },
-        { name: 'Oppo / Vivo / Realme Stock ROMs', path: '/category/cat-oppo-firmware', badge: 'ROMs' },
-      ],
       icon: (
         <svg className="w-5 h-5 text-white shrink-0" viewBox="0 0 24 24" fill="currentColor">
           <path d="M19.5 21a3 3 0 0 0 3-3v-8.25a3 3 0 0 0-3-3h-5.879a.75.75 0 0 1-.53-.22L11.47 4.91A2.25 2.25 0 0 0 9.879 4.25H4.5a3 3 0 0 0-3 3V18a3 3 0 0 0 3 3h15Z" />
@@ -108,11 +78,6 @@ const ServiceListPanel: React.FC<ServiceListPanelProps> = ({
       id: 'group',
       label: 'Service By Group',
       path: '/tools',
-      subItems: topCategories.map((cat) => ({
-        name: cat.name,
-        path: `/category/${cat.id}`,
-        badge: 'Group',
-      })),
       icon: (
         <svg className="w-5 h-5 text-white shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9">
           <rect x="2" y="3" width="20" height="14" rx="2" />
@@ -220,92 +185,47 @@ const ServiceListPanel: React.FC<ServiceListPanelProps> = ({
 
           {/* 5 Service Rows */}
           <div className="divide-y divide-white/20 border-b border-white/20">
-            {serviceItems.map((item) => {
-              const isExpanded = expandedService === item.id || activeServiceTab === item.id;
-              return (
-                <div key={item.id} className="w-full">
-                  <div className="flex items-center justify-between py-3.5 px-1 hover:bg-white/5 transition-colors group">
-                    <button
-                      type="button"
-                      onClick={() => handleRowClick(item)}
-                      className="flex items-center gap-3.5 flex-1 text-left focus:outline-none"
-                    >
-                      <span className="flex items-center justify-center w-6 h-6">
-                        {item.icon}
-                      </span>
-                      <span className="text-[15px] sm:text-base font-normal !text-white tracking-wide">
-                        {item.label}
-                      </span>
-                    </button>
-
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => handleNavigate(item.path)}
-                        className="text-[11px] font-semibold px-2.5 py-1 rounded bg-teal-500/15 hover:bg-teal-500/30 !text-teal-300 border border-teal-500/30 transition-colors"
-                      >
-                        Open
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleRowClick(item)}
-                        className="p-1 text-gray-300 hover:text-white transition-transform"
-                        aria-label={`Toggle ${item.label}`}
-                      >
-                        <svg
-                          className={`w-4 h-4 transition-transform duration-200 ${
-                            isExpanded ? 'rotate-90 text-teal-400' : ''
-                          }`}
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                          strokeWidth={2.4}
-                        >
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                        </svg>
-                      </button>
-                    </div>
+            {serviceItems.map((item) => (
+              <div key={item.id} className="w-full">
+                <div
+                  onClick={() => handleNavigate(item.path)}
+                  className="flex items-center justify-between py-3.5 px-1 hover:bg-white/5 transition-colors group cursor-pointer"
+                >
+                  <div className="flex items-center gap-3.5 flex-1 text-left">
+                    <span className="flex items-center justify-center w-6 h-6">
+                      {item.icon}
+                    </span>
+                    <span className="text-[15px] sm:text-base font-normal !text-white tracking-wide">
+                      {item.label}
+                    </span>
                   </div>
 
-                  {/* Expandable Sub-services Drawer */}
-                  {isExpanded && item.subItems && item.subItems.length > 0 && (
-                    <div className="bg-[#1b1b1b] border-t border-white/10 px-3 py-2.5 space-y-1.5 animate-fade-in">
-                      {item.subItems.map((sub, idx) => (
-                        <button
-                          key={idx}
-                          type="button"
-                          onClick={() => handleNavigate(sub.path)}
-                          className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg bg-[#242424] hover:bg-[#0c6b6b]/40 border border-white/5 hover:border-teal-400/40 transition-all text-left group/sub"
-                        >
-                          <div className="flex items-center gap-2.5 min-w-0">
-                            <span className="w-1.5 h-1.5 rounded-full bg-teal-400 shrink-0" />
-                            <span className="text-sm !text-gray-100 group-hover/sub:!text-white truncate">
-                              {sub.name}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2 shrink-0 ml-2">
-                            {sub.badge && (
-                              <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-teal-950/90 !text-teal-300 border border-teal-500/30">
-                                {sub.badge}
-                              </span>
-                            )}
-                            <svg
-                              className="w-3.5 h-3.5 text-gray-400 group-hover/sub:text-teal-300"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              stroke="currentColor"
-                              strokeWidth={2.2}
-                            >
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                            </svg>
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                  )}
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleNavigate(item.path);
+                      }}
+                      className="text-[11px] font-semibold px-2.5 py-1 rounded bg-teal-500/15 hover:bg-teal-500/30 !text-teal-300 border border-teal-500/30 transition-colors cursor-pointer"
+                    >
+                      Open
+                    </button>
+                    <span className="p-1 text-gray-300 group-hover:text-white transition-transform">
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        strokeWidth={2.4}
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                      </svg>
+                    </span>
+                  </div>
                 </div>
-              );
-            })}
+              </div>
+            ))}
           </div>
 
           {/* Full-width Teal Login | Register Button matching Screenshot */}
