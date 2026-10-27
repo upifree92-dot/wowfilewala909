@@ -173,7 +173,7 @@ const AppContent = () => {
             <Route path="automation" element={<HostingraConnectorPage />} />
             <Route path="utilities" element={<HostingraConnectorPage />} />
             <Route path="logs" element={<DashboardPage />} />
-            <Route path="theme" element={<AdminSettingsPage />} />
+            <Route path="theme" element={<Navigate to="/" replace />} />
             <Route path="hostinger" element={<HostingraConnectorPage />} />
             <Route path="hostingra" element={<HostingraConnectorPage />} />
             <Route path="supabase" element={<Navigate to="/admin/hostinger" replace />} />

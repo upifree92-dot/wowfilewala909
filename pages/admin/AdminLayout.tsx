@@ -76,7 +76,7 @@ const AdminLayout = () => {
         { to: "/admin/utilities", icon: <Box className="w-4 h-4 shrink-0" />, label: "Utilities", hasSubmenu: true },
         { to: "/admin/logs", icon: <Calendar className="w-4 h-4 shrink-0" />, label: "Activity Log", hasSubmenu: true },
         { to: "/admin/settings", icon: <Settings className="w-4 h-4 shrink-0" />, label: "Settings", hasSubmenu: true },
-        { to: "/admin/theme", icon: <Info className="w-4 h-4 shrink-0" />, label: "Website Theme", hasSubmenu: false },
+        { to: "/", icon: <Info className="w-4 h-4 shrink-0" />, label: "Website Theme", hasSubmenu: false },
     ];
 
     return (
