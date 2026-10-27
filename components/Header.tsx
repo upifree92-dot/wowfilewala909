@@ -638,6 +638,10 @@ const Header = () => {
           >
             {(siteContent?.nav || []).map((item: any, index: number) => {
               if (item.requiresNoUser && user) return null;
+              // Hide service items from top navbar alongside Home as requested
+              if (item.text && (item.text.toLowerCase().includes('service') || item.text.toLowerCase().includes('सर्विस'))) {
+                return null;
+              }
               const active = isItemActive(item.path);
 
               return (
@@ -1126,16 +1130,12 @@ const Header = () => {
         {/* Mobile & Tablet Secondary Bar: Navigation Links + Admin Quick Controls */}
         <div className="lg:hidden border-t border-slate-700/70 bg-[#23262c] px-3 py-2 flex flex-wrap items-center justify-between gap-2 overflow-x-auto">
           <nav className="flex items-center flex-nowrap sm:flex-wrap gap-1 text-xs font-semibold overflow-x-auto py-0.5">
-            <button
-              type="button"
-              onClick={() => setShowServiceListModal(true)}
-              className="px-2.5 py-1 rounded-md transition-colors whitespace-nowrap shrink-0 text-xs font-bold bg-[#0d7474] text-white border border-[#2dd4bf]/40 flex items-center gap-1"
-            >
-              <span>☰</span>
-              <span>SERVICES</span>
-            </button>
             {(siteContent?.nav || []).map((item: any, index: number) => {
               if (item.requiresNoUser && user) return null;
+              // Hide service items from navbar alongside Home as requested
+              if (item.text && (item.text.toLowerCase().includes('service') || item.text.toLowerCase().includes('सर्विस'))) {
+                return null;
+              }
               const active = isItemActive(item.path);
               return (
                 <Link
