@@ -1446,7 +1446,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
               userId,
               userObj: existingUser
             });
-            setNotification('Device change detected! Hardware ID (HWID) reset required.', 'error');
+            setNotification('Device change detected! Please request HWID reset via WhatsApp to Admin.', 'error');
             return false;
           }
           if (!registeredHWID) {
@@ -1486,7 +1486,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
                 userId: localUser.id,
                 userObj: localUser
               });
-              setNotification('Device change detected! Hardware ID (HWID) reset required.', 'error');
+              setNotification('Device change detected! Please request HWID reset via WhatsApp to Admin.', 'error');
               return false;
             }
             if (!registeredHWID) {
@@ -1550,7 +1550,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
               userId: localUser.id,
               userObj: localUser
             });
-            setNotification('Device change detected! Hardware ID (HWID) reset required.', 'error');
+            setNotification('Device change detected! Please request HWID reset via WhatsApp to Admin.', 'error');
             return false;
           }
           if (!registeredHWID) {

@@ -33,6 +33,7 @@ const AuthPage = () => {
     return searchParams.get('ref') || searchParams.get('referral') || '';
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [copiedHwid, setCopiedHwid] = useState(false);
 
 
 
@@ -362,58 +363,103 @@ const AuthPage = () => {
 
       </div>
 
-      {hwidMismatchInfo && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fadeIn font-sans">
-          <div className="bg-slate-900 border border-slate-700 rounded-2xl max-w-md w-full p-6 text-white shadow-2xl space-y-5">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <div className="flex items-center gap-2">
-                <span className="w-3 h-3 rounded-full bg-amber-400 animate-pulse" />
-                <h3 className="text-lg font-extrabold text-amber-400">Device Change Detected (HWID Mismatch)</h3>
+      {hwidMismatchInfo && (() => {
+        const rawPhone = siteContent?.pricing?.adminWhatsappNumber || siteContent?.whatsapp?.phoneNumber || "8658465589";
+        const cleanPhone = rawPhone.replace(/\D/g, '');
+        const targetPhone = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;
+        const msgText = `*HWID Reset Request*\nHello Admin, I have changed my device (Laptop/Mobile/PC/MacBook).\nPlease reset my Hardware ID (HWID) so I can login.\n\n*Account Email:* ${hwidMismatchInfo.email}\n*New Device HWID:* ${hwidMismatchInfo.currentHWID}\n*Old Registered HWID:* ${hwidMismatchInfo.registeredHWID}\n\nThank you!`;
+        const whatsappHref = `https://wa.me/${targetPhone}?text=${encodeURIComponent(msgText)}`;
+
+        const handleCopyDetails = () => {
+          if (navigator.clipboard) {
+            navigator.clipboard.writeText(msgText).then(() => {
+              setCopiedHwid(true);
+              setTimeout(() => setCopiedHwid(false), 2500);
+            }).catch(() => {});
+          }
+        };
+
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fadeIn font-sans">
+            <div className="bg-slate-900 border border-slate-700/80 rounded-2xl max-w-lg w-full p-6 text-white shadow-2xl space-y-5">
+              <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                <div className="flex items-center gap-2.5">
+                  <span className="w-3 h-3 rounded-full bg-amber-400 animate-pulse" />
+                  <h3 className="text-lg font-bold text-amber-400">Device Change Detected (HWID Lock)</h3>
+                </div>
+                <button 
+                  onClick={() => { setHwidMismatchInfo(null); setCopiedHwid(false); }} 
+                  className="text-slate-400 hover:text-white transition-colors text-lg p-1"
+                  aria-label="Close"
+                >
+                  ✕
+                </button>
               </div>
-              <button onClick={() => setHwidMismatchInfo(null)} className="text-slate-400 hover:text-white">✕</button>
-            </div>
 
-            <p className="text-sm text-slate-300 leading-relaxed">
-              You are logging in from a new device (laptop, mobile, PC, or MacBook). Your account is currently bound to another device.
-            </p>
+              <div className="space-y-3">
+                <p className="text-sm text-slate-300 leading-relaxed">
+                  Aapka account single device lock se protected hai. Nayi device (Laptop, Mobile, PC ya MacBook) par login karne ke liye <strong>Admin se Hardware ID (HWID) reset karwana zaroori hai</strong>.
+                </p>
+                <p className="text-xs text-amber-400/90 bg-amber-500/10 border border-amber-500/20 rounded-xl p-3">
+                  ⚠️ <strong>Note:</strong> Niche diye gaye WhatsApp button par click karke Admin ko pre-filled reset request bhejein. Admin panel se HWID reset hone ke baad aap is device par direct login kar sakenge.
+                </p>
+              </div>
 
-            <div className="bg-slate-800/80 rounded-xl p-3 text-xs space-y-1.5 font-mono border border-slate-700/60">
-              <p className="text-slate-400">Account: <span className="text-white">{hwidMismatchInfo.email}</span></p>
-              <p className="text-slate-400">Registered HWID: <span className="text-amber-300 truncate block">{hwidMismatchInfo.registeredHWID}</span></p>
-              <p className="text-slate-400">Current Device HWID: <span className="text-cyan-300 truncate block">{hwidMismatchInfo.currentHWID}</span></p>
-            </div>
+              {/* HWID Details Box */}
+              <div className="bg-slate-800/90 rounded-xl p-4 text-xs space-y-2 font-mono border border-slate-700/80">
+                <div className="flex justify-between items-center text-slate-400 border-b border-slate-700/50 pb-1.5">
+                  <span>Account Email:</span>
+                  <span className="text-white font-bold">{hwidMismatchInfo.email}</span>
+                </div>
+                <div className="flex flex-col gap-1 text-slate-400 border-b border-slate-700/50 pb-1.5">
+                  <span>New Device (Current HWID):</span>
+                  <span className="text-cyan-300 font-bold break-all bg-slate-950/70 p-1.5 rounded">{hwidMismatchInfo.currentHWID}</span>
+                </div>
+                <div className="flex flex-col gap-1 text-slate-400">
+                  <span>Old Bound HWID:</span>
+                  <span className="text-slate-300 break-all bg-slate-950/40 p-1.5 rounded">{hwidMismatchInfo.registeredHWID}</span>
+                </div>
+              </div>
 
-            <div className="flex flex-col gap-2.5 pt-2">
-              <button
-                onClick={async () => {
-                  await performSelfHwidReset();
-                  navigate('/');
-                }}
-                className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 px-4 rounded-xl transition-all shadow-lg text-sm flex items-center justify-center gap-2 cursor-pointer"
-              >
-                <span>Reset HWID to Current Device Now</span>
-              </button>
+              {/* Action Buttons */}
+              <div className="flex flex-col gap-2.5 pt-1">
+                {/* Primary Button: WhatsApp Direct Request */}
+                <a
+                  href={whatsappHref}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full bg-[#25D366] hover:bg-[#20ba5a] text-white font-bold py-3.5 px-4 rounded-xl transition-all shadow-lg hover:shadow-emerald-500/20 text-sm flex items-center justify-center gap-2.5 text-center cursor-pointer"
+                >
+                  <img 
+                    src={siteContent?.whatsapp?.iconUrl || "https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg"} 
+                    alt="WhatsApp" 
+                    className="w-5 h-5 shrink-0" 
+                  />
+                  <span>Request HWID Reset via WhatsApp</span>
+                </a>
 
-              <a
-                href={`https://wa.me/${(((siteContent?.pricing?.adminWhatsappNumber || siteContent?.whatsapp?.phoneNumber || "8658465589").replace(/\D/g, '').length === 10 ? "91" : "") + (siteContent?.pricing?.adminWhatsappNumber || siteContent?.whatsapp?.phoneNumber || "8658465589").replace(/\D/g, ''))}?text=${encodeURIComponent(`Hi Admin, I have changed my device. Please reset my Hardware ID (HWID) for account: ${hwidMismatchInfo.email}`)}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-full bg-[#25D366] hover:bg-[#20ba5a] text-white font-bold py-3 px-4 rounded-xl transition-all shadow-lg text-sm flex items-center justify-center gap-2"
-              >
-                <img src={siteContent?.whatsapp?.iconUrl || "https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg"} alt="WhatsApp" className="w-4 h-4" />
-                <span>Request HWID Reset via WhatsApp</span>
-              </a>
+                {/* Secondary Button: Copy Details */}
+                <button
+                  type="button"
+                  onClick={handleCopyDetails}
+                  className="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold py-2.5 px-4 rounded-xl transition-all text-xs flex items-center justify-center gap-2 cursor-pointer border border-slate-700"
+                >
+                  <span>{copiedHwid ? '✓ Request Message Copied!' : '📋 Copy Reset Message & HWID'}</span>
+                </button>
 
-              <button
-                onClick={() => setHwidMismatchInfo(null)}
-                className="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-2.5 px-4 rounded-xl transition-all text-xs cursor-pointer"
-              >
-                Cancel
-              </button>
+                {/* Cancel Button */}
+                <button
+                  type="button"
+                  onClick={() => { setHwidMismatchInfo(null); setCopiedHwid(false); }}
+                  className="w-full text-slate-400 hover:text-slate-200 font-medium py-2 px-4 rounded-xl transition-all text-xs cursor-pointer text-center"
+                >
+                  Back to Login
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 };
