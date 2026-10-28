@@ -217,7 +217,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'balancePackages',
         'autoWalletNewUser',
         'users',
-        'adminNotifications'
+        'adminNotifications',
+        'tokenKeys',
+        'tokenProtection',
+        'tokenLogs'
     ];
 
     foreach ($allowedKeys as $key) {

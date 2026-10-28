@@ -95,4 +95,51 @@ CREATE TABLE IF NOT EXISTS `appointments` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- 8. Table for Token Verification Keys
+CREATE TABLE IF NOT EXISTS `token_keys` (
+  `id` VARCHAR(191) NOT NULL,
+  `key` VARCHAR(191) NOT NULL,
+  `note` VARCHAR(255) DEFAULT NULL,
+  `status` VARCHAR(64) NOT NULL DEFAULT 'active',
+  `usage_count` INT NOT NULL DEFAULT 0,
+  `max_usage` INT DEFAULT NULL,
+  `expiry_date` TIMESTAMP NULL DEFAULT NULL,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `idx_token_key` (`key`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 9. Table for Token Protection Configuration
+CREATE TABLE IF NOT EXISTS `token_protection` (
+  `id` INT AUTO_INCREMENT NOT NULL,
+  `enabled` TINYINT(1) NOT NULL DEFAULT 1,
+  `whatsapp_contact` VARCHAR(64) NOT NULL DEFAULT '919876543210',
+  `custom_message` TEXT DEFAULT NULL,
+  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 10. Table for Token Access Verification Logs
+CREATE TABLE IF NOT EXISTS `token_logs` (
+  `id` INT AUTO_INCREMENT NOT NULL,
+  `key` VARCHAR(191) NOT NULL,
+  `file_id` VARCHAR(191) DEFAULT NULL,
+  `ip_address` VARCHAR(64) DEFAULT NULL,
+  `user_agent` TEXT DEFAULT NULL,
+  `verified_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Default Seed Data for Token Keys & Protection
+INSERT INTO `token_keys` (`id`, `key`, `note`, `status`, `usage_count`, `max_usage`) 
+VALUES 
+  ('tok-flash-msba-fhct', 'FLASH-MSBA-FHCT', 'ACER Official Tested Flash File Token Key', 'active', 0, NULL),
+  ('tok-flash-wow-9090', 'FLASH-WOW-9090', 'VIP Firmware Download Token', 'active', 0, NULL)
+ON DUPLICATE KEY UPDATE `status`='active';
+
+INSERT INTO `token_protection` (`id`, `enabled`, `whatsapp_contact`, `custom_message`) 
+VALUES (1, 1, '919876543210', 'Token verification active for protected firmware files.')
+ON DUPLICATE KEY UPDATE `enabled` = VALUES(`enabled`);
+
 COMMIT;
+

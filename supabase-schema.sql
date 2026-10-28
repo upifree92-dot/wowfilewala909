@@ -66,12 +66,48 @@ CREATE TABLE IF NOT EXISTS wallet_transactions (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- 6. Create SITE_SETTINGS Table for Cloud Content Syncing
-CREATE TABLE IF NOT EXISTS site_settings (
-    key TEXT PRIMARY KEY,
-    value JSONB NOT NULL,
+-- 7. Create TOKEN_KEYS Table
+CREATE TABLE IF NOT EXISTS token_keys (
+    id TEXT PRIMARY KEY,
+    key TEXT UNIQUE NOT NULL,
+    note TEXT,
+    status TEXT DEFAULT 'active' NOT NULL,
+    usage_count INTEGER DEFAULT 0 NOT NULL,
+    max_usage INTEGER,
+    expiry_date TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- 8. Create TOKEN_PROTECTION Table
+CREATE TABLE IF NOT EXISTS token_protection (
+    id INTEGER PRIMARY KEY DEFAULT 1,
+    enabled BOOLEAN DEFAULT true NOT NULL,
+    whatsapp_contact TEXT DEFAULT '919876543210' NOT NULL,
+    custom_message TEXT,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
+
+-- 9. Create TOKEN_LOGS Table
+CREATE TABLE IF NOT EXISTS token_logs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    key TEXT NOT NULL,
+    file_id TEXT,
+    ip_address TEXT,
+    user_agent TEXT,
+    verified_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- Seed Default Token Keys into Supabase
+INSERT INTO token_keys (id, key, note, status, usage_count) 
+VALUES 
+    ('tok-flash-msba-fhct', 'FLASH-MSBA-FHCT', 'ACER Official Tested Flash File Token Key', 'active', 0),
+    ('tok-flash-wow-9090', 'FLASH-WOW-9090', 'VIP Firmware Download Token', 'active', 0)
+ON CONFLICT (key) DO NOTHING;
+
+INSERT INTO token_protection (id, enabled, whatsapp_contact)
+VALUES (1, true, '919876543210')
+ON CONFLICT (id) DO NOTHING;
+
 
 
 -- =========================================================================
@@ -184,6 +220,9 @@ ALTER TABLE registered_users DISABLE ROW LEVEL SECURITY;
 ALTER TABLE order_history DISABLE ROW LEVEL SECURITY;
 ALTER TABLE wallet_transactions DISABLE ROW LEVEL SECURITY;
 ALTER TABLE site_settings DISABLE ROW LEVEL SECURITY;
+ALTER TABLE token_keys DISABLE ROW LEVEL SECURITY;
+ALTER TABLE token_protection DISABLE ROW LEVEL SECURITY;
+ALTER TABLE token_logs DISABLE ROW LEVEL SECURITY;
 
 GRANT ALL ON appointments TO anon, authenticated, service_role;
 GRANT ALL ON download_history TO anon, authenticated, service_role;
@@ -191,6 +230,10 @@ GRANT ALL ON registered_users TO anon, authenticated, service_role;
 GRANT ALL ON order_history TO anon, authenticated, service_role;
 GRANT ALL ON wallet_transactions TO anon, authenticated, service_role;
 GRANT ALL ON site_settings TO anon, authenticated, service_role;
+GRANT ALL ON token_keys TO anon, authenticated, service_role;
+GRANT ALL ON token_protection TO anon, authenticated, service_role;
+GRANT ALL ON token_logs TO anon, authenticated, service_role;
+
 
 
 -- -------------------------------------------------------------------------
