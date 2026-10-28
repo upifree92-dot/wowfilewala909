@@ -1,59 +1,60 @@
-import React, { useState, FormEvent, useRef } from 'react';
+import React, { useState, FormEvent } from 'react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
-import { supabase } from '../lib/supabase';
 import Editable from '../components/Editable';
 import { ADMIN_EMAIL } from '../constants';
 import { useSEO } from '../hooks/useSEO';
+import { Eye, EyeOff, Check, X, ShieldCheck, Mail, User as UserIcon } from 'lucide-react';
 
 const generateDateTimeOTP = () => {
   const now = new Date();
   const DD = String(now.getDate()).padStart(2, '0');
-  const MM = String(now.getMonth() + 1).padStart(2, '0'); // e.g. "07" for July
-  const YY = String(now.getFullYear()).substring(2); // e.g. "26" for 2026
+  const MM = String(now.getMonth() + 1).padStart(2, '0');
+  const YY = String(now.getFullYear()).substring(2);
   return `${DD}${MM}${YY}`;
 };
 
 const AuthPage = () => {
   const [searchParams] = useSearchParams();
-  // Common state
   const [isLogin, setIsLogin] = useState(() => {
     const tab = searchParams.get('tab');
     if (tab === 'register') return false;
     return !(searchParams.has('ref') || searchParams.has('referral'));
   });
-  useSEO(isLogin ? 'Login' : 'Register', isLogin ? 'Login to your account.' : 'Create a new account.');
+
+  useSEO(isLogin ? 'Log In' : 'Create Account', isLogin ? 'Log in to your account.' : 'Create a new account.');
+  
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const { siteContent, login, register, checkUserExists, notification, setNotification, clearNotification, hwidMismatchInfo, setHwidMismatchInfo, performSelfHwidReset } = useAppContext();
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [trustDevice, setTrustDevice] = useState(true);
+
+  const { siteContent, login, register, checkUserExists, notification, setNotification, clearNotification, hwidMismatchInfo, setHwidMismatchInfo } = useAppContext();
   const navigate = useNavigate();
 
-  // Registration-specific state
+  // Registration states
+  const [fullName, setFullName] = useState('');
   const [mobileNumber, setMobileNumber] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [referralCode, setReferralCode] = useState(() => {
-    return searchParams.get('ref') || searchParams.get('referral') || '';
-  });
+  const [referralCode] = useState(() => searchParams.get('ref') || searchParams.get('referral') || '');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [copiedHwid, setCopiedHwid] = useState(false);
 
-
-
-  // Email OTP Specific States
+  // Email OTP States
   const isOtpEnabled = siteContent?.auth?.emailOtpEnabled ?? true;
   const [isOtpMode, setIsOtpMode] = useState(false);
   const [sentOtp, setSentOtp] = useState('');
   const [otpInputs, setOtpInputs] = useState<string[]>(Array(6).fill(''));
 
   const handleOtpChange = (index: number, value: string) => {
-    const cleanValue = value.replace(/[^0-9]/g, ''); // only allow digits
+    const cleanValue = value.replace(/[^0-9]/g, '');
     if (!cleanValue && value !== '') return;
     
     const newInputs = [...otpInputs];
-    newInputs[index] = cleanValue.substring(cleanValue.length - 1); // only keep last character
+    newInputs[index] = cleanValue.substring(cleanValue.length - 1);
     setOtpInputs(newInputs);
 
-    // Auto-focus next input if a number is entered
     if (cleanValue && index < 5) {
       const nextInput = document.getElementById(`otp-input-${index + 1}`);
       nextInput?.focus();
@@ -63,14 +64,12 @@ const AuthPage = () => {
   const handleOtpKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Backspace') {
       if (!otpInputs[index] && index > 0) {
-        // Move back and clear previous field
         const newInputs = [...otpInputs];
         newInputs[index - 1] = '';
         setOtpInputs(newInputs);
         const prevInput = document.getElementById(`otp-input-${index - 1}`);
         prevInput?.focus();
       } else {
-        // Clear current field
         const newInputs = [...otpInputs];
         newInputs[index] = '';
         setOtpInputs(newInputs);
@@ -84,7 +83,6 @@ const AuthPage = () => {
     if (pastedData.length === 6) {
       const splitDigits = pastedData.split('');
       setOtpInputs(splitDigits);
-      // focus last element
       const lastInput = document.getElementById(`otp-input-5`);
       lastInput?.focus();
     }
@@ -119,7 +117,7 @@ const AuthPage = () => {
       enteredCode !== codeDDYYMM && 
       enteredCode !== '123456'
     ) {
-      setNotification(`Incorrect OTP code. Please enter the valid code (current OTP is ${codeDDMMYY}).`, "error");
+      setNotification(`Incorrect OTP code. Please enter the valid code.`, "error");
       return;
     }
 
@@ -134,7 +132,6 @@ const AuthPage = () => {
         }
       }
     } catch (err: any) {
-      console.warn('Registration after OTP warning:', err);
       setNotification(err.message || 'Registration failed. Please try again.', 'error');
     } finally {
       setIsSubmitting(false);
@@ -150,26 +147,23 @@ const AuthPage = () => {
       try {
         const success = await login(email, password);
         if (success) {
-          navigate('/'); // Redirect all users to home page after login
+          navigate('/');
         }
       } catch (err) {
-        console.warn('Login warning:', err);
+        console.warn('Login issue:', err);
       } finally {
         setIsSubmitting(false);
       }
     } else {
-      // --- Registration: Validate details & Sign Up ---
       if (password !== confirmPassword) {
         setNotification("Passwords do not match.", "error");
         return;
       }
       if (checkUserExists(email, mobileNumber)) {
-        // Notification is handled by the context function
         return;
       }
       
       if (isOtpEnabled) {
-        // Enter OTP mode instead of registering immediately
         const code = generateDateTimeOTP();
         setSentOtp(code);
         setIsOtpMode(true);
@@ -181,8 +175,6 @@ const AuthPage = () => {
       try {
         const success = await register(email, password, mobileNumber, referralCode);
         if (success) {
-          // Check if email confirmation is required (session might be null, but success is true)
-          // We redirect to home/profile, but let them know if confirmation is needed.
           if (email.toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
             navigate('/'); 
           } else {
@@ -190,8 +182,7 @@ const AuthPage = () => {
           }
         }
       } catch (err: any) {
-        console.warn('Registration warning:', err);
-        setNotification(err.message || 'Registration failed. Please check your details and try again.', 'error');
+        setNotification(err.message || 'Registration failed. Please try again.', 'error');
       } finally {
         setIsSubmitting(false);
       }
@@ -199,172 +190,357 @@ const AuthPage = () => {
   };
 
   return (
-    <div 
-      className="container mx-auto px-4 py-8 sm:py-16 flex items-center justify-center min-h-[calc(100vh-150px)] bg-cover bg-center"
-      style={{backgroundImage: "url('https://images.unsplash.com/photo-1550745165-9bc0b252726a?q=80&w=2070&auto=format&fit=crop')"}}
-    >
-      <div className="w-full max-w-md p-8 space-y-6 bg-slate-900/50 backdrop-blur-lg rounded-2xl shadow-2xl border border-white/20 text-white">
+    <div className="min-h-[calc(100vh-140px)] flex items-center justify-center py-10 px-4 bg-slate-100 dark:bg-slate-950">
+      {/* Outer Card Container */}
+      <div className="w-full max-w-4xl bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col md:flex-row min-h-[520px] relative">
         
-        {/* HEADER SECTION */}
-        <div className="text-center">
-            <h2 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-400">
-                {isOtpMode ? 'Email Verification' : (isLogin ? <Editable contentKey="auth.login.title" /> : <Editable contentKey="auth.register.title" />)}
-            </h2>
-            <p className="text-slate-300 mt-2 text-sm leading-relaxed">
-                {isOtpMode 
-                    ? `Please verify your email address to complete registration.`
-                    : (isLogin ? <Editable contentKey="auth.login.subtitle" /> : <Editable contentKey="auth.register.subtitle" />)
-                }
+        {/* Close Button top-right */}
+        <button 
+          onClick={() => navigate('/')} 
+          className="absolute top-4 right-4 z-20 text-slate-400 hover:text-slate-700 dark:hover:text-white p-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-all cursor-pointer"
+          title="Close"
+          aria-label="Close"
+        >
+          <X className="w-6 h-6" />
+        </button>
+
+        {/* LEFT COLUMN: Modern Graphic & Visual Branding */}
+        <div className="w-full md:w-1/2 bg-gradient-to-br from-slate-50 via-teal-50/30 to-slate-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-900 p-8 sm:p-12 flex flex-col items-center justify-center relative overflow-hidden border-b md:border-b-0 md:border-r border-slate-200 dark:border-slate-800">
+          
+          {/* Ambient Glows */}
+          <div className="absolute -top-10 -left-10 w-40 h-40 bg-teal-400/20 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-emerald-400/20 rounded-full blur-3xl pointer-events-none" />
+
+          {/* Graphic Composition matching the reference photo */}
+          <div className="relative w-64 h-64 flex items-center justify-center">
+            
+            {/* Background Circle */}
+            <div className="absolute w-44 h-44 rounded-full bg-teal-100/60 dark:bg-teal-950/40 blur-sm" />
+            
+            {/* White Base Card */}
+            <div className="relative z-10 w-52 h-36 bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-100 dark:border-slate-700 p-4 flex flex-col justify-between transform -rotate-3 hover:rotate-0 transition-transform duration-500">
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 rounded-full bg-teal-600 flex items-center justify-center text-white">
+                  <UserIcon className="w-3.5 h-3.5" />
+                </div>
+                <div className="space-y-1 flex-1">
+                  <div className="h-2 bg-slate-200 dark:bg-slate-700 rounded-full w-20" />
+                  <div className="h-1.5 bg-slate-100 dark:bg-slate-700/60 rounded-full w-12" />
+                </div>
+              </div>
+              
+              <div className="space-y-1.5 my-2">
+                <div className="h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full w-full" />
+                <div className="h-1.5 bg-slate-100 dark:bg-slate-700/60 rounded-full w-3/4" />
+              </div>
+
+              <div className="w-full h-6 bg-teal-600 rounded-lg flex items-center justify-center">
+                <div className="w-12 h-1 bg-white/70 rounded-full" />
+              </div>
+            </div>
+
+            {/* Envelope floating card (Top Left) */}
+            <div className="absolute top-4 left-0 z-20 bg-white dark:bg-slate-800 p-3 rounded-xl shadow-lg border border-slate-100 dark:border-slate-700 transform -rotate-6 hover:scale-105 transition-transform">
+              <div className="relative">
+                <Mail className="w-8 h-8 text-teal-600 dark:text-teal-400" />
+                <span className="absolute -top-1.5 -right-1.5 bg-teal-600 text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
+                  6
+                </span>
+              </div>
+            </div>
+
+            {/* Shield floating badge (Top Right) */}
+            <div className="absolute top-2 right-2 z-20 bg-teal-600 text-white p-3.5 rounded-2xl shadow-xl transform rotate-6 hover:scale-105 transition-transform flex items-center justify-center">
+              <ShieldCheck className="w-9 h-9 stroke-[2.2]" />
+            </div>
+
+            {/* Profile Avatar floating card (Bottom Right) */}
+            <div className="absolute bottom-4 right-1 z-20 bg-white dark:bg-slate-800 p-2.5 rounded-xl shadow-lg border border-slate-100 dark:border-slate-700 transform rotate-3 flex flex-col items-center">
+              <div className="w-7 h-7 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-teal-600 dark:text-teal-400">
+                <UserIcon className="w-4 h-4" />
+              </div>
+              <div className="w-5 h-1 bg-teal-600 rounded-full mt-1.5" />
+            </div>
+
+            {/* Sparkles & Accents */}
+            <div className="absolute top-8 left-20 text-amber-400 animate-pulse text-lg">✦</div>
+            <div className="absolute bottom-10 left-6 text-teal-400 text-sm">✦</div>
+            <div className="absolute bottom-2 left-28 w-2.5 h-2.5 rounded-full bg-rose-400/80" />
+          </div>
+
+          <div className="mt-6 text-center z-10">
+            <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100">WowFileWala Shield</h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-xs">
+              Secure, fast, and encrypted access for technician & repair firmware files.
             </p>
+          </div>
         </div>
 
-        {/* NOTIFICATION MESSAGES */}
-        {notification && (
-          <div className={`p-3.5 rounded-lg text-center text-xs font-semibold leading-relaxed border ${
-            notification.type === 'error' 
-              ? 'bg-red-500/10 border-red-500/20 text-red-300' 
-              : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300'
-          }`}>
-            {notification.message}
+
+        {/* RIGHT COLUMN: Form Panel */}
+        <div className="w-full md:w-1/2 p-8 sm:p-12 flex flex-col justify-center bg-white dark:bg-slate-900">
+          
+          <div className="max-w-md mx-auto w-full">
+            {/* Header Title */}
+            <div className="mb-6">
+              <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">
+                {isOtpMode ? 'Email Verification' : (isLogin ? 'Log In' : 'Create Account')}
+              </h2>
+              {isOtpMode && (
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                  Enter the 6-digit code sent to your email to complete registration.
+                </p>
+              )}
+            </div>
+
+            {/* Notification Banner */}
+            {notification && (
+              <div className={`p-3 rounded-lg text-xs font-semibold mb-5 border ${
+                notification.type === 'error' 
+                  ? 'bg-red-50 dark:bg-red-950/40 border-red-200 dark:border-red-900 text-red-600 dark:text-red-400' 
+                  : 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-900 text-emerald-700 dark:text-emerald-400'
+              }`}>
+                {notification.message}
+              </div>
+            )}
+
+            {/* OTP MODE */}
+            {isOtpMode ? (
+              <form onSubmit={handleOtpVerifyAndRegister} className="space-y-5">
+                <p className="text-xs text-slate-600 dark:text-slate-300">
+                  Verification code sent to <strong className="text-slate-900 dark:text-white">{email}</strong>
+                </p>
+
+                {/* 6 Digit Input */}
+                <div className="flex justify-between gap-1.5 py-2">
+                  {otpInputs.map((digit, idx) => (
+                    <input
+                      key={idx}
+                      id={`otp-input-${idx}`}
+                      type="text"
+                      maxLength={1}
+                      value={digit}
+                      onChange={(e) => handleOtpChange(idx, e.target.value)}
+                      onKeyDown={(e) => handleOtpKeyDown(idx, e)}
+                      onPaste={idx === 0 ? handleOtpPaste : undefined}
+                      className="w-10 h-12 text-center text-lg font-bold rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 focus:border-slate-800 dark:focus:border-slate-200 focus:ring-1 focus:ring-slate-800 text-slate-900 dark:text-white"
+                      required
+                    />
+                  ))}
+                </div>
+
+                {/* Admin WhatsApp Banner */}
+                <div className="bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/50 rounded-xl p-3 text-center">
+                  <p className="text-[11px] text-emerald-800 dark:text-emerald-300 mb-2 font-medium">
+                    Not receiving OTP? Get instant OTP from admin via WhatsApp
+                  </p>
+                  <a
+                    href={`https://wa.me/${(((siteContent?.pricing?.adminWhatsappNumber || siteContent?.whatsapp?.phoneNumber || "8658465589").replace(/\D/g, '').length === 10 ? "91" : "") + (siteContent?.pricing?.adminWhatsappNumber || siteContent?.whatsapp?.phoneNumber || "8658465589").replace(/\D/g, ''))}?text=${encodeURIComponent(`Hi Admin, I am registering with email ${email}. Please provide me the OTP for verification.`)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 bg-[#25D366] hover:bg-[#20ba5a] text-white font-bold py-1.5 px-3 rounded-lg text-xs shadow-sm transition-all"
+                  >
+                    <img 
+                      src={siteContent?.whatsapp?.iconUrl || "https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg"} 
+                      alt="WhatsApp" 
+                      className="w-4 h-4"
+                    />
+                    Contact Admin for OTP
+                  </a>
+                </div>
+
+                <button 
+                  type="submit" 
+                  disabled={isSubmitting} 
+                  className="w-full bg-[#54595e] hover:bg-slate-700 text-white font-semibold py-3 px-4 rounded-lg transition-all text-sm shadow-sm disabled:opacity-50"
+                >
+                  {isSubmitting ? 'Verifying...' : 'Verify OTP & Create Account'}
+                </button>
+
+                <div className="flex items-center justify-between text-xs text-slate-500 pt-1">
+                  <button type="button" onClick={() => setIsOtpMode(false)} className="hover:underline">
+                    ← Back to Register
+                  </button>
+                  <button type="button" onClick={handleResendOtp} className="text-slate-700 dark:text-slate-300 font-semibold hover:underline">
+                    Resend Code
+                  </button>
+                </div>
+              </form>
+            ) : (
+              /* STANDARD LOGIN / CREATE ACCOUNT FORM */
+              <form onSubmit={handleSubmit} className="space-y-4">
+                
+                {/* Full Name (on Register) */}
+                {!isLogin && (
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      Full Name
+                    </label>
+                    <input 
+                      type="text" 
+                      value={fullName} 
+                      onChange={(e) => setFullName(e.target.value)} 
+                      placeholder="Your full name" 
+                      required 
+                      className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 focus:border-slate-800 dark:focus:border-slate-200 focus:ring-1 focus:ring-slate-800 outline-none transition-all text-sm"
+                    />
+                  </div>
+                )}
+
+                {/* Mobile Number (on Register) */}
+                {!isLogin && (
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      Mobile Number
+                    </label>
+                    <input 
+                      type="tel" 
+                      value={mobileNumber} 
+                      onChange={(e) => setMobileNumber(e.target.value)} 
+                      placeholder="10-digit mobile number" 
+                      required 
+                      className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 focus:border-slate-800 dark:focus:border-slate-200 focus:ring-1 focus:ring-slate-800 outline-none transition-all text-sm"
+                    />
+                  </div>
+                )}
+
+                {/* Email Field */}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Email
+                  </label>
+                  <input 
+                    type="email" 
+                    value={email} 
+                    onChange={(e) => setEmail(e.target.value)} 
+                    placeholder="Email" 
+                    required 
+                    className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 focus:border-slate-800 dark:focus:border-slate-200 focus:ring-1 focus:ring-slate-800 outline-none transition-all text-sm"
+                  />
+                </div>
+
+                {/* Password Field */}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Password
+                  </label>
+                  <div className="relative">
+                    <input 
+                      type={showPassword ? "text" : "password"} 
+                      value={password} 
+                      onChange={(e) => setPassword(e.target.value)} 
+                      placeholder="••••••••" 
+                      required 
+                      className="w-full px-3.5 py-2.5 pr-10 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 focus:border-slate-800 dark:focus:border-slate-200 focus:ring-1 focus:ring-slate-800 outline-none transition-all text-sm"
+                    />
+                    <button 
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                      tabIndex={-1}
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Confirm Password Field (on Register) */}
+                {!isLogin && (
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      Confirm Password
+                    </label>
+                    <div className="relative">
+                      <input 
+                        type={showConfirmPassword ? "text" : "password"} 
+                        value={confirmPassword} 
+                        onChange={(e) => setConfirmPassword(e.target.value)} 
+                        placeholder="••••••••" 
+                        required 
+                        className="w-full px-3.5 py-2.5 pr-10 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 focus:border-slate-800 dark:focus:border-slate-200 focus:ring-1 focus:ring-slate-800 outline-none transition-all text-sm"
+                      />
+                      <button 
+                        type="button"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                        tabIndex={-1}
+                      >
+                        {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Trust Device & Forgot Row (on Login mode) */}
+                {isLogin && (
+                  <div className="flex items-center justify-between pt-1 pb-1">
+                    <label className="flex items-center gap-2 cursor-pointer select-none">
+                      <div 
+                        onClick={() => setTrustDevice(!trustDevice)} 
+                        className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${
+                          trustDevice 
+                            ? 'bg-teal-600 border-teal-600 text-white' 
+                            : 'border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800'
+                        }`}
+                      >
+                        {trustDevice && <Check className="w-3 h-3 stroke-[3]" />}
+                      </div>
+                      <span className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                        Trust this device
+                      </span>
+                    </label>
+
+                    <Link 
+                      to="/forgot-password" 
+                      className="text-xs font-medium text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200"
+                    >
+                      Forgot?
+                    </Link>
+                  </div>
+                )}
+
+                {/* Primary Action Button (Solid Dark Button matching screenshot) */}
+                <button 
+                  type="submit" 
+                  disabled={isSubmitting} 
+                  className="w-full mt-2 bg-[#54595e] hover:bg-slate-700 text-white font-semibold py-3 px-4 rounded-lg transition-all text-sm shadow-sm disabled:opacity-50 cursor-pointer"
+                >
+                  {isSubmitting ? 'Processing...' : (isLogin ? 'Log In' : 'Create Account')}
+                </button>
+
+              </form>
+            )}
+
+            {/* Divider Line: --- or --- */}
+            {!isOtpMode && (
+              <>
+                <div className="relative my-6 text-center">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-slate-200 dark:border-slate-800" />
+                  </div>
+                  <span className="relative px-3 bg-white dark:bg-slate-900 text-xs text-slate-400 uppercase tracking-wider">
+                    or
+                  </span>
+                </div>
+
+                {/* Secondary Outline Action Button (Switches mode) */}
+                <button 
+                  type="button"
+                  onClick={() => { setIsLogin(!isLogin); clearNotification(); }}
+                  className="w-full border border-slate-800 dark:border-slate-200 text-slate-900 dark:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-800 font-semibold py-3 px-4 rounded-lg transition-all text-sm cursor-pointer"
+                >
+                  {isLogin ? 'Create Account' : 'Log In'}
+                </button>
+              </>
+            )}
+
           </div>
-        )}
 
-        {/* OTP VERIFICATION MODE */}
-        {isOtpMode ? (
-          <form onSubmit={handleOtpVerifyAndRegister} className="space-y-6">
-            <div className="text-center space-y-2">
-              <p className="text-sm text-slate-300 leading-relaxed">
-                We've sent a 6-digit OTP code to <strong className="text-cyan-300">{email}</strong>. Please enter it below.
-              </p>
-            </div>
-
-            {/* Interactive 6-Digit input boxes */}
-            <div className="flex justify-between gap-2 max-w-xs mx-auto py-2">
-              {otpInputs.map((digit, idx) => (
-                <input
-                  key={idx}
-                  id={`otp-input-${idx}`}
-                  type="text"
-                  maxLength={1}
-                  value={digit}
-                  onChange={(e) => handleOtpChange(idx, e.target.value)}
-                  onKeyDown={(e) => handleOtpKeyDown(idx, e)}
-                  onPaste={idx === 0 ? handleOtpPaste : undefined}
-                  className="w-11 h-13 text-center text-xl font-bold font-mono rounded-xl bg-slate-800/80 border border-slate-600 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition-all text-white"
-                  required
-                />
-              ))}
-            </div>
-
-            {/* Contact Admin via WhatsApp for OTP option */}
-            <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-3.5 text-center mt-3 flex flex-col items-center">
-              <span className="text-[11px] font-medium text-emerald-300 leading-normal mb-2">
-                Not receiving OTP? Get instant OTP from admin via WhatsApp
-              </span>
-              <a
-                href={`https://wa.me/${(((siteContent?.pricing?.adminWhatsappNumber || siteContent?.whatsapp?.phoneNumber || "8658465589").replace(/\D/g, '').length === 10 ? "91" : "") + (siteContent?.pricing?.adminWhatsappNumber || siteContent?.whatsapp?.phoneNumber || "8658465589").replace(/\D/g, ''))}?text=${encodeURIComponent(`Hi Admin, I am registering with email ${email}. Please provide me the OTP for verification.`)}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 bg-[#25D366] hover:bg-[#20ba5a] text-white font-bold py-2 px-4 rounded-lg transition-all text-sm shadow-md hover:shadow-emerald-500/20"
-              >
-                <img 
-                  src={siteContent?.whatsapp?.iconUrl || "https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg"} 
-                  alt="WhatsApp Logo" 
-                  className="w-5 h-5"
-                />
-                Contact Admin for OTP
-              </a>
-            </div>
-
-            <button 
-              type="submit" 
-              disabled={isSubmitting} 
-              className="w-full bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 text-white font-bold py-3.5 px-4 rounded-xl transition-all text-base shadow-lg hover:shadow-cyan-500/25 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 focus:ring-offset-slate-900 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isSubmitting ? 'Verifying & Registering...' : 'Verify OTP & Create Account'}
-            </button>
-
-            <div className="flex items-center justify-between pt-2 text-sm text-slate-400">
-              <button 
-                type="button" 
-                onClick={() => { setIsOtpMode(false); clearNotification(); }} 
-                className="hover:text-white transition-all underline decoration-cyan-400/50"
-              >
-                Go Back to Register
-              </button>
-              
-              <button 
-                type="button" 
-                onClick={handleResendOtp}
-                className="text-cyan-400 hover:underline font-semibold"
-              >
-                Resend Verification Code
-              </button>
-            </div>
-          </form>
-        ) : (
-          /* REGULAR LOGIN / REGISTER FORMS */
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <div className="relative">
-              <Editable as="label" contentKey="auth.form.emailLabel" className="sr-only" htmlFor="email"/>
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" /></svg>
-              <input type="email" id="email" value={email} onChange={(e) => setEmail(e.target.value)} required className="w-full py-3.5 pl-12 pr-4 rounded-xl bg-slate-800/60 border border-slate-600 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition-all text-white placeholder:text-slate-400" placeholder="Email Address"/>
-            </div>
-
-            {!isLogin && (
-              <div className="relative">
-                <Editable as="label" contentKey="auth.form.mobileNumberLabel" className="sr-only" htmlFor="mobileNumber"/>
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" viewBox="0 0 20 20" fill="currentColor"><path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" /></svg>
-                <input type="tel" id="mobileNumber" value={mobileNumber} onChange={(e) => setMobileNumber(e.target.value)} required className="w-full py-3.5 pl-12 pr-4 rounded-xl bg-slate-800/60 border border-slate-600 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition-all text-white placeholder:text-slate-400" placeholder="Mobile Number"/>
-              </div>
-            )}
-            
-            <div className="relative">
-              <Editable as="label" contentKey="auth.form.passwordLabel" className="sr-only" htmlFor="password"/>
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M18 8a6 6 0 01-7.743 5.743L10 14l-1 1-1 1H6v2H2v-4l4.257-4.257A6 6 0 1118 8zm-6-4a1 1 0 100 2 1 1 0 000-2z" clipRule="evenodd" /></svg>
-              <input type="password" id="password" value={password} onChange={(e) => setPassword(e.target.value)} required className="w-full py-3.5 pl-12 pr-4 rounded-xl bg-slate-800/60 border border-slate-600 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition-all text-white placeholder:text-slate-400" placeholder="Password" />
-            </div>
-
-            {!isLogin && (
-              <div className="relative">
-                <label className="sr-only" htmlFor="confirmPassword">Confirm Password</label>
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
-                <input type="password" id="confirmPassword" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required className="w-full py-3.5 pl-12 pr-4 rounded-xl bg-slate-800/60 border border-slate-600 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition-all text-white placeholder:text-slate-400" placeholder="Confirm Password"/>
-              </div>
-            )}
-
-            <button 
-              type="submit" 
-              disabled={isSubmitting} 
-              className="w-full bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 text-white font-bold py-3.5 px-4 rounded-xl transition-all text-base shadow-lg hover:shadow-cyan-500/25 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 focus:ring-offset-slate-900 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isSubmitting ? 'Processing...' : <Editable as="span" contentKey={isLogin ? "auth.login.button" : "auth.register.button"} />}
-            </button>
-
-          </form>
-        )}
-        
-        {/* FOOTER SWITCH FORM MODE OPTIONS */}
-        {!isOtpMode && (
-          <div className="space-y-3.5 pt-2">
-            {isLogin && (
-              <div className="flex flex-col gap-2 text-center">
-                <Link to="/forgot-password" className="text-sm text-cyan-400 hover:underline font-semibold">
-                  <Editable as="span" contentKey="auth.login.forgotPasswordLink" />
-                </Link>
-              </div>
-            )}
-            <div className="text-center text-slate-400 text-sm">
-              <Editable as="span" contentKey={isLogin ? "auth.login.togglePrompt" : "auth.register.togglePrompt"} />
-              <button onClick={() => { setIsLogin(!isLogin); clearNotification(); }} className="text-cyan-400 hover:underline font-semibold ml-2">
-                <Editable as="span" contentKey={isLogin ? "auth.login.toggleLink" : "auth.register.toggleLink"} />
-              </button>
-            </div>
-          </div>
-        )}
+        </div>
 
       </div>
 
+      {/* HWID Lock Mismatch Modal */}
       {hwidMismatchInfo && (() => {
         const rawPhone = siteContent?.pricing?.adminWhatsappNumber || siteContent?.whatsapp?.phoneNumber || "8658465589";
         const cleanPhone = rawPhone.replace(/\D/g, '');
@@ -382,7 +558,7 @@ const AuthPage = () => {
         };
 
         return (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fadeIn font-sans">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm font-sans">
             <div className="bg-slate-900 border border-slate-700/80 rounded-2xl max-w-lg w-full p-6 text-white shadow-2xl space-y-5">
               <div className="flex items-center justify-between border-b border-slate-800 pb-3">
                 <div className="flex items-center gap-2.5">
@@ -403,11 +579,10 @@ const AuthPage = () => {
                   Aapka account single device lock se protected hai. Nayi device (Laptop, Mobile, PC ya MacBook) par login karne ke liye <strong>Admin se Hardware ID (HWID) reset karwana zaroori hai</strong>.
                 </p>
                 <p className="text-xs text-amber-400/90 bg-amber-500/10 border border-amber-500/20 rounded-xl p-3">
-                  ⚠️ <strong>Note:</strong> Niche diye gaye WhatsApp button par click karke Admin ko pre-filled reset request bhejein. Admin panel se HWID reset hone ke baad aap is device par direct login kar sakenge.
+                  ⚠️ <strong>Note:</strong> Niche diye gaye WhatsApp button par click karke Admin ko pre-filled reset request bhejein.
                 </p>
               </div>
 
-              {/* HWID Details Box */}
               <div className="bg-slate-800/90 rounded-xl p-4 text-xs space-y-2 font-mono border border-slate-700/80">
                 <div className="flex justify-between items-center text-slate-400 border-b border-slate-700/50 pb-1.5">
                   <span>Account Email:</span>
@@ -423,14 +598,12 @@ const AuthPage = () => {
                 </div>
               </div>
 
-              {/* Action Buttons */}
               <div className="flex flex-col gap-2.5 pt-1">
-                {/* Primary Button: WhatsApp Direct Request */}
                 <a
                   href={whatsappHref}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="w-full bg-[#25D366] hover:bg-[#20ba5a] text-white font-bold py-3.5 px-4 rounded-xl transition-all shadow-lg hover:shadow-emerald-500/20 text-sm flex items-center justify-center gap-2.5 text-center cursor-pointer"
+                  className="w-full bg-[#25D366] hover:bg-[#20ba5a] text-white font-bold py-3.5 px-4 rounded-xl transition-all shadow-lg text-sm flex items-center justify-center gap-2.5 text-center cursor-pointer"
                 >
                   <img 
                     src={siteContent?.whatsapp?.iconUrl || "https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg"} 
@@ -440,7 +613,6 @@ const AuthPage = () => {
                   <span>Request HWID Reset via WhatsApp</span>
                 </a>
 
-                {/* Secondary Button: Copy Details */}
                 <button
                   type="button"
                   onClick={handleCopyDetails}
@@ -449,7 +621,6 @@ const AuthPage = () => {
                   <span>{copiedHwid ? '✓ Request Message Copied!' : '📋 Copy Reset Message & HWID'}</span>
                 </button>
 
-                {/* Cancel Button */}
                 <button
                   type="button"
                   onClick={() => { setHwidMismatchInfo(null); setCopiedHwid(false); }}
@@ -462,6 +633,7 @@ const AuthPage = () => {
           </div>
         );
       })()}
+
     </div>
   );
 };
