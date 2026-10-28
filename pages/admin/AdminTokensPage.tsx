@@ -47,6 +47,7 @@ const AdminTokensPage: React.FC = () => {
   // Generator & Create form state
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [newKey, setNewKey] = useState('');
+  const [planName, setPlanName] = useState('1. BRONZE PLAN (STARTER)');
   const [clientName, setClientName] = useState('');
   const [clientPhone, setClientPhone] = useState('');
   const [maxUses, setMaxUses] = useState<number>(1);
@@ -81,6 +82,7 @@ const AdminTokensPage: React.FC = () => {
 
   const handleOpenCreateModal = () => {
     setNewKey(generateRandomKey());
+    setPlanName('1. BRONZE PLAN (STARTER)');
     setClientName('');
     setClientPhone('');
     setMaxUses(1);
@@ -106,12 +108,18 @@ const AdminTokensPage: React.FC = () => {
       expiresAt = new Date(now + 365 * 24 * 60 * 60 * 1000).toISOString();
     }
 
-
     createTokenKey({
       key: newKey.trim().toUpperCase(),
+      planName: planName || '1. BRONZE PLAN (STARTER)',
       clientName: clientName.trim() || undefined,
       clientPhone: clientPhone.trim() || undefined,
       maxUses: Number(maxUses),
+      dailyFilesLimit: 5,
+      dailyFilesUsed: 0,
+      dailyBandwidthLimitGB: 5,
+      dailyBandwidthUsedMB: 0,
+      totalBandwidthLimitGB: 200,
+      totalBandwidthUsedGB: 150.00,
       expiresAt,
       isActive: true,
       notes: notes.trim() || undefined,
@@ -120,6 +128,7 @@ const AdminTokensPage: React.FC = () => {
     setNotification(`Token Key ${newKey.toUpperCase()} created successfully!`, 'success');
     setIsCreateModalOpen(false);
   };
+
 
   const handleSaveMasterSettings = async () => {
     await updateTokenProtection({

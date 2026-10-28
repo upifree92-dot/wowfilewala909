@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
 import BackButton from '../components/BackButton';
 import DownloadItem from '../components/DownloadItem';
+import { TokenSubscriptionCard } from '../components/TokenSubscriptionCard';
 import { useSEO } from '../hooks/useSEO';
 
 const DownloadsPage = () => {
@@ -24,6 +25,10 @@ const DownloadsPage = () => {
                 <div className="max-w-4xl mx-auto bg-white/70 dark:bg-slate-800/70 backdrop-blur-lg p-8 rounded-xl shadow-lg">
                     <BackButton />
                     <h1 className="text-4xl font-bold mb-8 border-b-2 border-cyan-500 pb-4 text-slate-800 dark:text-slate-200">My Downloads</h1>
+                    
+                    {/* Active Token Plan Quota Card (Shows ONLY when Token Key is verified/active) */}
+                    <TokenSubscriptionCard className="mb-6" />
+
                     
                     {(() => {
                         const purchasedProducts = products.filter(product => user?.purchasedProductIds.includes(product.id));

@@ -166,15 +166,23 @@ export interface CartItem extends Product {}
 export interface TokenKey {
   id: string;
   key: string;
+  planName?: string; // e.g. "1. BRONZE PLAN (STARTER)"
   clientName?: string;
   clientPhone?: string;
   maxUses: number; // 0 for unlimited, or e.g. 1, 5, 10
   usedCount: number;
+  dailyFilesLimit?: number; // e.g. 5
+  dailyFilesUsed?: number; // e.g. 0
+  dailyBandwidthLimitGB?: number; // e.g. 5
+  dailyBandwidthUsedMB?: number; // e.g. 0
+  totalBandwidthLimitGB?: number; // e.g. 200
+  totalBandwidthUsedGB?: number; // e.g. 150.00
   createdAt: string;
   expiresAt?: string; // ISO date string or undefined for lifetime
   isActive: boolean;
   notes?: string;
 }
+
 
 export interface TokenDownloadLog {
   id: string;

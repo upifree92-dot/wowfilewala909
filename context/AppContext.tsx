@@ -171,7 +171,10 @@ interface AppContextType {
   setTokenVerificationModalOpen: (open: boolean) => void;
   pendingDownloadProduct: Product | null;
   setPendingDownloadProduct: (product: Product | null) => void;
+  activeTokenKey: TokenKey | null;
+  setActiveTokenKey: (token: TokenKey | null) => void;
 }
+
 
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -445,6 +448,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   });
   const [tokenVerificationModalOpen, setTokenVerificationModalOpen] = useState(false);
   const [pendingDownloadProduct, setPendingDownloadProduct] = useState<Product | null>(null);
+  const [activeTokenKey, setActiveTokenKey] = useState<TokenKey | null>(() => {
+    return getLocalStorage<TokenKey | null>('activeVerifiedTokenKey', null);
+  });
+
 
   // --- Theme State ---
   const [theme, setTheme] = useState<'light' | 'dark'>(() => getLocalStorage('theme', 'light'));
@@ -775,6 +782,25 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         return updated;
       });
 
+      const masterKeyObj: TokenKey = {
+        id: 'master-key-session',
+        key: cleanKey,
+        planName: '1. BRONZE PLAN (STARTER)',
+        dailyFilesLimit: 5,
+        dailyFilesUsed: 0,
+        dailyBandwidthLimitGB: 5,
+        dailyBandwidthUsedMB: 0,
+        totalBandwidthLimitGB: 200,
+        totalBandwidthUsedGB: 150.00,
+        maxUses: 0,
+        usedCount: 1,
+        createdAt: new Date().toISOString(),
+        expiresAt: new Date(expiryMs).toISOString(),
+        isActive: true
+      };
+      setActiveTokenKey(masterKeyObj);
+      setLocalStorage('activeVerifiedTokenKey', masterKeyObj);
+
       return { success: true, message: 'Master Token verified successfully! Access granted.' };
     }
 
@@ -797,15 +823,30 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
 
     // Increment usage
+    const updatedTokenObj: TokenKey = {
+      ...matchingToken,
+      planName: matchingToken.planName || '1. BRONZE PLAN (STARTER)',
+      usedCount: matchingToken.usedCount + 1,
+      dailyFilesUsed: (matchingToken.dailyFilesUsed || 0) + 1,
+      dailyBandwidthUsedMB: (matchingToken.dailyBandwidthUsedMB || 0) + 250,
+      totalBandwidthUsedGB: Math.min(
+        matchingToken.totalBandwidthLimitGB || 200,
+        (matchingToken.totalBandwidthUsedGB || 150) + 0.25
+      )
+    };
+
     const updatedTokens = tokenKeys.map(t => {
       if (t.id === matchingToken.id) {
-        return { ...t, usedCount: t.usedCount + 1 };
+        return updatedTokenObj;
       }
       return t;
     });
     setTokenKeys(updatedTokens);
     setLocalStorage('tokenKeys', updatedTokens);
     pushServerSync({ tokenKeys: updatedTokens }, true).catch(() => {});
+
+    setActiveTokenKey(updatedTokenObj);
+    setLocalStorage('activeVerifiedTokenKey', updatedTokenObj);
 
     // Save verified session
     const expiryMs = Date.now() + validityDurationMs;
@@ -826,6 +867,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       setLocalStorage('tokenLogs', updated);
       return updated;
     });
+
 
     return { success: true, message: 'Token Key verified successfully! Starting download...' };
   }, [tokenProtection, tokenKeys, user, pushServerSync]);
@@ -3985,8 +4027,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     tokenVerificationModalOpen,
     setTokenVerificationModalOpen,
     pendingDownloadProduct,
-    setPendingDownloadProduct
+    setPendingDownloadProduct,
+    activeTokenKey,
+    setActiveTokenKey
   };
+
 
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

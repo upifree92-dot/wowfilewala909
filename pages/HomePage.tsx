@@ -3,7 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
 import { useSEO } from '../hooks/useSEO';
 import { ProductPreviewModal } from '../components/ProductPreviewModal';
+import { TokenSubscriptionCard } from '../components/TokenSubscriptionCard';
 import type { Product, Category } from '../types';
+
 import { 
   Search, Home, Grid, List, Download, ArrowLeft, Plus, FolderPlus, FilePlus,
   FileText, CheckCircle2, ChevronLeft, ChevronRight, Sliders, X, Upload,
@@ -1015,8 +1017,14 @@ const HomePage = () => {
         </div>
       )}
 
+      {/* Active Token Plan Usage Card (Renders ONLY when Token Key is verified/active) */}
+      <div className="max-w-6xl mx-auto px-4 pt-4">
+        <TokenSubscriptionCard />
+      </div>
+
       {/* Search Header Container (Same-To-Same as Reference Image) */}
       <div className="max-w-6xl mx-auto px-4 pt-5 pb-3">
+
         <form onSubmit={handleSearchSubmit} className="max-w-3xl mx-auto">
           <div className="relative flex items-center bg-white rounded-full border-2 border-[#155e99] shadow-md hover:shadow-lg transition-all p-1">
             <div className="pl-4 pr-2 text-slate-400">

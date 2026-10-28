@@ -2,7 +2,9 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useSearchParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
 import BackButton from '../components/BackButton';
+import { TokenSubscriptionCard } from '../components/TokenSubscriptionCard';
 import { useSEO } from '../hooks/useSEO';
+
 import { 
   Download, Loader2, AlertCircle, CheckCircle, Lock, 
   Coins, ArrowRight, FileText, Globe, Info, AlertTriangle, KeyRound, ShieldCheck
@@ -278,8 +280,12 @@ const DirectDownloadPage = () => {
 
         {/* Info panel */}
         <div className="p-6 space-y-6">
+          {/* Active Token Plan Quota Card (Shows ONLY when Token Key is verified/active) */}
+          <TokenSubscriptionCard />
+
           {/* File description */}
           {product.description && (
+
             <div className="bg-slate-50 dark:bg-slate-900/30 p-4 rounded-xl border border-slate-100 dark:border-slate-800">
               <p className="text-xs uppercase tracking-wider font-extrabold text-slate-400 dark:text-slate-500 mb-1.5 flex items-center gap-1">
                 <FileText className="h-3.5 w-3.5" />
