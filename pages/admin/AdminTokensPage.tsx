@@ -50,7 +50,7 @@ const AdminTokensPage: React.FC = () => {
   const [clientName, setClientName] = useState('');
   const [clientPhone, setClientPhone] = useState('');
   const [maxUses, setMaxUses] = useState<number>(1);
-  const [expiryOption, setExpiryOption] = useState<'24h' | '7d' | '30d' | 'lifetime'>('24h');
+  const [expiryOption, setExpiryOption] = useState<'1d' | '6m' | '12m'>('1d');
   const [notes, setNotes] = useState('');
 
   // Master key editing state
@@ -84,7 +84,7 @@ const AdminTokensPage: React.FC = () => {
     setClientName('');
     setClientPhone('');
     setMaxUses(1);
-    setExpiryOption('24h');
+    setExpiryOption('1d');
     setNotes('');
     setIsCreateModalOpen(true);
   };
@@ -98,13 +98,14 @@ const AdminTokensPage: React.FC = () => {
 
     let expiresAt: string | undefined = undefined;
     const now = Date.now();
-    if (expiryOption === '24h') {
+    if (expiryOption === '1d') {
       expiresAt = new Date(now + 24 * 60 * 60 * 1000).toISOString();
-    } else if (expiryOption === '7d') {
-      expiresAt = new Date(now + 7 * 24 * 60 * 60 * 1000).toISOString();
-    } else if (expiryOption === '30d') {
-      expiresAt = new Date(now + 30 * 24 * 60 * 60 * 1000).toISOString();
+    } else if (expiryOption === '6m') {
+      expiresAt = new Date(now + 180 * 24 * 60 * 60 * 1000).toISOString();
+    } else if (expiryOption === '12m') {
+      expiresAt = new Date(now + 365 * 24 * 60 * 60 * 1000).toISOString();
     }
+
 
     createTokenKey({
       key: newKey.trim().toUpperCase(),
@@ -807,11 +808,11 @@ const AdminTokensPage: React.FC = () => {
                     onChange={(e) => setExpiryOption(e.target.value as any)}
                     className="w-full px-3.5 py-2 rounded-xl border border-slate-300 dark:border-neutral-700 bg-slate-50 dark:bg-neutral-950 text-xs font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500"
                   >
-                    <option value="24h">24 Hours (1 Day)</option>
-                    <option value="7d">7 Days (1 Week)</option>
-                    <option value="30d">30 Days (1 Month)</option>
-                    <option value="lifetime">Never Expire (Lifetime)</option>
+                    <option value="1d">1 Day (24 Hours)</option>
+                    <option value="6m">6 Months</option>
+                    <option value="12m">12 Months (1 Year)</option>
                   </select>
+
                 </div>
               </div>
 
