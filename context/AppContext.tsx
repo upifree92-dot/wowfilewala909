@@ -251,6 +251,17 @@ const INITIAL_TOKEN_KEYS: TokenKey[] = [
     notes: 'Universal admin master token key'
   },
   {
+    id: 'tok-flash-msba-fhct',
+    key: 'FLASH-MSBA-FHCT',
+    clientName: 'Tested ROM Access Key',
+    clientPhone: '8658465589',
+    maxUses: 0,
+    usedCount: 0,
+    createdAt: new Date().toISOString(),
+    isActive: true,
+    notes: 'Official Flash File Access Token'
+  },
+  {
     id: 'tok-vip-pass-1',
     key: 'FLASH-VIP-7788',
     clientName: 'VIP Customer Pass',
@@ -448,7 +459,16 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     return getLocalStorage<TokenProtectionConfig>('tokenProtection', DEFAULT_TOKEN_PROTECTION);
   });
   const [tokenKeys, setTokenKeys] = useState<TokenKey[]>(() => {
-    return getLocalStorage<TokenKey[]>('tokenKeys', INITIAL_TOKEN_KEYS);
+    const loaded = getLocalStorage<TokenKey[]>('tokenKeys', INITIAL_TOKEN_KEYS);
+    if (!Array.isArray(loaded) || loaded.length === 0) {
+      return INITIAL_TOKEN_KEYS;
+    }
+    const keyMap = new Map<string, TokenKey>();
+    INITIAL_TOKEN_KEYS.forEach(k => keyMap.set(k.key.trim().toUpperCase(), k));
+    loaded.forEach(k => keyMap.set(k.key.trim().toUpperCase(), k));
+    const merged = Array.from(keyMap.values());
+    setLocalStorage('tokenKeys', merged);
+    return merged;
   });
   const [tokenLogs, setTokenLogs] = useState<TokenDownloadLog[]>(() => {
     return getLocalStorage<TokenDownloadLog[]>('tokenLogs', []);
@@ -565,8 +585,17 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       setLocalStorage('tokenProtection', snapshot.tokenProtection);
     }
     if (Array.isArray(snapshot.tokenKeys)) {
-      setTokenKeys(snapshot.tokenKeys);
-      setLocalStorage('tokenKeys', snapshot.tokenKeys);
+      setTokenKeys(prevKeys => {
+        const keyMap = new Map<string, TokenKey>();
+        INITIAL_TOKEN_KEYS.forEach(k => keyMap.set(k.key.trim().toUpperCase(), k));
+        prevKeys.forEach(k => keyMap.set(k.key.trim().toUpperCase(), k));
+        snapshot.tokenKeys.forEach((k: TokenKey) => {
+          if (k && k.key) keyMap.set(k.key.trim().toUpperCase(), k);
+        });
+        const merged = Array.from(keyMap.values());
+        setLocalStorage('tokenKeys', merged);
+        return merged;
+      });
     }
 
     if (snapshot.users) {
@@ -762,57 +791,70 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   }, [isAdmin, tokenProtection.enabled]);
 
   const verifyTokenKey = useCallback((inputKey: string, productId?: string, productName?: string): { success: boolean; message: string } => {
-    const cleanKey = (inputKey || '').trim().toUpperCase();
-    if (!cleanKey) {
+    const rawInput = (inputKey || '').trim().toUpperCase().replace(/[\u200B-\u200D\uFEFF]/g, '');
+    const cleanKey = rawInput.replace(/\s+/g, '-');
+    const compactKey = cleanKey.replace(/[^A-Z0-9]/g, '');
+
+    if (!compactKey) {
       return { success: false, message: 'Please enter a valid Token Key.' };
     }
 
     const validityDurationMs = (tokenProtection.tokenValidityHours || 24) * 60 * 60 * 1000;
 
     // 1. Check Master Key
-    if (tokenProtection.masterKeyEnabled && tokenProtection.masterKey && cleanKey === tokenProtection.masterKey.trim().toUpperCase()) {
-      const expiryMs = Date.now() + validityDurationMs;
-      sessionStorage.setItem('flash_token_verified_until', String(expiryMs));
-      localStorage.setItem('flash_token_verified_until', String(expiryMs));
-      
-      const newLog: TokenDownloadLog = {
-        id: `tlog-${Date.now()}`,
-        tokenKey: cleanKey,
-        productId: productId || 'direct',
-        productName: productName || 'Protected Flash File',
-        userEmail: user?.email || 'Guest User',
-        downloadedAt: new Date().toISOString()
-      };
-      setTokenLogs(prev => {
-        const updated = [newLog, ...prev].slice(0, 100);
-        setLocalStorage('tokenLogs', updated);
-        return updated;
-      });
+    if (tokenProtection.masterKeyEnabled && tokenProtection.masterKey) {
+      const masterClean = tokenProtection.masterKey.trim().toUpperCase().replace(/\s+/g, '-');
+      const masterCompact = masterClean.replace(/[^A-Z0-9]/g, '');
 
-      const masterKeyObj: TokenKey = {
-        id: 'master-key-session',
-        key: cleanKey,
-        planName: '1. BRONZE PLAN (STARTER)',
-        dailyFilesLimit: 5,
-        dailyFilesUsed: 0,
-        dailyBandwidthLimitGB: 5,
-        dailyBandwidthUsedMB: 0,
-        totalBandwidthLimitGB: 200,
-        totalBandwidthUsedGB: 150.00,
-        maxUses: 0,
-        usedCount: 1,
-        createdAt: new Date().toISOString(),
-        expiresAt: new Date(expiryMs).toISOString(),
-        isActive: true
-      };
-      setActiveTokenKey(masterKeyObj);
-      setLocalStorage('activeVerifiedTokenKey', masterKeyObj);
+      if (compactKey === masterCompact) {
+        const expiryMs = Date.now() + validityDurationMs;
+        sessionStorage.setItem('flash_token_verified_until', String(expiryMs));
+        localStorage.setItem('flash_token_verified_until', String(expiryMs));
+        
+        const newLog: TokenDownloadLog = {
+          id: `tlog-${Date.now()}`,
+          tokenKey: cleanKey,
+          productId: productId || 'direct',
+          productName: productName || 'Protected Flash File',
+          userEmail: user?.email || 'Guest User',
+          downloadedAt: new Date().toISOString()
+        };
+        setTokenLogs(prev => {
+          const updated = [newLog, ...prev].slice(0, 100);
+          setLocalStorage('tokenLogs', updated);
+          return updated;
+        });
 
-      return { success: true, message: 'Master Token verified successfully! Access granted.' };
+        const masterKeyObj: TokenKey = {
+          id: 'master-key-session',
+          key: cleanKey,
+          planName: '1. BRONZE PLAN (STARTER)',
+          dailyFilesLimit: 5,
+          dailyFilesUsed: 0,
+          dailyBandwidthLimitGB: 5,
+          dailyBandwidthUsedMB: 0,
+          totalBandwidthLimitGB: 200,
+          totalBandwidthUsedGB: 150.00,
+          maxUses: 0,
+          usedCount: 1,
+          createdAt: new Date().toISOString(),
+          expiresAt: new Date(expiryMs).toISOString(),
+          isActive: true
+        };
+        setActiveTokenKey(masterKeyObj);
+        setLocalStorage('activeVerifiedTokenKey', masterKeyObj);
+
+        return { success: true, message: 'Master Token verified successfully! Access granted.' };
+      }
     }
 
     // 2. Check Specific Token Keys
-    const matchingToken = tokenKeys.find(t => t.key.trim().toUpperCase() === cleanKey);
+    const matchingToken = tokenKeys.find(t => {
+      const tokenClean = (t.key || '').trim().toUpperCase().replace(/\s+/g, '-');
+      const tokenCompact = tokenClean.replace(/[^A-Z0-9]/g, '');
+      return compactKey === tokenCompact;
+    });
+
     if (!matchingToken) {
       return { success: false, message: 'Invalid Token Key. Please contact admin on WhatsApp for a valid key.' };
     }

@@ -301,6 +301,8 @@ function getParsedUserGsmServices(customRate = 85.5, customMargin = 15) {
         autoWalletNewUser,
         users,
         adminNotifications,
+        tokenProtection,
+        tokenKeys,
         isManualSync,
       } = req.body || {};
 
@@ -312,6 +314,8 @@ function getParsedUserGsmServices(customRate = 85.5, customMargin = 15) {
       if (autoWalletNewUser !== undefined) payload.autoWalletNewUser = autoWalletNewUser;
       if (users !== undefined) payload.users = users;
       if (adminNotifications !== undefined) payload.adminNotifications = adminNotifications;
+      if (tokenProtection !== undefined) payload.tokenProtection = tokenProtection;
+      if (tokenKeys !== undefined) payload.tokenKeys = tokenKeys;
 
       const saved = writeCloudData(payload, Boolean(isManualSync));
       res.json({
