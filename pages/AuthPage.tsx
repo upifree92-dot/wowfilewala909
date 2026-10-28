@@ -18,6 +18,8 @@ const AuthPage = () => {
   const [searchParams] = useSearchParams();
   // Common state
   const [isLogin, setIsLogin] = useState(() => {
+    const tab = searchParams.get('tab');
+    if (tab === 'register') return false;
     return !(searchParams.has('ref') || searchParams.has('referral'));
   });
   useSEO(isLogin ? 'Login' : 'Register', isLogin ? 'Login to your account.' : 'Create a new account.');

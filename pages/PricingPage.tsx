@@ -137,17 +137,59 @@ const PaymentModal = ({ isOpen, onClose, pkg }: { isOpen: boolean, onClose: () =
 };
 
 
+// Modal for requesting registration / login when unauthenticated
+const AuthPromptModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) => {
+    const navigate = useNavigate();
+    if (!isOpen) return null;
+
+    return (
+        <div className="fixed inset-0 bg-black/80 flex justify-center items-center z-50 p-4" onClick={onClose}>
+            <div className="bg-slate-900 border border-slate-800 p-8 rounded-2xl shadow-2xl w-full max-w-md relative text-center text-white" onClick={e => e.stopPropagation()}>
+                <button onClick={onClose} className="absolute top-4 right-4 text-slate-400 hover:text-white text-2xl font-bold">&times;</button>
+                <div className="w-16 h-16 bg-amber-500/20 text-amber-400 rounded-full flex items-center justify-center mx-auto mb-4 border border-amber-500/30">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                    </svg>
+                </div>
+                <h2 className="text-2xl font-bold mb-2 text-white">Registration Required</h2>
+                <p className="text-slate-300 text-sm mb-6 leading-relaxed">
+                    You must be registered and logged in to subscribe to a download package. Please create a new account or log in to continue.
+                </p>
+                <div className="space-y-3">
+                    <button 
+                        onClick={() => { onClose(); navigate('/login?tab=register'); }}
+                        className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-extrabold py-3.5 px-4 rounded-xl transition-all shadow-lg shadow-amber-500/20 text-sm flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                        <span>Create New Account (Register)</span>
+                    </button>
+                    <button 
+                        onClick={() => { onClose(); navigate('/login'); }}
+                        className="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold py-3 px-4 rounded-xl transition-all border border-slate-700 text-sm flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                        <span>Already Registered? Log In</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 const PricingPage = () => {
     useSEO('Download Packages', 'Choose the download package or subscription plan that suits your needs.');
     const { user, balancePackages, isAdmin, isEditMode } = useAppContext();
+    const navigate = useNavigate();
     const location = useLocation();
     const state = location.state as { insufficientPoints?: boolean; requiredAmount?: number } | null;
     const [isPaymentModalOpen, setPaymentModalOpen] = useState(false);
     const [isEditModalOpen, setEditModalOpen] = useState(false);
+    const [isAuthPromptOpen, setAuthPromptOpen] = useState(false);
     const [selectedPackage, setSelectedPackage] = useState<BalancePackage | null>(null);
 
-    const handleBuyClick = (pkg: BalancePackage) => {
-        if (!user) return;
+    const handleSubscribeClick = (pkg: BalancePackage) => {
+        if (!user) {
+            setAuthPromptOpen(true);
+            return;
+        }
         setSelectedPackage(pkg);
         setPaymentModalOpen(true);
     };
@@ -189,7 +231,7 @@ const PricingPage = () => {
                 {!user && (
                     <div className="text-center p-6 bg-amber-500/10 border border-amber-500/30 text-amber-800 dark:text-amber-300 rounded-xl mb-10 max-w-xl mx-auto">
                         <p className="font-semibold text-sm">You must be logged in to subscribe to a plan.</p>
-                        <p className="mt-1 text-xs">Please <Link to="/login" className="font-bold underline text-amber-600 dark:text-amber-400">log in</Link> or <Link to="/login" className="font-bold underline text-amber-600 dark:text-amber-400">create an account</Link>.</p>
+                        <p className="mt-1 text-xs">Please <Link to="/login" className="font-bold underline text-amber-600 dark:text-amber-400">log in</Link> or <Link to="/login?tab=register" className="font-bold underline text-amber-600 dark:text-amber-400">create an account</Link>.</p>
                     </div>
                 )}
                 
@@ -265,10 +307,7 @@ const PricingPage = () => {
                            {/* Subscribe Button */}
                            <div className="p-7 pt-0 bg-white dark:bg-slate-900">
                                <button 
-                                   onClick={() => {
-                                     setSelectedPackage(pkg);
-                                     setPaymentModalOpen(true);
-                                   }} 
+                                   onClick={() => handleSubscribeClick(pkg)} 
                                    className="w-full bg-red-600 hover:bg-red-700 active:scale-98 text-white font-black py-3.5 px-4 rounded-xl transition-all shadow-md shadow-red-600/20 cursor-pointer"
                                >
                                    Subscribe Now
@@ -279,6 +318,7 @@ const PricingPage = () => {
                     })}
                 </div>
 
+                <AuthPromptModal isOpen={isAuthPromptOpen} onClose={() => setAuthPromptOpen(false)} />
                 {selectedPackage && <PaymentModal isOpen={isPaymentModalOpen} onClose={() => setPaymentModalOpen(false)} pkg={selectedPackage} />}
                 {selectedPackage && <EditPackageModal isOpen={isEditModalOpen} onClose={() => setEditModalOpen(false)} pkg={selectedPackage} />}
             </div>
