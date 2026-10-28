@@ -19,6 +19,10 @@ export interface Product {
   category?: string;
   createdAt?: string;
   serviceType?: 'imei' | 'server' | 'remote' | 'file';
+  dealerPrice?: number;
+  deliveryTime?: string;
+  isApiAutomated?: boolean;
+  isActive?: boolean;
 }
 
 export interface ActivationCustomField {

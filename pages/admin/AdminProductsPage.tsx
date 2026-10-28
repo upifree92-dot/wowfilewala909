@@ -2,6 +2,7 @@ import React, { useState, useMemo, FormEvent, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useAppContext } from '../../context/AppContext';
 import type { Product, Category, ActivationFormConfig, ActivationCustomField } from '../../types';
+import MasterServiceManagerModal from '../../components/MasterServiceManagerModal';
 
 // --- Category Modal (Add / Edit / Form Builder) ---
 interface CategoryModalProps {
@@ -286,6 +287,8 @@ const ProductModal = ({ product, isOpen, onClose, onDelete }: ProductModalProps)
   const [categoryId, setCategoryId] = useState('');
   const [serviceType, setServiceType] = useState<'imei' | 'server' | 'remote' | 'file'>('server');
   const [price, setPrice] = useState<number>(0);
+  const [dealerPrice, setDealerPrice] = useState<number>(0);
+  const [deliveryTime, setDeliveryTime] = useState<string>('Instant');
   const [downloadLink, setDownloadLink] = useState('');
   const [description, setDescription] = useState('');
   const [size, setSize] = useState('0 KB');
@@ -299,6 +302,8 @@ const ProductModal = ({ product, isOpen, onClose, onDelete }: ProductModalProps)
       setCategoryId(product.categoryId || '');
       setServiceType(product.serviceType || 'server');
       setPrice(product.price);
+      setDealerPrice(product.dealerPrice ?? Math.round(product.price * 0.85));
+      setDeliveryTime(product.deliveryTime || 'Instant');
       setDownloadLink(product.downloadLink);
       setDescription(product.description || '');
       setSize(product.size || '1.0 MB');
@@ -310,6 +315,8 @@ const ProductModal = ({ product, isOpen, onClose, onDelete }: ProductModalProps)
       setCategoryId(categories[0]?.id || '');
       setServiceType('server');
       setPrice(0);
+      setDealerPrice(0);
+      setDeliveryTime('Instant');
       setDownloadLink('');
       setDescription('');
       setSize('1.0 MB');
@@ -335,6 +342,8 @@ const ProductModal = ({ product, isOpen, onClose, onDelete }: ProductModalProps)
       categoryId,
       serviceType,
       price: Number(price),
+      dealerPrice: Number(dealerPrice),
+      deliveryTime,
       downloadLink: downloadLink || '#',
       description,
       size,
@@ -358,11 +367,11 @@ const ProductModal = ({ product, isOpen, onClose, onDelete }: ProductModalProps)
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-slate-400 font-bold text-xs uppercase tracking-wider mb-2">Product Name</label>
+            <label className="block text-slate-400 font-bold text-xs uppercase tracking-wider mb-2">Product / Service Name</label>
             <input type="text" value={name} onChange={e => setName(e.target.value)} required className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-500/40 text-sm" placeholder="e.g. VIP Mod Tool" />
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-slate-400 font-bold text-xs uppercase tracking-wider mb-2">Service Type</label>
               <select value={serviceType} onChange={e => setServiceType(e.target.value as any)} required className="w-full px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-amber-400 font-bold focus:outline-none focus:ring-2 focus:ring-amber-500/40 text-xs sm:text-sm">
@@ -381,9 +390,20 @@ const ProductModal = ({ product, isOpen, onClose, onDelete }: ProductModalProps)
                 ))}
               </select>
             </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
-              <label className="block text-slate-400 font-bold text-xs uppercase tracking-wider mb-2">Price (₹)</label>
-              <input type="number" value={price} onChange={e => setPrice(Number(e.target.value))} required className="w-full px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-500/40 text-xs sm:text-sm font-bold font-mono" />
+              <label className="block text-slate-400 font-bold text-xs uppercase tracking-wider mb-2">Customer Price (₹)</label>
+              <input type="number" value={price} onChange={e => setPrice(Number(e.target.value))} required className="w-full px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-emerald-400 focus:outline-none focus:ring-2 focus:ring-amber-500/40 text-xs sm:text-sm font-bold font-mono" />
+            </div>
+            <div>
+              <label className="block text-slate-400 font-bold text-xs uppercase tracking-wider mb-2">Dealer Price (₹)</label>
+              <input type="number" value={dealerPrice} onChange={e => setDealerPrice(Number(e.target.value))} required className="w-full px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-500/40 text-xs sm:text-sm font-bold font-mono" />
+            </div>
+            <div>
+              <label className="block text-slate-400 font-bold text-xs uppercase tracking-wider mb-2">Delivery Time</label>
+              <input type="text" value={deliveryTime} onChange={e => setDeliveryTime(e.target.value)} required className="w-full px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-500/40 text-xs sm:text-sm" placeholder="e.g. Instant / 1-5 Mins" />
             </div>
           </div>
 
@@ -479,6 +499,7 @@ const AdminProductsPage = () => {
   };
 
   // Modal controls
+  const [isMasterManagerOpen, setIsMasterManagerOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
@@ -543,6 +564,7 @@ const AdminProductsPage = () => {
     <div className="bg-gradient-to-b from-slate-900/90 to-slate-950/90 backdrop-blur-md p-6 sm:p-8 rounded-2xl border border-slate-800/80 shadow-2xl animate-in fade-in duration-300">
       
       {/* Modals */}
+      <MasterServiceManagerModal isOpen={isMasterManagerOpen} onClose={() => setIsMasterManagerOpen(false)} />
       <ProductModal product={selectedProduct} isOpen={isProductModalOpen} onClose={() => { setIsProductModalOpen(false); setSelectedProduct(null); }} onDelete={handleDeleteProduct} />
       <CategoryModal category={selectedCategory} isOpen={isCategoryModalOpen} onClose={() => { setIsCategoryModalOpen(false); setSelectedCategory(null); }} />
 
@@ -613,7 +635,15 @@ const AdminProductsPage = () => {
           <h1 className="text-xl font-bold tracking-wide text-slate-100">Services List & Catalog</h1>
         </div>
         
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          {/* 1-Button Master Manager Trigger */}
+          <button
+            onClick={() => setIsMasterManagerOpen(true)}
+            className="bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-400 hover:to-emerald-500 text-slate-950 px-4 py-2 rounded-xl text-xs sm:text-sm font-black flex items-center gap-2 transition-all shadow-lg shadow-teal-500/20 cursor-pointer"
+          >
+            <span>⚡ 1-Button Master Manager</span>
+          </button>
+
           {/* Tab switches */}
           <div className="bg-slate-950 p-1 rounded-xl border border-slate-800 flex">
             <button
@@ -777,21 +807,22 @@ const AdminProductsPage = () => {
                   <th className="p-3 pb-4">Service Details</th>
                   <th className="p-3 pb-4">Type</th>
                   <th className="p-3 pb-4">Category</th>
-                  <th className="p-3 pb-4">Size</th>
-                  <th className="p-3 pb-4">Price</th>
-                  <th className="p-3 pb-4">Stats</th>
+                  <th className="p-3 pb-4">Customer Price</th>
+                  <th className="p-3 pb-4">Dealer Price</th>
+                  <th className="p-3 pb-4 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/40">
                 {filteredProducts.length > 0 ? filteredProducts.map(p => {
                   const categoryName = categories.find(c => c.id === p.categoryId)?.name || 'Unknown';
                   const st = getProductServiceType(p);
+                  const dp = p.dealerPrice ?? Math.round(p.price * 0.85);
                   return (
                     <tr 
                       key={p.id} 
                       onDoubleClick={() => setDoubleClickProduct(p)}
-                      className="group hover:bg-slate-900/60 transition-colors duration-150 cursor-pointer select-none"
-                      title="Double click for Edit / Delete options"
+                      className="group hover:bg-slate-900/60 transition-colors duration-150 select-none"
+                      title="Double click or use buttons to Edit / Delete"
                     >
                       <td className="p-3 py-4">
                         <div className="font-bold text-slate-100 text-sm sm:text-base flex items-center gap-2">
@@ -803,16 +834,15 @@ const AdminProductsPage = () => {
                             {p.tags?.includes('new') && (
                               <span className="px-1.5 py-0.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[9px] font-extrabold uppercase rounded tracking-wider">New</span>
                             )}
-                            {p.tags?.includes('featured') && (
-                              <span className="px-1.5 py-0.5 bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 text-[9px] font-extrabold uppercase rounded tracking-wider">Hot</span>
-                            )}
                           </span>
                         </div>
                         <div className="text-xs text-slate-500 mt-1 line-clamp-1 max-w-lg">{p.description}</div>
-                        <div className="text-[10px] text-slate-400 mt-1.5 font-mono select-all truncate max-w-sm" title={p.downloadLink}>
-                          Link: <span className="text-amber-500/80">{p.downloadLink}</span>
+                        <div className="text-[10px] text-slate-400 mt-1 font-mono flex items-center gap-3">
+                          <span>Delivery: <strong className="text-slate-200">{p.deliveryTime || 'Instant'}</strong></span>
+                          <span>Size: <strong className="text-slate-200">{p.size}</strong></span>
                         </div>
                       </td>
+
                       <td className="p-3 py-4 text-xs font-semibold">
                         {st === 'imei' && (
                           <span className="px-2 py-1 bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded-lg inline-flex items-center gap-1 text-[11px]">
@@ -835,17 +865,37 @@ const AdminProductsPage = () => {
                           </span>
                         )}
                       </td>
+
                       <td className="p-3 py-4 text-xs sm:text-sm text-slate-300 font-medium">{categoryName}</td>
-                      <td className="p-3 py-4 text-xs font-mono text-slate-400">{p.size}</td>
-                      <td className="p-3 py-4 font-extrabold text-amber-400 font-mono text-sm sm:text-base">₹{p.price}</td>
-                      <td className="p-3 py-4 text-xs text-slate-400 space-y-0.5">
-                        <div className="flex items-center gap-1 font-mono">
-                          <span className="text-slate-500">Views:</span>
-                          <span className="text-slate-300 font-semibold">{p.views || 0}</span>
-                        </div>
-                        <div className="flex items-center gap-1 font-mono">
-                          <span className="text-slate-500">Dl:</span>
-                          <span className="text-slate-300 font-semibold">{p.downloads || 0}</span>
+
+                      <td className="p-3 py-4 font-extrabold text-emerald-400 font-mono text-sm sm:text-base">
+                        ₹{p.price}
+                      </td>
+
+                      <td className="p-3 py-4 font-extrabold text-amber-400 font-mono text-sm sm:text-base">
+                        ₹{dp}
+                      </td>
+
+                      <td className="p-3 py-4 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedProduct(p);
+                              setIsProductModalOpen(true);
+                            }}
+                            className="px-2.5 py-1.5 rounded-lg bg-teal-500/15 hover:bg-teal-500/30 text-teal-300 border border-teal-500/30 text-xs font-bold transition-all cursor-pointer"
+                          >
+                            ✏️ Edit
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteProduct(p.id)}
+                            className="px-2 py-1.5 rounded-lg bg-rose-500/15 hover:bg-rose-500/30 text-rose-400 border border-rose-500/30 text-xs font-bold transition-all cursor-pointer"
+                            title="Delete Service"
+                          >
+                            🗑️
+                          </button>
                         </div>
                       </td>
                     </tr>
