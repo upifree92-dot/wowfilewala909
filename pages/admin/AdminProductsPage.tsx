@@ -667,24 +667,29 @@ const AdminProductsPage = () => {
           </div>
 
           {/* Search bar and Category Filters */}
-          <div className="flex flex-col md:flex-row gap-4 p-4 bg-slate-950 rounded-xl border border-slate-800/40">
-            <input 
-              type="text" 
-              placeholder="Search by name, description, size..." 
-              value={productQuery} 
-              onChange={e => setProductQuery(e.target.value)} 
-              className="w-full md:flex-grow px-3.5 py-2 text-xs sm:text-sm bg-slate-900 border border-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500/40 text-slate-200 placeholder-slate-500" 
-            />
-            <select
-              value={categoryFilter}
-              onChange={e => setCategoryFilter(e.target.value)}
-              className="px-3 py-2 text-xs sm:text-sm bg-slate-900 border border-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500/40 text-slate-300"
-            >
-              <option value="all">All Categories</option>
-              {categories.map(c => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
-            </select>
+          <div className="flex flex-col md:flex-row gap-4 p-4 bg-slate-950 rounded-xl border border-slate-800/40 items-center justify-between">
+            <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto flex-grow">
+              <input 
+                type="text" 
+                placeholder="Search by name, description, size..." 
+                value={productQuery} 
+                onChange={e => setProductQuery(e.target.value)} 
+                className="w-full sm:w-80 px-3.5 py-2 text-xs sm:text-sm bg-slate-900 border border-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500/40 text-slate-200 placeholder-slate-500" 
+              />
+              <select
+                value={categoryFilter}
+                onChange={e => setCategoryFilter(e.target.value)}
+                className="px-3 py-2 text-xs sm:text-sm bg-slate-900 border border-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500/40 text-slate-300"
+              >
+                <option value="all">All Categories</option>
+                {categories.map(c => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+            </div>
+            <div className="text-[11px] text-amber-400/80 font-medium flex items-center gap-1.5 self-start md:self-center bg-amber-500/5 px-3 py-1.5 rounded-lg border border-amber-500/10 whitespace-nowrap">
+              <span>💡 Double-click any row to quick edit</span>
+            </div>
           </div>
 
           {/* Product list table */}
@@ -706,7 +711,12 @@ const AdminProductsPage = () => {
                   const categoryName = categories.find(c => c.id === p.categoryId)?.name || 'Unknown';
                   const st = getProductServiceType(p);
                   return (
-                    <tr key={p.id} className="hover:bg-slate-900/30 transition-colors duration-150">
+                    <tr 
+                      key={p.id} 
+                      onDoubleClick={() => { setSelectedProduct(p); setIsProductModalOpen(true); }}
+                      className="group hover:bg-slate-900/60 transition-colors duration-150 cursor-pointer select-none"
+                      title="Double click to edit this service"
+                    >
                       <td className="p-3 py-4">
                         <div className="font-bold text-slate-100 text-sm sm:text-base flex items-center gap-2">
                           <span>{p.name}</span>
@@ -763,19 +773,19 @@ const AdminProductsPage = () => {
                         </div>
                       </td>
                       <td className="p-3 py-4 text-right">
-                        <div className="flex justify-end gap-2">
+                        <div className="flex justify-end gap-2 opacity-30 group-hover:opacity-100 transition-opacity duration-200">
                           <button
-                            onClick={() => { setSelectedProduct(p); setIsProductModalOpen(true); }}
-                            className="p-2 bg-slate-950 border border-slate-800 text-amber-400 hover:bg-amber-500 hover:text-white rounded-xl transition-all duration-200 shadow-sm"
-                            title="Edit Product"
+                            onClick={(e) => { e.stopPropagation(); setSelectedProduct(p); setIsProductModalOpen(true); }}
+                            className="p-2 bg-slate-900 border border-slate-800 text-amber-400 hover:bg-amber-500 hover:text-slate-950 rounded-xl transition-all duration-200 shadow-sm"
+                            title="Edit Product (or double-click row)"
                           >
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
                               <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
                             </svg>
                           </button>
                           <button
-                            onClick={() => handleDeleteProduct(p.id)}
-                            className="p-2 bg-slate-950 border border-slate-800 text-rose-400 hover:bg-rose-500 hover:text-white rounded-xl transition-all duration-200 shadow-sm"
+                            onClick={(e) => { e.stopPropagation(); handleDeleteProduct(p.id); }}
+                            className="p-2 bg-slate-900 border border-slate-800 text-rose-400 hover:bg-rose-500 hover:text-white rounded-xl transition-all duration-200 shadow-sm"
                             title="Delete Product"
                           >
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
