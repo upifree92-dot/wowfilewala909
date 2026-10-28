@@ -1,7 +1,7 @@
 
 
 import React, { createContext, useState, useEffect, useContext, useCallback, ReactNode } from 'react';
-import type { User, Product, CartItem, Category, BalancePackage, DownloadRecord, AdminNotification, UserNotification, Transaction, TransactionType, InputField } from '../types';
+import type { User, Product, CartItem, Category, BalancePackage, DownloadRecord, AdminNotification, UserNotification, Transaction, TransactionType, InputField, TokenKey, TokenDownloadLog, TokenProtectionConfig } from '../types';
 import { INITIAL_PRODUCTS, INITIAL_CATEGORIES, ADMIN_EMAIL, INITIAL_BALANCE_PACKAGES } from '../constants';
 import { INITIAL_SITE_CONTENT } from '../siteContent';
 import { saveDownloadRecord, saveRegisteredUser, deleteRegisteredUser, deleteAllNonAdminUsers, getRegisteredUser, getRegisteredUsers, saveOrder, saveWalletTransaction, updateOrderStatus, adminResetHWID, supabase, addSupabaseErrorListener, getSiteSetting, saveSiteSetting, clearAllSupabaseTables, isSandboxMode } from '../lib/supabase';
@@ -64,7 +64,7 @@ interface AppContextType {
   updateProduct: (productData: Product) => void;
   deleteProduct: (productId: string) => void;
   updateCategory: (categoryData: Category) => void;
-  initiateDownload: (product: Product) => void;
+  initiateDownload: (product: Product, bypassTokenCheck?: boolean) => void;
 
   // Balance packages and purchasing
   balancePackages: BalancePackage[];
@@ -154,7 +154,25 @@ interface AppContextType {
   hwidMismatchInfo: { email: string; currentHWID: string; registeredHWID: string; userId?: string; userObj?: User } | null;
   setHwidMismatchInfo: (info: { email: string; currentHWID: string; registeredHWID: string; userId?: string; userObj?: User } | null) => void;
   performSelfHwidReset: () => Promise<void>;
+
+  // Flash File Token Key Protection System
+  tokenProtection: TokenProtectionConfig;
+  tokenKeys: TokenKey[];
+  tokenLogs: TokenDownloadLog[];
+  updateTokenProtection: (config: Partial<TokenProtectionConfig>) => Promise<void>;
+  createTokenKey: (data: Omit<TokenKey, 'id' | 'createdAt' | 'usedCount'>) => TokenKey;
+  updateTokenKey: (token: TokenKey) => void;
+  deleteTokenKey: (tokenId: string) => void;
+  toggleTokenKeyStatus: (tokenId: string) => void;
+  clearTokenLogs: () => void;
+  verifyTokenKey: (inputKey: string, productId?: string, productName?: string) => { success: boolean; message: string };
+  isTokenVerified: () => boolean;
+  tokenVerificationModalOpen: boolean;
+  setTokenVerificationModalOpen: (open: boolean) => void;
+  pendingDownloadProduct: Product | null;
+  setPendingDownloadProduct: (product: Product | null) => void;
 }
+
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
@@ -206,8 +224,45 @@ export const getClientHWID = (): string => {
   }
 };
 
+const DEFAULT_TOKEN_PROTECTION: TokenProtectionConfig = {
+  enabled: true,
+  requireForFreeFiles: true,
+  requireForPaidFiles: true,
+  masterKey: 'FLASH-WOW-9090',
+  masterKeyEnabled: true,
+  adminWhatsappForTokens: '8658465589',
+  promptMessage: 'Yeh Flash File Token Key dwara surakshit hai. Download shuru karne ke liye Token Key enter karein.',
+  tokenValidityHours: 24,
+};
+
+const INITIAL_TOKEN_KEYS: TokenKey[] = [
+  {
+    id: 'tok-master-default',
+    key: 'FLASH-WOW-9090',
+    clientName: 'Master Admin Key (Default)',
+    clientPhone: '8658465589',
+    maxUses: 0,
+    usedCount: 0,
+    createdAt: new Date().toISOString(),
+    isActive: true,
+    notes: 'Universal admin master token key'
+  },
+  {
+    id: 'tok-vip-pass-1',
+    key: 'FLASH-VIP-7788',
+    clientName: 'VIP Customer Pass',
+    clientPhone: '9876543210',
+    maxUses: 5,
+    usedCount: 0,
+    createdAt: new Date().toISOString(),
+    expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+    isActive: true,
+    notes: 'Multi-use pass for testing/VIP'
+  }
+];
 
 export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+
   const [user, setUser] = useState<User | null>(getLocalStorage('currentUser', null));
   const [cart, setCart] = useState<CartItem[]>(getLocalStorage('cart', []));
   const [products, setProducts] = useState<Product[]>(() => {
@@ -378,6 +433,19 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setOrderSuccessModalOpen(true);
   };
   
+  // --- Token Key File Protection State ---
+  const [tokenProtection, setTokenProtection] = useState<TokenProtectionConfig>(() => {
+    return getLocalStorage<TokenProtectionConfig>('tokenProtection', DEFAULT_TOKEN_PROTECTION);
+  });
+  const [tokenKeys, setTokenKeys] = useState<TokenKey[]>(() => {
+    return getLocalStorage<TokenKey[]>('tokenKeys', INITIAL_TOKEN_KEYS);
+  });
+  const [tokenLogs, setTokenLogs] = useState<TokenDownloadLog[]>(() => {
+    return getLocalStorage<TokenDownloadLog[]>('tokenLogs', []);
+  });
+  const [tokenVerificationModalOpen, setTokenVerificationModalOpen] = useState(false);
+  const [pendingDownloadProduct, setPendingDownloadProduct] = useState<Product | null>(null);
+
   // --- Theme State ---
   const [theme, setTheme] = useState<'light' | 'dark'>(() => getLocalStorage('theme', 'light'));
 
@@ -478,6 +546,15 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       setAutoWalletNewUser(Boolean(snapshot.autoWalletNewUser));
       setLocalStorage('autoWalletNewUser', Boolean(snapshot.autoWalletNewUser));
     }
+    if (snapshot.tokenProtection) {
+      setTokenProtection(snapshot.tokenProtection);
+      setLocalStorage('tokenProtection', snapshot.tokenProtection);
+    }
+    if (Array.isArray(snapshot.tokenKeys)) {
+      setTokenKeys(snapshot.tokenKeys);
+      setLocalStorage('tokenKeys', snapshot.tokenKeys);
+    }
+
     if (snapshot.users) {
       let remoteUsersMap: Record<string, User> = {};
       if (Array.isArray(snapshot.users)) {
@@ -584,6 +661,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           categories,
           balancePackages,
           autoWalletNewUser,
+          tokenProtection,
+          tokenKeys,
           users: Object.values(allUsers),
           adminNotifications,
         },
@@ -596,8 +675,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         saveSiteSetting('products', products),
         saveSiteSetting('categories', categories),
         saveSiteSetting('balance_packages', balancePackages),
-        saveSiteSetting('auto_wallet_25_new_user', autoWalletNewUser)
+        saveSiteSetting('auto_wallet_25_new_user', autoWalletNewUser),
+        saveSiteSetting('token_protection', tokenProtection),
+        saveSiteSetting('token_keys', tokenKeys)
       ]);
+
 
       if (!isSandboxMode) {
         await supabase.channel('public:site_settings').send({
@@ -647,6 +729,155 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     isEditMode ||
     getLocalStorage<boolean>('admin_mode_active', false);
   const [cloudSettingsSynced, setCloudSettingsSynced] = useState(false);
+
+  // --- Flash File Token Key Management & Verification Methods ---
+  const isTokenVerified = useCallback((): boolean => {
+    if (isAdmin) return true;
+    if (!tokenProtection.enabled) return true;
+    try {
+      const sessionUntil = sessionStorage.getItem('flash_token_verified_until');
+      if (sessionUntil && Number(sessionUntil) > Date.now()) {
+        return true;
+      }
+      const localUntil = localStorage.getItem('flash_token_verified_until');
+      if (localUntil && Number(localUntil) > Date.now()) {
+        return true;
+      }
+    } catch (e) {}
+    return false;
+  }, [isAdmin, tokenProtection.enabled]);
+
+  const verifyTokenKey = useCallback((inputKey: string, productId?: string, productName?: string): { success: boolean; message: string } => {
+    const cleanKey = (inputKey || '').trim().toUpperCase();
+    if (!cleanKey) {
+      return { success: false, message: 'Please enter a valid Token Key.' };
+    }
+
+    const validityDurationMs = (tokenProtection.tokenValidityHours || 24) * 60 * 60 * 1000;
+
+    // 1. Check Master Key
+    if (tokenProtection.masterKeyEnabled && tokenProtection.masterKey && cleanKey === tokenProtection.masterKey.trim().toUpperCase()) {
+      const expiryMs = Date.now() + validityDurationMs;
+      sessionStorage.setItem('flash_token_verified_until', String(expiryMs));
+      localStorage.setItem('flash_token_verified_until', String(expiryMs));
+      
+      const newLog: TokenDownloadLog = {
+        id: `tlog-${Date.now()}`,
+        tokenKey: cleanKey,
+        productId: productId || 'direct',
+        productName: productName || 'Protected Flash File',
+        userEmail: user?.email || 'Guest User',
+        downloadedAt: new Date().toISOString()
+      };
+      setTokenLogs(prev => {
+        const updated = [newLog, ...prev].slice(0, 100);
+        setLocalStorage('tokenLogs', updated);
+        return updated;
+      });
+
+      return { success: true, message: 'Master Token verified successfully! Access granted.' };
+    }
+
+    // 2. Check Specific Token Keys
+    const matchingToken = tokenKeys.find(t => t.key.trim().toUpperCase() === cleanKey);
+    if (!matchingToken) {
+      return { success: false, message: 'Invalid Token Key. Please contact admin on WhatsApp for a valid key.' };
+    }
+
+    if (!matchingToken.isActive) {
+      return { success: false, message: 'This Token Key has been revoked or deactivated by admin.' };
+    }
+
+    if (matchingToken.expiresAt && new Date(matchingToken.expiresAt).getTime() < Date.now()) {
+      return { success: false, message: 'This Token Key has expired. Please obtain a new key.' };
+    }
+
+    if (matchingToken.maxUses > 0 && matchingToken.usedCount >= matchingToken.maxUses) {
+      return { success: false, message: `This Token Key has reached its maximum download limit (${matchingToken.maxUses}/${matchingToken.maxUses} used).` };
+    }
+
+    // Increment usage
+    const updatedTokens = tokenKeys.map(t => {
+      if (t.id === matchingToken.id) {
+        return { ...t, usedCount: t.usedCount + 1 };
+      }
+      return t;
+    });
+    setTokenKeys(updatedTokens);
+    setLocalStorage('tokenKeys', updatedTokens);
+    pushServerSync({ tokenKeys: updatedTokens }, true).catch(() => {});
+
+    // Save verified session
+    const expiryMs = Date.now() + validityDurationMs;
+    sessionStorage.setItem('flash_token_verified_until', String(expiryMs));
+    localStorage.setItem('flash_token_verified_until', String(expiryMs));
+
+    // Log download
+    const newLog: TokenDownloadLog = {
+      id: `tlog-${Date.now()}`,
+      tokenKey: cleanKey,
+      productId: productId || 'direct',
+      productName: productName || 'Protected Flash File',
+      userEmail: user?.email || 'Guest User',
+      downloadedAt: new Date().toISOString()
+    };
+    setTokenLogs(prev => {
+      const updated = [newLog, ...prev].slice(0, 100);
+      setLocalStorage('tokenLogs', updated);
+      return updated;
+    });
+
+    return { success: true, message: 'Token Key verified successfully! Starting download...' };
+  }, [tokenProtection, tokenKeys, user, pushServerSync]);
+
+  const updateTokenProtection = async (config: Partial<TokenProtectionConfig>) => {
+    const updated = { ...tokenProtection, ...config };
+    setTokenProtection(updated);
+    setLocalStorage('tokenProtection', updated);
+    saveSiteSetting('token_protection', updated).catch(() => {});
+    pushServerSync({ tokenProtection: updated }, true).catch(() => {});
+  };
+
+  const createTokenKey = (data: Omit<TokenKey, 'id' | 'createdAt' | 'usedCount'>): TokenKey => {
+    const newToken: TokenKey = {
+      ...data,
+      id: `tok-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      createdAt: new Date().toISOString(),
+      usedCount: 0,
+    };
+    const updated = [newToken, ...tokenKeys];
+    setTokenKeys(updated);
+    setLocalStorage('tokenKeys', updated);
+    pushServerSync({ tokenKeys: updated }, true).catch(() => {});
+    return newToken;
+  };
+
+  const updateTokenKey = (token: TokenKey) => {
+    const updated = tokenKeys.map(t => t.id === token.id ? token : t);
+    setTokenKeys(updated);
+    setLocalStorage('tokenKeys', updated);
+    pushServerSync({ tokenKeys: updated }, true).catch(() => {});
+  };
+
+  const deleteTokenKey = (tokenId: string) => {
+    const updated = tokenKeys.filter(t => t.id !== tokenId);
+    setTokenKeys(updated);
+    setLocalStorage('tokenKeys', updated);
+    pushServerSync({ tokenKeys: updated }, true).catch(() => {});
+  };
+
+  const toggleTokenKeyStatus = (tokenId: string) => {
+    const updated = tokenKeys.map(t => t.id === tokenId ? { ...t, isActive: !t.isActive } : t);
+    setTokenKeys(updated);
+    setLocalStorage('tokenKeys', updated);
+    pushServerSync({ tokenKeys: updated }, true).catch(() => {});
+  };
+
+  const clearTokenLogs = () => {
+    setTokenLogs([]);
+    setLocalStorage('tokenLogs', []);
+  };
+
 
   // Async effect to fetch and sync latest settings from Server & Supabase on load
   useEffect(() => {
@@ -2041,8 +2272,16 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     return user?.favoriteProductIds.includes(productId) ?? false;
   }, [user]);
   
-  const initiateDownload = (product: Product) => {
+  const initiateDownload = (product: Product, bypassTokenCheck = false) => {
+    // Check Flash File Token Key protection gate
+    if (!bypassTokenCheck && tokenProtection.enabled && !isAdmin && !isTokenVerified()) {
+      setPendingDownloadProduct(product);
+      setTokenVerificationModalOpen(true);
+      return;
+    }
+
     // 1. Record download history if logged in
+
     if (user) {
       const updatedUser = { ...user };
       if (!updatedUser.downloadTimers) {
@@ -3731,8 +3970,24 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     resetToDefaultServices,
     hwidMismatchInfo,
     setHwidMismatchInfo,
-    performSelfHwidReset
+    performSelfHwidReset,
+    tokenProtection,
+    tokenKeys,
+    tokenLogs,
+    updateTokenProtection,
+    createTokenKey,
+    updateTokenKey,
+    deleteTokenKey,
+    toggleTokenKeyStatus,
+    clearTokenLogs,
+    verifyTokenKey,
+    isTokenVerified,
+    tokenVerificationModalOpen,
+    setTokenVerificationModalOpen,
+    pendingDownloadProduct,
+    setPendingDownloadProduct
   };
+
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 };

@@ -162,3 +162,36 @@ export interface SocialLink {
 }
 
 export interface CartItem extends Product {}
+
+export interface TokenKey {
+  id: string;
+  key: string;
+  clientName?: string;
+  clientPhone?: string;
+  maxUses: number; // 0 for unlimited, or e.g. 1, 5, 10
+  usedCount: number;
+  createdAt: string;
+  expiresAt?: string; // ISO date string or undefined for lifetime
+  isActive: boolean;
+  notes?: string;
+}
+
+export interface TokenDownloadLog {
+  id: string;
+  tokenKey: string;
+  productId: string;
+  productName: string;
+  userEmail?: string;
+  downloadedAt: string;
+}
+
+export interface TokenProtectionConfig {
+  enabled: boolean;
+  requireForFreeFiles: boolean;
+  requireForPaidFiles: boolean;
+  masterKey: string;
+  masterKeyEnabled: boolean;
+  adminWhatsappForTokens: string;
+  promptMessage: string;
+  tokenValidityHours: number;
+}

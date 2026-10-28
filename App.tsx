@@ -38,6 +38,8 @@ import AdminSettingsPage from './pages/admin/AdminSettingsPage';
 import WebsitePage from './pages/WebsitePage';
 import DirectDownloadPage from './pages/DirectDownloadPage';
 import HostingraConnectorPage from './pages/admin/HostingraConnectorPage';
+import AdminTokensPage from './pages/admin/AdminTokensPage';
+import { TokenVerificationModal } from './components/TokenVerificationModal';
 import TextColorEditor from './components/TextColorEditor';
 
 
@@ -173,6 +175,8 @@ const AppContent = () => {
             <Route path="automation" element={<HostingraConnectorPage />} />
             <Route path="utilities" element={<HostingraConnectorPage />} />
             <Route path="logs" element={<DashboardPage />} />
+            <Route path="tokens" element={<AdminTokensPage />} />
+            <Route path="token-keys" element={<AdminTokensPage />} />
             <Route path="theme" element={<Navigate to="/" replace />} />
             <Route path="hostinger" element={<HostingraConnectorPage />} />
             <Route path="hostingra" element={<HostingraConnectorPage />} />
@@ -182,12 +186,14 @@ const AppContent = () => {
         </Routes>
         <Notification />
         <OrderSuccessModal />
+        <TokenVerificationModal />
         <EditModal />
         <BackToTop />
         <TextColorEditor />
       </div>
     )
   }
+
   
   return (
     <div 
@@ -222,6 +228,7 @@ const AppContent = () => {
       <Notification />
       <OrderSuccessModal />
       <ImportantNoticeModal />
+      <TokenVerificationModal />
       <EditModal />
       <WhatsAppButton />
       <BackToTop />

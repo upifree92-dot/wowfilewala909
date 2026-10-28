@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useAppContext } from '../../context/AppContext';
-import { Settings, CreditCard, Plus, Trash2, Edit2, Save, Globe, Smartphone, HelpCircle } from 'lucide-react';
+import { Settings, CreditCard, Plus, Trash2, Edit2, Save, Globe, Smartphone, HelpCircle, KeyRound, Lock, ExternalLink } from 'lucide-react';
 
 const AdminSettingsPage = () => {
     const { 
@@ -11,10 +12,13 @@ const AdminSettingsPage = () => {
         addBalancePackage, 
         deleteBalancePackage,
         theme,
-        toggleTheme
+        toggleTheme,
+        tokenProtection,
+        updateTokenProtection,
+        setNotification
     } = useAppContext();
 
-    const [activeTab, setActiveTab] = useState<'payments' | 'packages' | 'identity'>('payments');
+    const [activeTab, setActiveTab] = useState<'payments' | 'packages' | 'identity' | 'tokens'>('payments');
 
     // Payments Tab States
     const [upiId, setUpiId] = useState(siteContent?.pricing?.upiId || '');
@@ -54,6 +58,24 @@ const AdminSettingsPage = () => {
         updateSiteContent('auth.emailOtpEnabled', emailOtpEnabled);
         updateSiteContent('auth.hwidLockEnabled', hwidLockEnabled);
     };
+
+    // Token Protection Tab States
+    const [tokenLockEnabled, setTokenLockEnabled] = useState(tokenProtection?.enabled ?? true);
+    const [masterTokenKey, setMasterTokenKey] = useState(tokenProtection?.masterKey || 'FLASH-WOW-9090');
+    const [tokenWhatsapp, setTokenWhatsapp] = useState(tokenProtection?.adminWhatsappForTokens || '8658465589');
+    const [tokenPrompt, setTokenPrompt] = useState(tokenProtection?.promptMessage || 'This flash file is locked. Please enter your authorized Token Key to proceed.');
+
+    const handleSaveTokenSettings = async (e: React.FormEvent) => {
+        e.preventDefault();
+        await updateTokenProtection({
+            enabled: tokenLockEnabled,
+            masterKey: masterTokenKey.trim().toUpperCase(),
+            adminWhatsappForTokens: tokenWhatsapp.trim(),
+            promptMessage: tokenPrompt.trim()
+        });
+        setNotification('Token protection settings successfully saved and synced!', 'success');
+    };
+
 
     const handleOpenAddPackage = () => {
         setEditingPackage({ amount: '', price: '' });
@@ -134,7 +156,15 @@ const AdminSettingsPage = () => {
                     <Globe className="h-4 w-4 shrink-0" />
                     Site Identity & Info
                 </button>
+                <button
+                    onClick={() => setActiveTab('tokens')}
+                    className={`py-3.5 px-4 sm:px-6 font-bold text-xs sm:text-sm flex items-center gap-2 border-b-2 whitespace-nowrap shrink-0 transition-all ${activeTab === 'tokens' ? 'border-amber-500 text-amber-400 bg-amber-500/10' : 'border-transparent text-slate-300 hover:text-white'}`}
+                >
+                    <KeyRound className="h-4 w-4 shrink-0" />
+                    Token Key File Lock
+                </button>
             </div>
+
 
             {/* Content Area */}
             <div className="bg-slate-900/95 border border-slate-800 backdrop-blur-md p-4 sm:p-6 rounded-2xl shadow-xl text-slate-100">
@@ -468,7 +498,113 @@ const AdminSettingsPage = () => {
                         </div>
                     </form>
                 )}
+
+                {/* TOKEN KEY PROTECTION TAB */}
+                {activeTab === 'tokens' && (
+                    <form onSubmit={handleSaveTokenSettings} className="space-y-6">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-800 gap-3">
+                            <div>
+                                <h3 className="text-lg font-bold text-slate-100 flex items-center gap-2">
+                                    <KeyRound className="h-5 w-5 text-amber-500" />
+                                    Flash File Token Key Lock System
+                                </h3>
+                                <p className="text-xs text-slate-400 mt-0.5">
+                                    Prevent unauthorized downloads. When active, every user must enter a Token Key before accessing any flash file.
+                                </p>
+                            </div>
+                            <Link
+                                to="/admin/tokens"
+                                className="inline-flex items-center gap-1.5 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs rounded-xl shadow transition-all shrink-0"
+                            >
+                                <span>Open Full Token Manager</span>
+                                <ExternalLink className="w-3.5 h-3.5" />
+                            </Link>
+                        </div>
+
+                        {/* Master Lock Switch */}
+                        <div className="p-4 bg-slate-950/80 rounded-2xl border border-slate-800 flex items-center justify-between gap-4">
+                            <div>
+                                <label className="block text-sm font-bold text-slate-200">
+                                    Enforce Token Key on All File Downloads (Active Protection)
+                                </label>
+                                <p className="text-xs text-slate-400 mt-1">
+                                    When turned ON, no user can download or direct-access any flash file without verifying a Token Key first.
+                                </p>
+                            </div>
+                            <label className="relative inline-flex items-center cursor-pointer select-none shrink-0">
+                                <input
+                                    type="checkbox"
+                                    checked={tokenLockEnabled}
+                                    onChange={(e) => setTokenLockEnabled(e.target.checked)}
+                                    className="sr-only peer"
+                                />
+                                <div className="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500"></div>
+                            </label>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label className="block text-sm font-bold text-slate-200 mb-2">
+                                    Master Universal Token Key
+                                </label>
+                                <input
+                                    type="text"
+                                    value={masterTokenKey}
+                                    onChange={(e) => setMasterTokenKey(e.target.value.toUpperCase())}
+                                    className="w-full px-4 py-2.5 rounded-xl border border-slate-700 bg-slate-950 text-slate-100 font-mono font-bold tracking-wider uppercase focus:outline-none focus:ring-2 focus:ring-amber-500"
+                                    placeholder="FLASH-WOW-9090"
+                                />
+                                <p className="text-xs text-slate-400 mt-1">
+                                    Universal master bypass key that always unlocks any flash file.
+                                </p>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-bold text-slate-200 mb-2">
+                                    Admin WhatsApp Number for Token Inquiries
+                                </label>
+                                <input
+                                    type="text"
+                                    value={tokenWhatsapp}
+                                    onChange={(e) => setTokenWhatsapp(e.target.value)}
+                                    className="w-full px-4 py-2.5 rounded-xl border border-slate-700 bg-slate-950 text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                                    placeholder="8658465589"
+                                />
+                                <p className="text-xs text-slate-400 mt-1">
+                                    Users who don't have a token key will be directed to this WhatsApp number to purchase/request one.
+                                </p>
+                            </div>
+
+                            <div className="md:col-span-2">
+                                <label className="block text-sm font-bold text-slate-200 mb-2">
+                                    User Lock Notice Message
+                                </label>
+                                <input
+                                    type="text"
+                                    value={tokenPrompt}
+                                    onChange={(e) => setTokenPrompt(e.target.value)}
+                                    className="w-full px-4 py-2.5 rounded-xl border border-slate-700 bg-slate-950 text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                                    placeholder="This flash file is locked. Please enter your authorized Token Key to proceed."
+                                />
+                                <p className="text-xs text-slate-400 mt-1">
+                                    Shown in the security verification modal when users attempt to download.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="flex justify-end pt-2">
+                            <button
+                                type="submit"
+                                className="w-full sm:w-auto justify-center bg-amber-500 hover:bg-amber-600 text-slate-950 font-black px-6 py-2.5 rounded-xl flex items-center gap-2 shadow-sm transition-all"
+                            >
+                                <Save className="h-4 w-4" />
+                                Save Token Lock Configuration
+                            </button>
+                        </div>
+                    </form>
+                )}
             </div>
+
         </div>
     );
 };

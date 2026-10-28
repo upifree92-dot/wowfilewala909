@@ -5,13 +5,25 @@ import BackButton from '../components/BackButton';
 import { useSEO } from '../hooks/useSEO';
 import { 
   Download, Loader2, AlertCircle, CheckCircle, Lock, 
-  Coins, ArrowRight, FileText, Globe, Info, AlertTriangle 
+  Coins, ArrowRight, FileText, Globe, Info, AlertTriangle, KeyRound, ShieldCheck
 } from 'lucide-react';
 
 const DirectDownloadPage = () => {
   const [searchParams] = useSearchParams();
   const productId = searchParams.get('id');
-  const { products, user, hasPurchased, purchaseProductDirectly, initiateDownload, setNotification, siteContent } = useAppContext();
+  const { 
+    products, 
+    user, 
+    hasPurchased, 
+    purchaseProductDirectly, 
+    initiateDownload, 
+    setNotification, 
+    siteContent,
+    tokenProtection,
+    isTokenVerified,
+    verifyTokenKey,
+    isAdmin
+  } = useAppContext();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -21,8 +33,16 @@ const DirectDownloadPage = () => {
   const [isCountdownActive, setIsCountdownActive] = useState(false);
   const [isPurchasing, setIsPurchasing] = useState(false);
 
+  // Direct Token Verification State
+  const [tokenKeyInput, setTokenKeyInput] = useState('');
+  const [tokenError, setTokenError] = useState('');
+  const [tokenSuccess, setTokenSuccess] = useState('');
+  const [isVerifyingToken, setIsVerifyingToken] = useState(false);
+  const [verifiedTokenSession, setVerifiedTokenSession] = useState(() => isTokenVerified());
+
   const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const downloadTriggeredRef = useRef(false);
+
 
   const product = products.find(p => p.id === productId);
   useSEO(
@@ -122,9 +142,41 @@ const DirectDownloadPage = () => {
     }
   };
 
+  const isProtectedByToken = tokenProtection?.enabled && !isAdmin && !verifiedTokenSession;
+
+  const handleDirectTokenSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setTokenError('');
+    setTokenSuccess('');
+
+    const trimmed = tokenKeyInput.trim().toUpperCase();
+    if (!trimmed) {
+      setTokenError('Please enter a valid Token Key.');
+      return;
+    }
+
+    setIsVerifyingToken(true);
+    setTimeout(() => {
+      const res = verifyTokenKey(trimmed, product?.id, product?.name);
+      if (res.success) {
+        setTokenSuccess(res.message);
+        setVerifiedTokenSession(true);
+        setTimeout(() => {
+          setIsVerifyingToken(false);
+          downloadTriggeredRef.current = false;
+          handleDownloadAction();
+        }, 600);
+      } else {
+        setIsVerifyingToken(false);
+        setTokenError(res.message);
+      }
+    }, 400);
+  };
+
   // Auto-download handler for free/already-purchased files
   useEffect(() => {
     if (status !== 'ready' || !product) return;
+    if (isProtectedByToken) return; // Prevent auto-download when token is required!
 
     const isPurchased = hasPurchased(product.id);
     const isFree = product.price === 0;
@@ -140,7 +192,8 @@ const DirectDownloadPage = () => {
       setIsCountdownActive(true);
       setCountdown(3);
     }
-  }, [status, product, user]);
+  }, [status, product, user, isProtectedByToken]);
+
 
   // Handle countdown for paid files (auto unlock)
   useEffect(() => {

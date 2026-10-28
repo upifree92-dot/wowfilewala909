@@ -23,11 +23,12 @@ import {
     LogOut,
     Menu,
     X,
-    ExternalLink
+    ExternalLink,
+    KeyRound
 } from 'lucide-react';
 
 const AdminLayout = () => {
-    const { isAdmin, logout, getAdminNotifications, siteContent } = useAppContext();
+    const { isAdmin, logout, getAdminNotifications, siteContent, tokenProtection } = useAppContext();
     const navigate = useNavigate();
     const location = useLocation();
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -75,9 +76,11 @@ const AdminLayout = () => {
         { to: "/admin/automation", icon: <RefreshCw className="w-4 h-4 shrink-0" />, label: "Automation", hasSubmenu: true },
         { to: "/admin/utilities", icon: <Box className="w-4 h-4 shrink-0" />, label: "Utilities", hasSubmenu: true },
         { to: "/admin/logs", icon: <Calendar className="w-4 h-4 shrink-0" />, label: "Activity Log", hasSubmenu: true },
+        { to: "/admin/tokens", icon: <KeyRound className="w-4 h-4 shrink-0 text-amber-400" />, label: "Token Keys (File Lock)", hasSubmenu: false, badge: tokenProtection?.enabled ? "LOCK" : undefined },
         { to: "/admin/settings", icon: <Settings className="w-4 h-4 shrink-0" />, label: "Settings", hasSubmenu: true },
         { to: "/", icon: <Info className="w-4 h-4 shrink-0" />, label: "Website Theme", hasSubmenu: false },
     ];
+
 
     return (
         <div className="flex h-screen bg-[#f4f6fa] text-slate-800 font-sans overflow-hidden">
