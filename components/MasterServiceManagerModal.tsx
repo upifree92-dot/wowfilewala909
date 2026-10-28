@@ -56,11 +56,14 @@ const MasterServiceManagerModal: React.FC<MasterServiceManagerModalProps> = ({ i
     setEditForm({
       ...p,
       name: p.name || '',
+      serviceType: p.serviceType || getServiceType(p),
+      categoryId: p.categoryId || (categories.length > 0 ? categories[0].id : ''),
       price: p.price ?? 0,
       dealerPrice: p.dealerPrice ?? Math.round((p.price ?? 0) * 0.85),
       deliveryTime: p.deliveryTime || 'Instant',
       downloadLink: p.downloadLink || '#',
       description: p.description || '',
+      size: p.size || 'Auto API',
       isActive: p.isActive !== false
     });
   };
@@ -78,6 +81,11 @@ const MasterServiceManagerModal: React.FC<MasterServiceManagerModalProps> = ({ i
       price: Number(editForm.price || 0),
       dealerPrice: Number(editForm.dealerPrice || 0),
       name: editForm.name.trim(),
+      serviceType: editForm.serviceType || original.serviceType || 'server',
+      categoryId: editForm.categoryId || original.categoryId || (categories[0]?.id || 'cat-general'),
+      downloadLink: editForm.downloadLink || '#',
+      description: editForm.description || '',
+      size: editForm.size || 'Auto API'
     };
 
     updateProduct(updated);
@@ -385,65 +393,130 @@ const MasterServiceManagerModal: React.FC<MasterServiceManagerModalProps> = ({ i
 
                 if (isEditing) {
                   return (
-                    <tr key={p.id} className="bg-teal-950/30 border-l-2 border-teal-500">
-                      <td colSpan={7} className="p-3">
+                    <tr key={p.id} className="bg-teal-950/40 border-l-2 border-teal-500">
+                      <td colSpan={7} className="p-4">
                         <form onSubmit={handleSaveEdit} className="space-y-3">
-                          <div className="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-6 gap-2">
-                            <div className="col-span-2">
-                              <label className="block text-[9px] font-bold text-slate-400 uppercase">Title</label>
+                          <div className="text-xs font-bold text-teal-300 uppercase tracking-wider mb-1">
+                            ✏️ Editing Service: {p.name}
+                          </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+                            <div className="sm:col-span-2">
+                              <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Service Title</label>
                               <input
                                 type="text"
                                 value={editForm.name || ''}
                                 onChange={e => setEditForm({ ...editForm, name: e.target.value })}
-                                className="w-full p-1.5 bg-slate-950 border border-slate-700 text-white font-bold rounded text-xs"
+                                required
+                                className="w-full p-2 bg-slate-950 border border-slate-700 text-white font-bold rounded-lg text-xs"
                               />
                             </div>
 
                             <div>
-                              <label className="block text-[9px] font-bold text-slate-400 uppercase">Customer Price (₹)</label>
+                              <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Service Type</label>
+                              <select
+                                value={editForm.serviceType || 'server'}
+                                onChange={e => setEditForm({ ...editForm, serviceType: e.target.value as any })}
+                                className="w-full p-2 bg-slate-950 border border-slate-700 text-amber-400 font-bold rounded-lg text-xs"
+                              >
+                                <option value="imei">📱 IMEI Service</option>
+                                <option value="server">🖥️ Server Service</option>
+                                <option value="remote">⚡ Remote Tool Rent</option>
+                                <option value="file">📁 File Service</option>
+                              </select>
+                            </div>
+
+                            <div>
+                              <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Category</label>
+                              <select
+                                value={editForm.categoryId || ''}
+                                onChange={e => setEditForm({ ...editForm, categoryId: e.target.value })}
+                                className="w-full p-2 bg-slate-950 border border-slate-700 text-slate-300 rounded-lg text-xs"
+                              >
+                                {categories.map(c => (
+                                  <option key={c.id} value={c.id}>{c.name}</option>
+                                ))}
+                              </select>
+                            </div>
+
+                            <div>
+                              <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Customer Price (₹)</label>
                               <input
                                 type="number"
                                 value={editForm.price ?? 0}
                                 onChange={e => setEditForm({ ...editForm, price: Number(e.target.value) })}
-                                className="w-full p-1.5 bg-slate-950 border border-slate-700 text-emerald-400 font-bold font-mono rounded text-xs"
+                                required
+                                className="w-full p-2 bg-slate-950 border border-slate-700 text-emerald-400 font-bold font-mono rounded-lg text-xs"
                               />
                             </div>
 
                             <div>
-                              <label className="block text-[9px] font-bold text-slate-400 uppercase">Dealer Price (₹)</label>
+                              <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Dealer Price (₹)</label>
                               <input
                                 type="number"
                                 value={editForm.dealerPrice ?? 0}
                                 onChange={e => setEditForm({ ...editForm, dealerPrice: Number(e.target.value) })}
-                                className="w-full p-1.5 bg-slate-950 border border-slate-700 text-amber-400 font-bold font-mono rounded text-xs"
+                                required
+                                className="w-full p-2 bg-slate-950 border border-slate-700 text-amber-400 font-bold font-mono rounded-lg text-xs"
                               />
                             </div>
 
                             <div>
-                              <label className="block text-[9px] font-bold text-slate-400 uppercase">Delivery Time</label>
+                              <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Delivery Time</label>
                               <input
                                 type="text"
                                 value={editForm.deliveryTime || ''}
                                 onChange={e => setEditForm({ ...editForm, deliveryTime: e.target.value })}
-                                className="w-full p-1.5 bg-slate-950 border border-slate-700 text-slate-200 rounded text-xs"
+                                required
+                                className="w-full p-2 bg-slate-950 border border-slate-700 text-slate-200 rounded-lg text-xs"
                               />
                             </div>
 
-                            <div className="flex items-end gap-2">
-                              <button
-                                type="submit"
-                                className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-3 py-1.5 rounded text-xs"
-                              >
-                                Save
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => setEditingServiceId(null)}
-                                className="bg-slate-800 text-slate-300 font-bold px-3 py-1.5 rounded text-xs"
-                              >
-                                Cancel
-                              </button>
+                            <div>
+                              <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Size / Format</label>
+                              <input
+                                type="text"
+                                value={editForm.size || ''}
+                                onChange={e => setEditForm({ ...editForm, size: e.target.value })}
+                                className="w-full p-2 bg-slate-950 border border-slate-700 text-slate-200 rounded-lg text-xs font-mono"
+                              />
                             </div>
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div>
+                              <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Download / API Link</label>
+                              <input
+                                type="text"
+                                value={editForm.downloadLink || ''}
+                                onChange={e => setEditForm({ ...editForm, downloadLink: e.target.value })}
+                                className="w-full p-2 bg-slate-950 border border-slate-700 text-slate-200 rounded-lg text-xs font-mono"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Description</label>
+                              <input
+                                type="text"
+                                value={editForm.description || ''}
+                                onChange={e => setEditForm({ ...editForm, description: e.target.value })}
+                                className="w-full p-2 bg-slate-950 border border-slate-700 text-slate-200 rounded-lg text-xs"
+                              />
+                            </div>
+                          </div>
+
+                          <div className="flex justify-end gap-2 pt-2">
+                            <button
+                              type="button"
+                              onClick={() => setEditingServiceId(null)}
+                              className="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold px-4 py-2 rounded-lg text-xs transition-all"
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              type="submit"
+                              className="bg-teal-500 hover:bg-teal-400 text-slate-950 font-black px-5 py-2 rounded-lg text-xs uppercase tracking-wider transition-all shadow cursor-pointer"
+                            >
+                              Save Changes
+                            </button>
                           </div>
                         </form>
                       </td>
