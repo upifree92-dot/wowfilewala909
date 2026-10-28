@@ -111,7 +111,7 @@ export const INITIAL_SITE_CONTENT = {
         "iconUrl": "https://img.icons8.com/ios-filled/50/ffffff/linkedin.png"
       }
     ],
-    "copyright": "© 2025 wowfilewala. All Rights Reserved."
+    "copyright": "© 2027 wowfilewala. All Rights Reserved."
   },
   "home": {
     "hero": {

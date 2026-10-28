@@ -303,8 +303,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         if (storedContent.header?.title === "KGFILEWALA" || storedContent.header?.title === "Your Health mobilehubb" || storedContent.header?.title === "mobilehubb") {
             storedContent.header.title = "wowfilewala";
         }
-        if (storedContent.footer?.copyright === "© 2025 mobilehubb. All Rights Reserved.") {
-            storedContent.footer.copyright = "© 2025 wowfilewala. All Rights Reserved.";
+        if (storedContent.footer) {
+            storedContent.footer.copyright = "© 2027 wowfilewala. All Rights Reserved.";
         }
         if (storedContent.websitePage?.p1 && storedContent.websitePage.p1.includes("mobilehubb")) {
             storedContent.websitePage.p1 = storedContent.websitePage.p1.replace(/mobilehubb/g, "wowfilewala");
