@@ -298,21 +298,21 @@ const ProductModal = ({ product, isOpen, onClose, onDelete }: ProductModalProps)
 
   useEffect(() => {
     if (product) {
-      setName(product.name);
-      setCategoryId(product.categoryId || '');
+      setName(product.name || '');
+      setCategoryId(product.categoryId || (categories.length > 0 ? categories[0].id : ''));
       setServiceType(product.serviceType || 'server');
-      setPrice(product.price);
-      setDealerPrice(product.dealerPrice ?? Math.round(product.price * 0.85));
+      setPrice(product.price ?? 0);
+      setDealerPrice(product.dealerPrice ?? Math.round((product.price ?? 0) * 0.85));
       setDeliveryTime(product.deliveryTime || 'Instant');
-      setDownloadLink(product.downloadLink);
+      setDownloadLink(product.downloadLink || '');
       setDescription(product.description || '');
       setSize(product.size || '1.0 MB');
-      setIsPaid(product.tags?.includes('paid') ?? true);
-      setIsNew(product.tags?.includes('new') ?? false);
-      setIsFeatured(product.tags?.includes('featured') ?? false);
+      setIsPaid(Array.isArray(product.tags) ? product.tags.includes('paid') : true);
+      setIsNew(Array.isArray(product.tags) ? product.tags.includes('new') : false);
+      setIsFeatured(Array.isArray(product.tags) ? product.tags.includes('featured') : false);
     } else {
       setName('');
-      setCategoryId(categories[0]?.id || '');
+      setCategoryId(categories.length > 0 ? categories[0].id : '');
       setServiceType('server');
       setPrice(0);
       setDealerPrice(0);
@@ -880,7 +880,8 @@ const AdminProductsPage = () => {
                         <div className="flex items-center justify-end gap-2">
                           <button
                             type="button"
-                            onClick={() => {
+                            onClick={(e) => {
+                              e.stopPropagation();
                               setSelectedProduct(p);
                               setIsProductModalOpen(true);
                             }}
@@ -890,7 +891,10 @@ const AdminProductsPage = () => {
                           </button>
                           <button
                             type="button"
-                            onClick={() => handleDeleteProduct(p.id)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteProduct(p.id);
+                            }}
                             className="px-2 py-1.5 rounded-lg bg-rose-500/15 hover:bg-rose-500/30 text-rose-400 border border-rose-500/30 text-xs font-bold transition-all cursor-pointer"
                             title="Delete Service"
                           >

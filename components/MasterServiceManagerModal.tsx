@@ -55,8 +55,12 @@ const MasterServiceManagerModal: React.FC<MasterServiceManagerModalProps> = ({ i
     setEditingServiceId(p.id);
     setEditForm({
       ...p,
-      dealerPrice: p.dealerPrice ?? Math.round(p.price * 0.85),
+      name: p.name || '',
+      price: p.price ?? 0,
+      dealerPrice: p.dealerPrice ?? Math.round((p.price ?? 0) * 0.85),
       deliveryTime: p.deliveryTime || 'Instant',
+      downloadLink: p.downloadLink || '#',
+      description: p.description || '',
       isActive: p.isActive !== false
     });
   };
