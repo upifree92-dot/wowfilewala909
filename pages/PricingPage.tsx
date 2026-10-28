@@ -119,14 +119,8 @@ const PaymentModal = ({ isOpen, onClose, pkg }: { isOpen: boolean, onClose: () =
                 <div className="bg-slate-100 p-3 rounded-xl inline-block mb-4 shadow-inner border border-slate-200">
                     <img src={qrCodeUrl} alt="UPI QR Code" className="mx-auto rounded-lg w-48 h-48"/>
                 </div>
-                <div className="bg-slate-100 dark:bg-slate-950 p-3 rounded-xl border border-slate-300 dark:border-slate-800 text-sm text-slate-800 dark:text-slate-300 mb-6 flex items-center justify-between">
+                <div className="bg-slate-100 dark:bg-slate-950 p-3 rounded-xl border border-slate-300 dark:border-slate-800 text-sm text-slate-800 dark:text-slate-300 mb-6 flex items-center justify-center">
                   <span><strong>Amount:</strong> ₹{pkg.price.toFixed(2)}</span>
-                  {upiId && (
-                    <div className="flex items-center gap-1.5 font-mono text-xs text-orange-600 dark:text-amber-400">
-                      <span>{upiId}</span>
-                      <CopyButton textToCopy={upiId} className="w-7 h-7 !p-1" />
-                    </div>
-                  )}
                 </div>
                  <a 
                     href={whatsappUrl} 
