@@ -225,7 +225,17 @@ const PricingPage = () => {
                                 <p className="text-xs text-slate-300 mt-1">{pkg.description}</p>
                                 
                                 <div className="mt-6">
-                                    <span className="text-4xl sm:text-5xl font-black text-white font-mono">₹{pkg.price.toFixed(2)}</span>
+                                    <div className="flex items-center justify-center gap-2 flex-wrap">
+                                      <span className="text-4xl sm:text-5xl font-black text-white font-mono">₹{pkg.price.toFixed(2)}</span>
+                                      {pkg.originalPrice && (
+                                        <span className="text-sm font-semibold text-slate-400 line-through">₹{pkg.originalPrice.toFixed(2)}</span>
+                                      )}
+                                      {pkg.discountBadge && (
+                                        <span className="text-[11px] font-black bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded-full uppercase">
+                                          {pkg.discountBadge}
+                                        </span>
+                                      )}
+                                    </div>
                                     <p className="text-xs text-slate-400 font-semibold mt-1">For {pkg.period}</p>
                                 </div>
                             </div>
@@ -261,9 +271,11 @@ const PricingPage = () => {
                            {/* Subscribe Button */}
                            <div className="p-7 pt-0 bg-white dark:bg-slate-900">
                                <button 
-                                   onClick={() => handleBuyClick(pkg)} 
-                                   disabled={!user}
-                                   className="w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-bold py-3.5 px-4 rounded-xl transition-all shadow-lg shadow-orange-500/25 disabled:opacity-50 disabled:cursor-not-allowed"
+                                   onClick={() => {
+                                     setSelectedPackage(pkg);
+                                     setPaymentModalOpen(true);
+                                   }} 
+                                   className="w-full bg-red-600 hover:bg-red-700 active:scale-98 text-white font-black py-3.5 px-4 rounded-xl transition-all shadow-md shadow-red-600/20 cursor-pointer"
                                >
                                    Subscribe Now
                                </button>

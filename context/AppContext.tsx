@@ -299,7 +299,14 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setLocalStorage('categories', merged);
     return merged;
   });
-  const [balancePackages, setBalancePackages] = useState<BalancePackage[]>(() => getLocalStorage('balancePackages', INITIAL_BALANCE_PACKAGES));
+  const [balancePackages, setBalancePackages] = useState<BalancePackage[]>(() => {
+    const loaded = getLocalStorage<BalancePackage[]>('balancePackages', []);
+    if (!Array.isArray(loaded) || loaded.length === 0 || !loaded.some(p => p.id === 'plan-basic' || p.id === 'plan-1-file')) {
+      setLocalStorage('balancePackages', INITIAL_BALANCE_PACKAGES);
+      return INITIAL_BALANCE_PACKAGES;
+    }
+    return loaded;
+  });
   const [anonymousRecents, setAnonymousRecents] = useState<string[]>(() => getLocalStorage('anonymousRecents', []));
   const [allUsers, setAllUsers] = useState<Record<string, User>>(() => getLocalStorage('users', {}));
   const [adminNotifications, setAdminNotifications] = useState<AdminNotification[]>(() => getLocalStorage('adminNotifications', []));

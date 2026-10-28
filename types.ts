@@ -152,6 +152,8 @@ export interface BalancePackage {
   dailyBandwidth: string;
   devices: string;
   isBestSeller?: boolean;
+  originalPrice?: number;
+  discountBadge?: string;
   amount?: number;
 }
 
