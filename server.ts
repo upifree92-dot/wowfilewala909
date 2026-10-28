@@ -113,7 +113,7 @@ async function startServer() {
     });
   });
 
-function getParsedUserGsmServices() {
+function getParsedUserGsmServices(customRate = 85.5, customMargin = 15) {
   const filePath = path.join(__dirname, 'public', 'assets', 'aistudio', 'Paste_October_26__2026_-_10_01PM_95e23a41');
   if (!fs.existsSync(filePath)) return null;
   try {
@@ -121,9 +121,6 @@ function getParsedUserGsmServices() {
     const lines = raw.split('\n');
     const services: any[] = [];
     let idCounter = 1;
-    
-    // Exchange rate factor (1 USD = 85.5 INR with margin)
-    const exchangeRate = 85.5;
 
     for (const line of lines) {
       const trimmed = line.trim();
@@ -147,7 +144,8 @@ function getParsedUserGsmServices() {
         }
 
         const usdPrice = parseFloat(parts[2]) || 0;
-        const inrPrice = usdPrice > 0 ? Math.round((usdPrice * exchangeRate * 1.15) * 100) / 100 : 0;
+        const marginMultiplier = 1 + (customMargin / 100);
+        const inrPrice = usdPrice > 0 ? Math.round((usdPrice * customRate * marginMultiplier) * 100) / 100 : 0;
         const name = parts[3];
 
         services.push({
@@ -159,7 +157,7 @@ function getParsedUserGsmServices() {
           usdPrice: usdPrice,
           size: serviceType === 'remote' ? 'Tool Rental' : serviceType === 'imei' ? 'Instant IMEI' : 'Auto API',
           description: `${name} - Auto Synced GSM API Service`,
-          providerCost: Math.round(usdPrice * exchangeRate * 100) / 100
+          providerCost: Math.round(usdPrice * customRate * 100) / 100
         });
       }
     }
@@ -172,21 +170,18 @@ function getParsedUserGsmServices() {
 
   // API Route: Automatically fetch & sync live GSM API Services
   app.post('/api/fetch-gsm-services', async (req, res) => {
-    const { apiUrl, username } = req.body || {};
+    const { apiUrl, username, exchangeRate, marginPercent } = req.body || {};
     try {
-      const parsedServices = getParsedUserGsmServices();
-      const services = parsedServices && parsedServices.length > 0 ? parsedServices : [
-        { id: 'gsm-101', name: 'FRPFILE ACTIVATOR A12 + Bypass Hello Screen', categoryName: 'Server Services', serviceType: 'server', price: 549.69, size: 'Auto Credit', description: 'Instant activation for FRPFILE A12+ Hello Bypass', providerCost: 450.00 },
-        { id: 'gsm-102', name: 'NexaPro A12+ Hello Bypass Server Credits', categoryName: 'Server Services', serviceType: 'server', price: 283.37, size: 'Auto Credit', description: 'NexaPro A12+ Hello Screen unlock credits', providerCost: 220.00 },
-        { id: 'gsm-105', name: 'Android Multi Tool Rent [2 Hours]', categoryName: 'Remote Tool Rentals', serviceType: 'remote', price: 37.72, size: '2 Hours ID', description: '2 Hours Instant Login ID & Password for Android Multi Tool', providerCost: 25.00 },
-        { id: 'gsm-106', name: 'UnlockTool Rent 24 Hours (Instant Access ID)', categoryName: 'Remote Tool Rentals', serviceType: 'remote', price: 120.00, size: '24 Hours ID', description: '24 Hours Full Access Login ID & Password for UnlockTool', providerCost: 90.00 },
-      ];
+      const rate = parseFloat(exchangeRate) || 85.5;
+      const margin = parseFloat(marginPercent) || 15;
+      const parsedServices = getParsedUserGsmServices(rate, margin);
+      const services = parsedServices && parsedServices.length > 0 ? parsedServices : [];
 
       res.json({
         success: true,
         apiBalance: '2778.068',
-        provider: apiUrl || 'https://www.gsmfastunlock.com',
-        username: username || 'mrbanu',
+        provider: apiUrl || 'API Server',
+        username: username || 'User',
         services: services,
         count: services.length,
         message: `Successfully synced ${services.length} live services from GSM API provider!`

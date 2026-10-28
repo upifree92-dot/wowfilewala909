@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAppContext } from '../../context/AppContext';
 import { 
     X, 
@@ -15,23 +15,23 @@ import {
 } from 'lucide-react';
 
 const HostingraConnectorPage = () => {
-    const { siteContent, updateSiteContent, setNotification, createProduct, products, categories, createCategory } = useAppContext();
+    const { siteContent, updateSiteContent, setNotification, createProduct, updateProduct, products, categories } = useAppContext();
 
     // Active tab in side menu: 'api_info' | 'pricing' | 'manage' | 'services' | 'delete'
     const [activeTab, setActiveTab] = useState<'api_info' | 'pricing' | 'manage' | 'services' | 'delete'>('api_info');
 
-    // Default API Server credentials matching exact screenshot image_de1d40f2.png
+    // Clean API Server credentials state with NO hardcoded default values
     const savedApi = siteContent?.apiServer || {};
     const [status, setStatus] = useState<string>(savedApi.status || 'Active');
-    const [apiName, setApiName] = useState<string>(savedApi.apiName || 'https://www.gsmkg');
-    const [apiUrl, setApiUrl] = useState<string>(savedApi.apiUrl || 'https://www.gsmfastunlock.com');
-    const [username, setUsername] = useState<string>(savedApi.username || 'mrbanu');
-    const [apiAccessKey, setApiAccessKey] = useState<string>(savedApi.apiAccessKey || 'W3A-419-MUK-CBM-8CD-I3-ZBY-42');
-    const [balance, setBalance] = useState<string>(savedApi.balance || '2778.068');
+    const [apiName, setApiName] = useState<string>(savedApi.apiName ?? '');
+    const [apiUrl, setApiUrl] = useState<string>(savedApi.apiUrl ?? '');
+    const [username, setUsername] = useState<string>(savedApi.username ?? '');
+    const [apiAccessKey, setApiAccessKey] = useState<string>(savedApi.apiAccessKey ?? '');
+    const [balance, setBalance] = useState<string>(savedApi.balance || '0.00');
 
     // Pricing tab state
-    const [marginPercent, setMarginPercent] = useState<number>(savedApi.marginPercent || 15);
-    const [exchangeRate, setExchangeRate] = useState<number>(savedApi.exchangeRate || 85.5);
+    const [marginPercent, setMarginPercent] = useState<number>(savedApi.marginPercent ?? 15);
+    const [exchangeRate, setExchangeRate] = useState<number>(savedApi.exchangeRate ?? 85.5);
     const [autoSyncPrice, setAutoSyncPrice] = useState<boolean>(savedApi.autoSyncPrice !== false);
 
     // Manage tab state
@@ -43,52 +43,91 @@ const HostingraConnectorPage = () => {
     // Services tab search
     const [serviceSearch, setServiceSearch] = useState('');
 
-    // Sample API Services List
-    const [apiServices, setApiServices] = useState([
-        { id: '101', name: 'FRPFILE ACTIVATOR A12 + Bypass Hello Screen', providerCost: 450.00, sellingPrice: 549.69, active: true },
-        { id: '102', name: 'NexaPro A12+ Hello bypass', providerCost: 220.00, sellingPrice: 283.37, active: true },
-        { id: '103', name: 'Apple iPhone / iPad Warranty Coverage Check', providerCost: 100.00, sellingPrice: 137.42, active: true },
-        { id: '104', name: 'Asm Auth Tool - Xiaomi FRP Credits', providerCost: 300.00, sellingPrice: 359.95, active: true },
-        { id: '105', name: 'Android Multi Tool Rent [2 Hours]', providerCost: 25.00, sellingPrice: 37.72, active: true },
-        { id: '106', name: 'UnlockTool Rent 24 Hours (Instant Access ID)', providerCost: 90.00, sellingPrice: 120.00, active: true },
-        { id: '107', name: 'Griffin Unlocker Rent 24 Hours', providerCost: 70.00, sellingPrice: 95.00, active: true },
-        { id: '108', name: 'Borneo Schematic Rent 24 Hours', providerCost: 60.00, sellingPrice: 80.00, active: true },
-    ]);
+    useEffect(() => {
+        if (siteContent?.apiServer) {
+            const api = siteContent.apiServer;
+            if (api.status !== undefined) setStatus(api.status);
+            if (api.apiName !== undefined) setApiName(api.apiName);
+            if (api.apiUrl !== undefined) setApiUrl(api.apiUrl);
+            if (api.username !== undefined) setUsername(api.username);
+            if (api.apiAccessKey !== undefined) setApiAccessKey(api.apiAccessKey);
+            if (api.balance !== undefined) setBalance(api.balance);
+            if (api.marginPercent !== undefined) setMarginPercent(api.marginPercent);
+            if (api.exchangeRate !== undefined) setExchangeRate(api.exchangeRate);
+            if (api.autoSyncPrice !== undefined) setAutoSyncPrice(api.autoSyncPrice);
+        }
+    }, [siteContent]);
+
+    // Recalculate & update all catalog prices when Exchange Rate or Profit Margin changes
+    const updateAllProductPrices = (rate: number, margin: number) => {
+        if (!products || products.length === 0) return 0;
+        let count = 0;
+        products.forEach((p) => {
+            let baseUsd = p.usdPrice;
+            if (!baseUsd && p.price > 0) {
+                // Infer base USD cost assuming previous 85.5 rate and 15% margin
+                baseUsd = p.price / (85.5 * 1.15);
+            }
+            if (baseUsd && baseUsd > 0) {
+                const newInrCost = baseUsd * rate;
+                const newSellingPrice = Math.round((newInrCost * (1 + margin / 100)) * 100) / 100;
+                updateProduct({
+                    ...p,
+                    price: newSellingPrice,
+                    providerCost: Math.round(newInrCost * 100) / 100
+                });
+                count++;
+            }
+        });
+        return count;
+    };
 
     // Perform live API fetch & automatically populate services into catalog
-    const syncApiServicesToCatalog = async () => {
+    const syncApiServicesToCatalog = async (
+        url = apiUrl,
+        user = username,
+        key = apiAccessKey,
+        rate = exchangeRate,
+        margin = marginPercent
+    ) => {
         try {
             const res = await fetch('/api/fetch-gsm-services', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ apiUrl, username, apiAccessKey })
+                body: JSON.stringify({ apiUrl: url, username: user, apiAccessKey: key, exchangeRate: rate, marginPercent: margin })
             });
             const data = await res.json();
             if (data?.success && Array.isArray(data.services)) {
                 setBalance(data.apiBalance || balance);
-                let addedCount = 0;
+                let updatedCount = 0;
                 
-                // Find or default category ID
                 const defaultCat = categories[0]?.id || 'cat-box-tools';
 
                 data.services.forEach((srv: any) => {
-                    const exists = products.some(p => p.name.toLowerCase() === srv.name.toLowerCase());
-                    if (!exists) {
+                    const existingProduct = products.find(p => p.name.toLowerCase() === srv.name.toLowerCase());
+                    if (existingProduct) {
+                        updateProduct({
+                            ...existingProduct,
+                            price: srv.price,
+                            providerCost: srv.providerCost
+                        });
+                        updatedCount++;
+                    } else {
                         createProduct({
                             name: srv.name,
                             categoryId: defaultCat,
                             serviceType: srv.serviceType || 'server',
                             price: srv.price,
-                            downloadLink: apiUrl || 'https://www.gsmfastunlock.com',
+                            downloadLink: url || '#',
                             description: `${srv.description || srv.name} - Auto Synced from ${apiName || 'API Server'}`,
                             size: srv.size || 'Auto Sync',
                             tags: ['new', 'paid']
                         });
-                        addedCount++;
+                        updatedCount++;
                     }
                 });
 
-                setNotification(`API Connected! ${data.services.length} services synced live (${addedCount} new added to catalog).`, 'success');
+                setNotification(`API Connected! Synced ${data.services.length} services at 1 USD = ₹${rate} (${margin}% margin).`, 'success');
                 return true;
             }
         } catch (e) {
@@ -115,7 +154,38 @@ const HostingraConnectorPage = () => {
             autoCheckStatus
         };
         updateSiteContent('apiServer', updatedData);
-        await syncApiServicesToCatalog();
+
+        if (apiUrl.trim()) {
+            await syncApiServicesToCatalog(apiUrl, username, apiAccessKey, exchangeRate, marginPercent);
+        } else {
+            setNotification('API Server configuration saved successfully!', 'success');
+        }
+    };
+
+    // Handle Save Pricing Rules
+    const handleSavePricing = async (e: React.FormEvent) => {
+        e.preventDefault();
+        const updatedData = {
+            status,
+            apiName,
+            apiUrl,
+            username,
+            apiAccessKey,
+            balance,
+            marginPercent,
+            exchangeRate,
+            autoSyncPrice,
+            autoPlaceOrders,
+            autoCheckStatus
+        };
+        updateSiteContent('apiServer', updatedData);
+
+        const count = updateAllProductPrices(exchangeRate, marginPercent);
+        if (apiUrl.trim()) {
+            await syncApiServicesToCatalog(apiUrl, username, apiAccessKey, exchangeRate, marginPercent);
+        }
+
+        setNotification(`Pricing Rules Saved! Profit Margin: ${marginPercent}%, Rate: 1 USD = ₹${exchangeRate}. ${count || 'All'} service prices updated!`, 'success');
     };
 
     // Test connection handler
@@ -138,14 +208,14 @@ const HostingraConnectorPage = () => {
 
     return (
         <div className="max-w-6xl mx-auto pb-12 font-sans animate-in fade-in duration-200">
-            {/* Main Outer Modal/Card matching exact layout of image_de1d40f2.png */}
+            {/* Main Outer Modal/Card matching exact layout */}
             <div className="bg-white rounded-lg border border-slate-200/90 shadow-sm overflow-hidden min-h-[520px]">
                 {/* Modal Title Header */}
                 <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-white">
                     <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight flex items-center gap-2">
-                        <span>{apiName || 'https://www.gsmkg'}</span>
+                        <span>{apiName.trim() || 'API Server Integration'}</span>
                         <span className="text-slate-700 font-semibold text-sm sm:text-base">
-                            (₹{balance} )
+                            (₹{balance})
                         </span>
                     </h2>
                     <button
@@ -160,7 +230,7 @@ const HostingraConnectorPage = () => {
 
                 {/* Main Content Area: Left Vertical Tabs + Right Content Panel */}
                 <div className="flex flex-col md:flex-row min-h-[460px]">
-                    {/* Left Sidebar Menu matching image_de1d40f2.png */}
+                    {/* Left Sidebar Menu */}
                     <div className="w-full md:w-48 bg-[#f8fafc] border-b md:border-b-0 md:border-r border-slate-200 shrink-0 py-2">
                         <button
                             type="button"
@@ -221,7 +291,7 @@ const HostingraConnectorPage = () => {
 
                     {/* Right Main Content Panel */}
                     <div className="flex-1 p-6 sm:p-8 bg-white flex flex-col justify-between">
-                        {/* TAB 1: API Info (Exact layout of image_de1d40f2.png) */}
+                        {/* TAB 1: API Info */}
                         {activeTab === 'api_info' && (
                             <form onSubmit={handleUpdateApiInfo} className="space-y-6 max-w-2xl">
                                 <div className="space-y-5">
@@ -238,7 +308,6 @@ const HostingraConnectorPage = () => {
                                             >
                                                 <option value="Active">Active</option>
                                                 <option value="Disabled">Disabled</option>
-                                                <option value="Maintenance">Maintenance</option>
                                             </select>
                                         </div>
                                     </div>
@@ -253,7 +322,7 @@ const HostingraConnectorPage = () => {
                                                 type="text"
                                                 value={apiName}
                                                 onChange={(e) => setApiName(e.target.value)}
-                                                placeholder="https://www.gsmkg"
+                                                placeholder="e.g. My GSM Server API"
                                                 className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-md text-xs sm:text-sm text-slate-800 focus:outline-none focus:border-slate-800 transition-all shadow-2xs"
                                             />
                                         </div>
@@ -269,7 +338,7 @@ const HostingraConnectorPage = () => {
                                                 type="text"
                                                 value={apiUrl}
                                                 onChange={(e) => setApiUrl(e.target.value)}
-                                                placeholder="https://www.gsmfastunlock.com"
+                                                placeholder="e.g. https://your-provider-domain.com"
                                                 className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-md text-xs sm:text-sm text-slate-800 focus:outline-none focus:border-slate-800 transition-all shadow-2xs"
                                             />
                                         </div>
@@ -285,7 +354,7 @@ const HostingraConnectorPage = () => {
                                                 type="text"
                                                 value={username}
                                                 onChange={(e) => setUsername(e.target.value)}
-                                                placeholder="mrbanu"
+                                                placeholder="Enter API Username"
                                                 className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-md text-xs sm:text-sm text-slate-800 focus:outline-none focus:border-slate-800 transition-all shadow-2xs"
                                             />
                                         </div>
@@ -301,14 +370,14 @@ const HostingraConnectorPage = () => {
                                                 type="text"
                                                 value={apiAccessKey}
                                                 onChange={(e) => setApiAccessKey(e.target.value)}
-                                                placeholder="W3A-419-MUK-CBM-8CD-I3-ZBY-42"
+                                                placeholder="Enter API Access Key"
                                                 className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-md text-xs sm:text-sm text-slate-800 font-mono focus:outline-none focus:border-slate-800 transition-all shadow-2xs"
                                             />
                                         </div>
                                     </div>
                                 </div>
 
-                                {/* Update Button (Black button matching exact photo image_de1d40f2.png) */}
+                                {/* Update Button */}
                                 <div className="pt-6">
                                     <button
                                         type="submit"
@@ -322,7 +391,7 @@ const HostingraConnectorPage = () => {
 
                         {/* TAB 2: Pricing */}
                         {activeTab === 'pricing' && (
-                            <form onSubmit={handleUpdateApiInfo} className="space-y-6 max-w-2xl">
+                            <form onSubmit={handleSavePricing} className="space-y-6 max-w-2xl">
                                 <div className="space-y-5">
                                     <div className="grid grid-cols-1 sm:grid-cols-12 items-center gap-3">
                                         <label className="sm:col-span-4 text-xs sm:text-sm font-medium text-slate-700">
@@ -333,10 +402,10 @@ const HostingraConnectorPage = () => {
                                                 type="number"
                                                 value={marginPercent}
                                                 onChange={(e) => setMarginPercent(parseFloat(e.target.value) || 0)}
-                                                className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-md text-xs sm:text-sm text-slate-800 focus:outline-none focus:border-slate-800 transition-all shadow-2xs"
+                                                className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-md text-xs sm:text-sm text-slate-800 focus:outline-none focus:border-slate-800 transition-all shadow-2xs font-bold text-amber-600"
                                             />
                                             <p className="text-[11px] text-slate-400 mt-1">
-                                                Adds profit margin automatically on provider costs.
+                                                Adds profit margin percentage automatically on provider base costs.
                                             </p>
                                         </div>
                                     </div>
@@ -351,8 +420,11 @@ const HostingraConnectorPage = () => {
                                                 step="0.1"
                                                 value={exchangeRate}
                                                 onChange={(e) => setExchangeRate(parseFloat(e.target.value) || 1)}
-                                                className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-md text-xs sm:text-sm text-slate-800 focus:outline-none focus:border-slate-800 transition-all shadow-2xs"
+                                                className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-md text-xs sm:text-sm text-slate-800 focus:outline-none focus:border-slate-800 transition-all shadow-2xs font-bold text-emerald-600"
                                             />
+                                            <p className="text-[11px] text-slate-400 mt-1">
+                                                Used to convert USD provider costs into INR.
+                                            </p>
                                         </div>
                                     </div>
 
@@ -378,7 +450,7 @@ const HostingraConnectorPage = () => {
                                 <div className="pt-6">
                                     <button
                                         type="submit"
-                                        className="px-6 py-2.5 bg-[#18181b] hover:bg-black text-white font-semibold text-xs sm:text-sm rounded-md shadow-sm transition-all cursor-pointer"
+                                        className="px-6 py-2.5 bg-[#18181b] hover:bg-black text-white font-semibold text-xs sm:text-sm rounded-md shadow-sm transition-all cursor-pointer active:scale-95"
                                     >
                                         Save Pricing Rules
                                     </button>
@@ -393,11 +465,11 @@ const HostingraConnectorPage = () => {
                                     <div className="flex items-center justify-between">
                                         <div>
                                             <h3 className="font-bold text-xs sm:text-sm text-slate-800">Connection Status</h3>
-                                            <p className="text-xs text-slate-500 mt-0.5">{apiUrl}</p>
+                                            <p className="text-xs text-slate-500 mt-0.5">{apiUrl || 'Not configured'}</p>
                                         </div>
-                                        <span className="px-3 py-1 bg-emerald-100 text-emerald-800 text-xs font-bold rounded-full flex items-center gap-1.5">
+                                        <span className={`px-3 py-1 text-xs font-bold rounded-full flex items-center gap-1.5 ${apiUrl ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-600'}`}>
                                             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                                            Active
+                                            {apiUrl ? 'Active' : 'Inactive'}
                                         </span>
                                     </div>
 
@@ -470,26 +542,28 @@ const HostingraConnectorPage = () => {
                                     </button>
                                 </div>
 
-                                <div className="overflow-x-auto border border-slate-200 rounded-md">
+                                <div className="overflow-x-auto border border-slate-200 rounded-md max-h-96">
                                     <table className="w-full text-left text-xs">
-                                        <thead className="bg-slate-50 border-b border-slate-200 text-slate-700 font-bold">
+                                        <thead className="bg-slate-50 border-b border-slate-200 text-slate-700 font-bold sticky top-0 bg-slate-50">
                                             <tr>
                                                 <th className="p-3">ID</th>
                                                 <th className="p-3">Service Name</th>
-                                                <th className="p-3 text-right">API Cost</th>
-                                                <th className="p-3 text-right">Selling Price</th>
+                                                <th className="p-3 text-right">API Cost (USD)</th>
+                                                <th className="p-3 text-right">Selling Price (INR)</th>
                                                 <th className="p-3 text-center">Status</th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-slate-100">
-                                            {apiServices
-                                                .filter(s => s.name.toLowerCase().includes(serviceSearch.toLowerCase()))
-                                                .map((srv) => (
-                                                    <tr key={srv.id} className="hover:bg-slate-50">
-                                                        <td className="p-3 font-mono text-slate-500">#{srv.id}</td>
-                                                        <td className="p-3 font-semibold text-slate-800">{srv.name}</td>
-                                                        <td className="p-3 text-right text-slate-600">₹{srv.providerCost.toFixed(2)}</td>
-                                                        <td className="p-3 text-right font-bold text-slate-900">₹{srv.sellingPrice.toFixed(2)}</td>
+                                            {products
+                                                .filter(p => p.name.toLowerCase().includes(serviceSearch.toLowerCase()))
+                                                .map((p, idx) => (
+                                                    <tr key={p.id || idx} className="hover:bg-slate-50">
+                                                        <td className="p-3 font-mono text-slate-500">#{p.id}</td>
+                                                        <td className="p-3 font-semibold text-slate-800">{p.name}</td>
+                                                        <td className="p-3 text-right text-slate-600 font-mono">
+                                                            ${p.usdPrice ? p.usdPrice.toFixed(2) : (p.price / (exchangeRate * (1 + marginPercent / 100))).toFixed(2)}
+                                                        </td>
+                                                        <td className="p-3 text-right font-bold text-slate-900 font-mono">₹{p.price.toFixed(2)}</td>
                                                         <td className="p-3 text-center">
                                                             <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 text-[10px] font-bold rounded-full">
                                                                 Active
@@ -509,7 +583,7 @@ const HostingraConnectorPage = () => {
                                 <div className="p-5 bg-rose-50 border border-rose-200 rounded-lg space-y-2 text-rose-700">
                                     <div className="flex items-center gap-2 font-bold text-sm text-rose-800">
                                         <AlertTriangle className="w-4 h-4 text-rose-600" />
-                                        Remove API Integration ({apiName})
+                                        Remove API Integration ({apiName || 'Current Server'})
                                     </div>
                                     <p className="text-xs leading-relaxed text-rose-600">
                                         Are you sure you want to delete this API provider server? Auto-submission and live balance syncing for this endpoint will stop.
@@ -521,7 +595,11 @@ const HostingraConnectorPage = () => {
                                         type="button"
                                         onClick={() => {
                                             setStatus('Disabled');
-                                            setNotification('API Server provider integration disabled.', 'error');
+                                            setApiUrl('');
+                                            setUsername('');
+                                            setApiAccessKey('');
+                                            updateSiteContent('apiServer', { status: 'Disabled', apiName: '', apiUrl: '', username: '', apiAccessKey: '' });
+                                            setNotification('API Server provider integration disabled and fields cleared.', 'error');
                                         }}
                                         className="px-6 py-2.5 bg-red-600 hover:bg-red-700 text-white font-bold text-xs sm:text-sm rounded-md shadow-sm transition-all cursor-pointer flex items-center gap-2"
                                     >
