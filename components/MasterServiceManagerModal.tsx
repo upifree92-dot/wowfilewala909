@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { useAppContext } from '../context/AppContext';
 import type { Product } from '../types';
 import { Search, X, Plus, Edit2, Trash2, ShieldCheck, Zap, Server, Smartphone, FolderCheck, Percent, Layers, CheckCircle } from 'lucide-react';
@@ -9,7 +10,7 @@ interface MasterServiceManagerModalProps {
 }
 
 const MasterServiceManagerModal: React.FC<MasterServiceManagerModalProps> = ({ isOpen, onClose }) => {
-  const { products, categories, createProduct, updateProduct, deleteProduct, setNotification } = useAppContext();
+  const { isAdmin, products, categories, createProduct, updateProduct, deleteProduct, setNotification } = useAppContext();
 
   const [activeTab, setActiveTab] = useState<'all' | 'imei' | 'remote' | 'server' | 'file'>('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -31,7 +32,7 @@ const MasterServiceManagerModal: React.FC<MasterServiceManagerModalProps> = ({ i
   const [editingServiceId, setEditingServiceId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Partial<Product>>({});
 
-  if (!isOpen) return null;
+  if (!isOpen || !isAdmin) return null;
 
   const getServiceType = (p: Product): 'imei' | 'remote' | 'server' | 'file' => {
     if (p.serviceType) return p.serviceType;
@@ -136,13 +137,11 @@ const MasterServiceManagerModal: React.FC<MasterServiceManagerModalProps> = ({ i
   };
 
   const handleDelete = (id: string, name: string) => {
-    if (window.confirm(`Delete service "${name}"?`)) {
-      deleteProduct(id);
-      setNotification(`Service deleted!`, 'success');
-    }
+    deleteProduct(id);
+    setNotification(`Service "${name}" deleted!`, 'success');
   };
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-[9999] bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 animate-fade-in">
       <div className="bg-slate-900 border-2 border-teal-500/40 rounded-2xl w-full max-w-6xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
         
@@ -599,7 +598,8 @@ const MasterServiceManagerModal: React.FC<MasterServiceManagerModalProps> = ({ i
         </div>
 
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

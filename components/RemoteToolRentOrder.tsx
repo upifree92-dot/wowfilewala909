@@ -188,7 +188,7 @@ export const REMOTE_RENTAL_TOOLS: RemoteToolItem[] = [
 
 const RemoteToolRentOrder: React.FC = () => {
   const navigate = useNavigate();
-  const { user, placeImeiOrder, setNotification } = useAppContext();
+  const { user, products, placeImeiOrder, setNotification } = useAppContext();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedGroup, setSelectedGroup] = useState('All');
@@ -201,9 +201,48 @@ const RemoteToolRentOrder: React.FC = () => {
   const [userNote, setUserNote] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Merge static list with Admin-updated/added Remote Tool Rent products from AppContext
+  const liveRemoteTools = useMemo(() => {
+    const productById = new Map<string, any>();
+    const productByName = new Map<string, any>();
+    (products || []).forEach((p) => {
+      productById.set(p.id, p);
+      productByName.set(p.name.trim().toLowerCase(), p);
+    });
+
+    const baseIds = new Set(REMOTE_RENTAL_TOOLS.map((t) => t.id));
+    const baseNames = new Set(REMOTE_RENTAL_TOOLS.map((t) => t.name.trim().toLowerCase()));
+
+    const updatedBase = REMOTE_RENTAL_TOOLS.map((tool) => {
+      const match = productById.get(tool.id) || productByName.get(tool.name.trim().toLowerCase());
+      if (match) {
+        return {
+          ...tool,
+          name: match.name || tool.name,
+          price: match.price ?? tool.price,
+          deliveryTime: match.deliveryTime || tool.deliveryTime,
+        };
+      }
+      return tool;
+    });
+
+    const customRemote: RemoteToolItem[] = (products || [])
+      .filter((p) => p.serviceType === 'remote' && !baseIds.has(p.id) && !baseNames.has(p.name.trim().toLowerCase()))
+      .map((p) => ({
+        id: p.id,
+        name: p.name,
+        category: 'Rent Digital Tools Username&Password ✅',
+        price: p.price ?? 0,
+        deliveryTime: p.deliveryTime || 'Instant',
+        isNew: p.tags?.includes('new') ?? true,
+      }));
+
+    return [...customRemote, ...updatedBase];
+  }, [products]);
+
   // Filter tools based on search, group, and discounted checkbox
   const filteredTools = useMemo(() => {
-    return REMOTE_RENTAL_TOOLS.filter((tool) => {
+    return liveRemoteTools.filter((tool) => {
       // Group filter
       if (selectedGroup !== 'All' && tool.category !== selectedGroup) {
         return false;
@@ -224,7 +263,7 @@ const RemoteToolRentOrder: React.FC = () => {
       }
       return true;
     });
-  }, [searchQuery, selectedGroup, discountedOnly]);
+  }, [liveRemoteTools, searchQuery, selectedGroup, discountedOnly]);
 
   const handleOpenOrderModal = (tool: RemoteToolItem) => {
     setActiveModalTool(tool);

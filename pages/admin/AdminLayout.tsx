@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { NavLink, Outlet, useNavigate, Link, useLocation } from 'react-router-dom';
 import { useAppContext } from '../../context/AppContext';
+import Notification from '../../components/Notification';
 import {
     Gauge,
     ShoppingBag,
@@ -28,7 +29,7 @@ import {
 } from 'lucide-react';
 
 const AdminLayout = () => {
-    const { isAdmin, logout, getAdminNotifications, siteContent, tokenProtection } = useAppContext();
+    const { user, isAdmin, logout, getAdminNotifications, siteContent, tokenProtection } = useAppContext();
     const navigate = useNavigate();
     const location = useLocation();
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -36,12 +37,30 @@ const AdminLayout = () => {
 
     React.useEffect(() => {
         if (!isAdmin) {
-            navigate('/login', { replace: true });
+            navigate(user ? '/' : '/login', { replace: true });
         }
-    }, [isAdmin, navigate]);
+    }, [isAdmin, user, navigate]);
 
     if (!isAdmin) {
-        return <div className="h-screen w-screen flex items-center justify-center bg-black text-white">Access Denied</div>;
+        return (
+            <div className="h-screen w-screen flex flex-col items-center justify-center bg-slate-950 text-white p-6 text-center">
+                <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 max-w-md w-full shadow-2xl">
+                    <div className="w-12 h-12 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center mx-auto mb-4 font-black text-xl">
+                        🔒
+                    </div>
+                    <h2 className="text-lg font-extrabold text-white mb-2">Admin Access Only</h2>
+                    <p className="text-xs text-slate-400 mb-6">
+                        Yeh section aur editing options keval Administrator ke liye hain.
+                    </p>
+                    <Link
+                        to={user ? '/' : '/login'}
+                        className="inline-block w-full py-2.5 px-4 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs uppercase tracking-wider transition-all"
+                    >
+                        {user ? 'Go to Home Page' : 'Admin Login'}
+                    </Link>
+                </div>
+            </div>
+        );
     }
 
     const [servicesMenuOpen, setServicesMenuOpen] = useState(
@@ -84,6 +103,7 @@ const AdminLayout = () => {
 
     return (
         <div className="flex h-screen bg-[#f4f6fa] text-slate-800 font-sans overflow-hidden">
+            <Notification />
             {/* Desktop Left Sidebar (Pure Black #000000 exactly matching photo) */}
             <aside className="hidden lg:flex flex-col w-64 bg-black text-white shrink-0 border-r border-neutral-900 select-none z-30">
                 {/* Brand Logo & Title */}

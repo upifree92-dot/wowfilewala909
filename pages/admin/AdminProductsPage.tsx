@@ -1,8 +1,24 @@
 import React, { useState, useMemo, FormEvent, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { createPortal } from 'react-dom';
+import { useSearchParams, Link } from 'react-router-dom';
 import { useAppContext } from '../../context/AppContext';
 import type { Product, Category, ActivationFormConfig, ActivationCustomField } from '../../types';
 import MasterServiceManagerModal from '../../components/MasterServiceManagerModal';
+
+const inferProductServiceType = (p: Product): 'imei' | 'server' | 'remote' | 'file' => {
+  if (p.serviceType) return p.serviceType;
+  const id = (p.id || '').toLowerCase();
+  if (id.startsWith('imei-')) return 'imei';
+  if (id.startsWith('srv-') || id.startsWith('server-')) return 'server';
+  if (id.startsWith('remote-') || id.startsWith('tool-')) return 'remote';
+  if (id.startsWith('file-') || id.startsWith('pkg-')) return 'file';
+
+  const text = (p.name + ' ' + (p.description || '') + ' ' + (p.categoryId || '')).toLowerCase();
+  if (text.includes('imei') || text.includes('icloud') || text.includes('sn ') || text.includes('serial') || text.includes('carrier') || text.includes('clean imei') || text.includes('network unlock')) return 'imei';
+  if (text.includes('remote') || text.includes('rent') || text.includes('teamviewer') || text.includes('flexihub') || text.includes('hours') || text.includes('login id')) return 'remote';
+  if (text.includes('file') || text.includes('firmware') || text.includes('rom') || text.includes('dump') || text.includes('setup') || text.includes('driver') || text.includes('iso') || text.includes('pinout') || text.includes('schematic') || text.includes('da ') || text.includes('flash tool')) return 'file';
+  return 'server';
+};
 
 // --- Category Modal (Add / Edit / Form Builder) ---
 interface CategoryModalProps {
@@ -12,7 +28,7 @@ interface CategoryModalProps {
 }
 
 const CategoryModal = ({ category, isOpen, onClose }: CategoryModalProps) => {
-  const { createCategory, updateCategory, categories } = useAppContext();
+  const { isAdmin, createCategory, updateCategory, categories } = useAppContext();
   
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -72,7 +88,7 @@ const CategoryModal = ({ category, isOpen, onClose }: CategoryModalProps) => {
     setCustomFields([]);
   };
 
-  if (!isOpen) return null;
+  if (!isOpen || !isAdmin) return null;
 
   const handleAddField = () => {
     if (!newFieldName || !newFieldLabel) return;
@@ -128,10 +144,10 @@ const CategoryModal = ({ category, isOpen, onClose }: CategoryModalProps) => {
     onClose();
   };
 
-  return (
-    <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex justify-center items-center z-50 p-4" onClick={onClose}>
-      <div className="bg-slate-950 p-6 sm:p-8 rounded-2xl shadow-2xl w-full max-w-2xl border border-slate-800 relative max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-        <button onClick={onClose} className="absolute top-4 right-4 text-slate-400 hover:text-slate-200 text-3xl font-bold transition-colors">&times;</button>
+  return createPortal(
+    <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-md flex justify-center items-center z-[9999] p-3 sm:p-4" onClick={onClose}>
+      <div className="bg-slate-950 p-5 sm:p-8 rounded-2xl shadow-2xl w-full max-w-2xl border border-slate-800 relative max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+        <button type="button" onClick={onClose} className="absolute top-4 right-4 text-slate-400 hover:text-slate-200 text-3xl font-bold transition-colors">&times;</button>
         <h2 className="text-xl font-bold mb-1 text-slate-100">{category ? 'Edit Category' : 'Create Category'}</h2>
         <p className="text-xs text-slate-500 mb-6">Setup categories and custom active forms for keys & services</p>
 
@@ -267,7 +283,8 @@ const CategoryModal = ({ category, isOpen, onClose }: CategoryModalProps) => {
           </button>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 
@@ -281,7 +298,7 @@ interface ProductModalProps {
 }
 
 const ProductModal = ({ product, isOpen, onClose, onDelete }: ProductModalProps) => {
-  const { createProduct, updateProduct, categories } = useAppContext();
+  const { isAdmin, createProduct, updateProduct, categories, setNotification } = useAppContext();
 
   const [name, setName] = useState('');
   const [categoryId, setCategoryId] = useState('');
@@ -301,11 +318,11 @@ const ProductModal = ({ product, isOpen, onClose, onDelete }: ProductModalProps)
     if (product) {
       setName(product.name || '');
       setCategoryId(product.categoryId || defaultCatId);
-      setServiceType(product.serviceType || 'server');
+      setServiceType(inferProductServiceType(product));
       setPrice(product.price ?? 0);
       setDealerPrice(product.dealerPrice ?? Math.round((product.price ?? 0) * 0.85));
       setDeliveryTime(product.deliveryTime || 'Instant');
-      setDownloadLink(product.downloadLink || '');
+      setDownloadLink(product.downloadLink || '#');
       setDescription(product.description || '');
       setSize(product.size || '1.0 MB');
       setIsPaid(Array.isArray(product.tags) ? product.tags.includes('paid') : true);
@@ -318,7 +335,7 @@ const ProductModal = ({ product, isOpen, onClose, onDelete }: ProductModalProps)
       setPrice(0);
       setDealerPrice(0);
       setDeliveryTime('Instant');
-      setDownloadLink('');
+      setDownloadLink('#');
       setDescription('');
       setSize('1.0 MB');
       setIsPaid(true);
@@ -327,14 +344,17 @@ const ProductModal = ({ product, isOpen, onClose, onDelete }: ProductModalProps)
     }
   }, [product, isOpen, categories]);
 
-  if (!isOpen) return null;
+  if (!isOpen || !isAdmin) return null;
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     try {
       const defaultCatId = categories && categories.length > 0 ? categories[0].id : 'cat-imei';
       const finalCatId = categoryId || defaultCatId;
-      if (!name.trim()) return;
+      if (!name.trim()) {
+        setNotification('Please enter a service/product name.', 'error');
+        return;
+      }
 
       const tags: ('new' | 'featured' | 'paid')[] = [];
       if (isPaid) tags.push('paid');
@@ -362,16 +382,21 @@ const ProductModal = ({ product, isOpen, onClose, onDelete }: ProductModalProps)
       onClose();
     } catch (err) {
       console.error("Error saving product:", err);
-      alert("Error saving product. Please check values.");
+      setNotification("Error saving service. Please check values.", "error");
     }
   };
 
-  return (
-    <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex justify-center items-center z-50 p-4" onClick={onClose}>
-      <div className="bg-slate-950 p-6 sm:p-8 rounded-2xl shadow-2xl w-full max-w-lg border border-slate-800 relative max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-        <button onClick={onClose} className="absolute top-4 right-4 text-slate-400 hover:text-slate-200 text-3xl font-bold transition-colors">&times;</button>
-        <h2 className="text-xl font-bold mb-1 text-slate-100">{product ? 'Edit Product File' : 'Add New File / Product'}</h2>
-        <p className="text-xs text-slate-500 mb-6">Setup instant digital downloadable products & codes</p>
+  return createPortal(
+    <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-md flex justify-center items-center z-[9999] p-3 sm:p-4" onClick={onClose}>
+      <div className="bg-slate-950 p-5 sm:p-7 rounded-2xl shadow-2xl w-full max-w-lg border border-amber-500/30 relative max-h-[92vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+        <button type="button" onClick={onClose} className="absolute top-4 right-4 w-8 h-8 rounded-full bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white flex items-center justify-center text-xl font-bold transition-colors">&times;</button>
+        <div className="flex items-center gap-2 mb-1">
+          <span className="px-2 py-0.5 rounded bg-amber-500/15 text-amber-400 border border-amber-500/30 text-[10px] font-black uppercase tracking-wider">
+            Admin Only
+          </span>
+          <h2 className="text-lg sm:text-xl font-bold text-slate-100">{product ? 'Edit Service / File' : 'Add New Service / File'}</h2>
+        </div>
+        <p className="text-xs text-slate-400 mb-5">Modify service title, category, customer price, dealer price & delivery time</p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -449,7 +474,14 @@ const ProductModal = ({ product, isOpen, onClose, onDelete }: ProductModalProps)
             <textarea value={description} onChange={e => setDescription(e.target.value)} rows={3} className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-500/40 text-sm" placeholder="Tell users what this file contains..." />
           </div>
 
-          <div className="flex gap-3 mt-4 pt-2">
+          <div className="flex flex-wrap gap-2.5 mt-4 pt-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-3 bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-300 font-bold rounded-xl text-xs transition-all cursor-pointer"
+            >
+              Cancel
+            </button>
             {product && onDelete && (
               <button
                 type="button"
@@ -457,25 +489,26 @@ const ProductModal = ({ product, isOpen, onClose, onDelete }: ProductModalProps)
                   onDelete(product.id);
                   onClose();
                 }}
-                className="px-4 py-3 bg-rose-950/40 hover:bg-rose-900/60 border border-rose-800/60 text-rose-400 font-bold rounded-xl text-xs transition-all"
+                className="px-4 py-3 bg-rose-950/40 hover:bg-rose-900/60 border border-rose-800/60 text-rose-400 font-bold rounded-xl text-xs transition-all cursor-pointer"
               >
-                Delete Service
+                🗑️ Delete
               </button>
             )}
-            <button type="submit" className="flex-1 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-bold py-3 px-4 rounded-xl shadow-lg shadow-orange-500/10 transition-all text-sm">
-              {product ? 'Save File Settings' : 'Create Product File'}
+            <button type="submit" className="flex-1 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-slate-950 font-black py-3 px-4 rounded-xl shadow-lg shadow-orange-500/20 transition-all text-sm cursor-pointer">
+              {product ? '💾 Save Changes' : '➕ Create Service'}
             </button>
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 
 
 // --- Main Component ---
 const AdminProductsPage = () => {
-  const { products, categories, deleteProduct, deleteCategory, setNotification, resetToDefaultServices } = useAppContext();
+  const { isAdmin, user, products, categories, deleteProduct, deleteCategory, setNotification, resetToDefaultServices } = useAppContext();
   const [searchParams, setSearchParams] = useSearchParams();
   
   const [activeTab, setActiveTab] = useState<'products' | 'categories'>('products');
@@ -514,20 +547,7 @@ const AdminProductsPage = () => {
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [doubleClickProduct, setDoubleClickProduct] = useState<Product | null>(null);
 
-  const getProductServiceType = (p: Product): 'imei' | 'server' | 'remote' | 'file' => {
-    if (p.serviceType) return p.serviceType;
-    const id = (p.id || '').toLowerCase();
-    if (id.startsWith('imei-')) return 'imei';
-    if (id.startsWith('srv-') || id.startsWith('server-')) return 'server';
-    if (id.startsWith('remote-') || id.startsWith('tool-')) return 'remote';
-    if (id.startsWith('file-') || id.startsWith('pkg-')) return 'file';
-
-    const text = (p.name + ' ' + (p.description || '') + ' ' + (p.categoryId || '')).toLowerCase();
-    if (text.includes('imei') || text.includes('icloud') || text.includes('sn ') || text.includes('serial') || text.includes('carrier') || text.includes('clean imei') || text.includes('network unlock')) return 'imei';
-    if (text.includes('remote') || text.includes('rent') || text.includes('teamviewer') || text.includes('flexihub') || text.includes('hours') || text.includes('login id')) return 'remote';
-    if (text.includes('file') || text.includes('firmware') || text.includes('rom') || text.includes('dump') || text.includes('setup') || text.includes('driver') || text.includes('iso') || text.includes('pinout') || text.includes('schematic') || text.includes('da ') || text.includes('flash tool')) return 'file';
-    return 'server';
-  };
+  const getProductServiceType = inferProductServiceType;
 
   const serviceCounts = useMemo(() => {
     const counts = { all: products.length, imei: 0, server: 0, remote: 0, file: 0 };
@@ -550,55 +570,74 @@ const AdminProductsPage = () => {
   }, [products, productQuery, categoryFilter, serviceTypeFilter]);
 
   const handleDeleteProduct = (productId: string) => {
-    if (window.confirm("Are you sure you want to permanently remove this product?")) {
-      deleteProduct(productId);
-      setNotification("Product deleted successfully!", "success");
-    }
+    if (!isAdmin) return;
+    deleteProduct(productId);
+    setNotification("Service deleted successfully!", "success");
   };
 
   const handleDeleteCategory = (categoryId: string) => {
+    if (!isAdmin) return;
     const connectedProducts = products.filter(p => p.categoryId === categoryId);
     if (connectedProducts.length > 0) {
-      alert(`Cannot delete this category. It has ${connectedProducts.length} active products. Please move or delete products first.`);
+      setNotification(`Cannot delete category with ${connectedProducts.length} active products. Move or delete products first.`, "error");
       return;
     }
-    if (window.confirm("Are you sure you want to delete this category?")) {
-      deleteCategory(categoryId);
-      setNotification("Category removed successfully!", "success");
-    }
+    deleteCategory(categoryId);
+    setNotification("Category removed successfully!", "success");
   };
 
+  if (!isAdmin) {
+    return (
+      <div className="bg-slate-950 p-8 rounded-2xl border border-slate-800 text-center max-w-md mx-auto my-12 shadow-2xl">
+        <div className="w-12 h-12 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center mx-auto mb-3 text-xl">
+          🔒
+        </div>
+        <h2 className="text-lg font-extrabold text-white mb-2">Admin Access Only</h2>
+        <p className="text-xs text-slate-400 mb-5">
+          Service editing options are restricted to the Administrator only.
+        </p>
+        <Link
+          to={user ? "/" : "/login"}
+          className="inline-block px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs uppercase tracking-wider"
+        >
+          {user ? "Back to Home" : "Admin Login"}
+        </Link>
+      </div>
+    );
+  }
+
   return (
-    <div className="bg-gradient-to-b from-slate-900/90 to-slate-950/90 backdrop-blur-md p-6 sm:p-8 rounded-2xl border border-slate-800/80 shadow-2xl animate-in fade-in duration-300">
+    <div className="bg-gradient-to-b from-slate-900 to-slate-950 p-4 sm:p-6 lg:p-8 rounded-2xl border border-slate-800/80 shadow-2xl">
       
-      {/* Modals */}
+      {/* Modals rendered via Portal to document.body */}
       <MasterServiceManagerModal isOpen={isMasterManagerOpen} onClose={() => setIsMasterManagerOpen(false)} />
       <ProductModal product={selectedProduct} isOpen={isProductModalOpen} onClose={() => { setIsProductModalOpen(false); setSelectedProduct(null); }} onDelete={handleDeleteProduct} />
       <CategoryModal category={selectedCategory} isOpen={isCategoryModalOpen} onClose={() => { setIsCategoryModalOpen(false); setSelectedCategory(null); }} />
 
-      {/* Double-Click Service Action Modal */}
-      {doubleClickProduct && (
-        <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-md flex justify-center items-center z-50 p-4 animate-in fade-in duration-150" onClick={() => setDoubleClickProduct(null)}>
-          <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-2xl max-w-sm w-full animate-in zoom-in-95 duration-150" onClick={e => e.stopPropagation()}>
+      {/* Double-Click Service Action Modal via Portal */}
+      {doubleClickProduct && createPortal(
+        <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-md flex justify-center items-center z-[9999] p-4" onClick={() => setDoubleClickProduct(null)}>
+          <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-2xl max-w-sm w-full" onClick={e => e.stopPropagation()}>
             <div className="flex justify-between items-start mb-4">
               <div>
                 <span className="text-[10px] font-bold font-mono uppercase tracking-wider text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
-                  Service Action
+                  Admin Service Action
                 </span>
                 <h3 className="text-base font-bold text-slate-100 mt-1.5 line-clamp-1">{doubleClickProduct.name}</h3>
                 <p className="text-[11px] text-slate-400 mt-0.5">Select action to perform on this service:</p>
               </div>
-              <button onClick={() => setDoubleClickProduct(null)} className="text-slate-400 hover:text-white text-2xl font-bold leading-none">&times;</button>
+              <button type="button" onClick={() => setDoubleClickProduct(null)} className="text-slate-400 hover:text-white text-2xl font-bold leading-none">&times;</button>
             </div>
 
             <div className="space-y-3 my-5">
               <button
+                type="button"
                 onClick={() => {
                   setSelectedProduct(doubleClickProduct);
                   setIsProductModalOpen(true);
                   setDoubleClickProduct(null);
                 }}
-                className="w-full flex items-center gap-3.5 p-3.5 bg-slate-950 hover:bg-amber-500/10 border border-slate-800 hover:border-amber-500/40 rounded-xl transition-all group"
+                className="w-full flex items-center gap-3.5 p-3.5 bg-slate-950 hover:bg-amber-500/10 border border-slate-800 hover:border-amber-500/40 rounded-xl transition-all group cursor-pointer"
               >
                 <div className="w-10 h-10 rounded-lg bg-amber-500/10 text-amber-400 flex items-center justify-center font-bold text-lg group-hover:bg-amber-500 group-hover:text-slate-950 transition-all">
                   ✏️
@@ -610,12 +649,13 @@ const AdminProductsPage = () => {
               </button>
 
               <button
+                type="button"
                 onClick={() => {
                   const pid = doubleClickProduct.id;
                   setDoubleClickProduct(null);
                   handleDeleteProduct(pid);
                 }}
-                className="w-full flex items-center gap-3.5 p-3.5 bg-slate-950 hover:bg-rose-500/10 border border-slate-800 hover:border-rose-500/40 rounded-xl transition-all group"
+                className="w-full flex items-center gap-3.5 p-3.5 bg-slate-950 hover:bg-rose-500/10 border border-slate-800 hover:border-rose-500/40 rounded-xl transition-all group cursor-pointer"
               >
                 <div className="w-10 h-10 rounded-lg bg-rose-500/10 text-rose-400 flex items-center justify-center font-bold text-lg group-hover:bg-rose-500 group-hover:text-white transition-all">
                   🗑️
@@ -628,13 +668,15 @@ const AdminProductsPage = () => {
             </div>
 
             <button
+              type="button"
               onClick={() => setDoubleClickProduct(null)}
-              className="w-full py-2.5 bg-slate-950 hover:bg-slate-800 text-slate-400 font-bold rounded-xl text-xs transition-all border border-slate-800"
+              className="w-full py-2.5 bg-slate-950 hover:bg-slate-800 text-slate-400 font-bold rounded-xl text-xs transition-all border border-slate-800 cursor-pointer"
             >
               Cancel
             </button>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6 border-b border-slate-800/80 pb-5">
@@ -670,12 +712,11 @@ const AdminProductsPage = () => {
 
           {resetToDefaultServices && (
             <button
+              type="button"
               onClick={() => {
-                if (window.confirm("Reload all default IMEI, Server, Remote Tool Rent, and File services into catalog?")) {
-                  resetToDefaultServices();
-                }
+                resetToDefaultServices();
               }}
-              className="bg-slate-900 hover:bg-slate-800 text-teal-400 border border-teal-500/30 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-1.5 transition-all shadow-sm"
+              className="bg-slate-900 hover:bg-slate-800 text-teal-400 border border-teal-500/30 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer"
               title="Restore all default services across all 4 categories"
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">

@@ -6,7 +6,7 @@ import { SERVER_SERVICES_LIST, ServerServiceItem } from '../data/serverServicesD
 
 const ServerServiceOrder: React.FC = () => {
   const navigate = useNavigate();
-  const { user, placeImeiOrder, setNotification } = useAppContext();
+  const { user, products, categories, placeImeiOrder, setNotification } = useAppContext();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedGroup, setSelectedGroup] = useState('All');
@@ -19,18 +19,60 @@ const ServerServiceOrder: React.FC = () => {
   const [userNote, setUserNote] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Merge static list with Admin-updated/added Server products from AppContext
+  const liveServerServices = useMemo(() => {
+    const productById = new Map<string, any>();
+    const productByName = new Map<string, any>();
+    (products || []).forEach((p) => {
+      productById.set(p.id, p);
+      productByName.set(p.name.trim().toLowerCase(), p);
+    });
+
+    const baseIds = new Set(SERVER_SERVICES_LIST.map((s) => s.id));
+    const baseNames = new Set(SERVER_SERVICES_LIST.map((s) => s.name.trim().toLowerCase()));
+
+    const updatedBase = SERVER_SERVICES_LIST.map((srv) => {
+      const match = productById.get(srv.id) || productByName.get(srv.name.trim().toLowerCase());
+      if (match) {
+        return {
+          ...srv,
+          name: match.name || srv.name,
+          price: match.price ?? srv.price,
+          deliveryTime: match.deliveryTime || srv.deliveryTime,
+        };
+      }
+      return srv;
+    });
+
+    const customServer: ServerServiceItem[] = (products || [])
+      .filter((p) => p.serviceType === 'server' && !baseIds.has(p.id) && !baseNames.has(p.name.trim().toLowerCase()))
+      .map((p) => {
+        const catName = categories?.find((c) => c.id === p.categoryId)?.name || 'Server Services & Activations';
+        return {
+          id: p.id,
+          name: p.name,
+          category: catName,
+          price: p.price ?? 0,
+          deliveryTime: p.deliveryTime || 'Instant',
+          isNew: p.tags?.includes('new') ?? true,
+        };
+      });
+
+    return [...customServer, ...updatedBase];
+  }, [products, categories]);
+
   // Extract all unique group names sorted alphabetically
   const allGroups = useMemo(() => {
     const groupsSet = new Set<string>();
-    SERVER_SERVICES_LIST.forEach((s) => {
+    liveServerServices.forEach((s) => {
       if (s.category) groupsSet.add(s.category);
     });
     return Array.from(groupsSet).sort((a, b) => a.localeCompare(b));
-  }, []);
+  }, [liveServerServices]);
 
   // Filter services based on search, group dropdown, and discounted checkbox
   const filteredServices = useMemo(() => {
-    return SERVER_SERVICES_LIST.filter((srv) => {
+    return liveServerServices.filter((srv) => {
       // Group filter
       if (selectedGroup !== 'All' && srv.category !== selectedGroup) {
         return false;
@@ -51,7 +93,7 @@ const ServerServiceOrder: React.FC = () => {
       }
       return true;
     });
-  }, [searchQuery, selectedGroup, discountedOnly]);
+  }, [liveServerServices, searchQuery, selectedGroup, discountedOnly]);
 
   // Group filtered services by category for clean section display
   const servicesByCategory = useMemo(() => {

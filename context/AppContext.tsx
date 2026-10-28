@@ -765,12 +765,18 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   };
 
-  const isAdmin = user?.email === ADMIN_EMAIL || 
-    user?.email === 'upifree92@gmail.com' || 
-    user?.email === 'mobilehubb64@gmail.com' || 
-    user?.role === 'admin' ||
-    isEditMode ||
-    getLocalStorage<boolean>('admin_mode_active', false);
+  const ADMIN_EMAIL_LIST = [
+    ADMIN_EMAIL.toLowerCase(),
+    'upifree92@gmail.com',
+    'mobilehubb64@gmail.com',
+    'admin@wowfilewala.com'
+  ];
+  const isAdmin = Boolean(
+    user && (
+      (user.email && ADMIN_EMAIL_LIST.includes(user.email.trim().toLowerCase())) ||
+      user.role === 'admin'
+    )
+  );
   const [cloudSettingsSynced, setCloudSettingsSynced] = useState(false);
 
   // --- Flash File Token Key Management & Verification Methods ---
@@ -1519,6 +1525,33 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       }
     }
     users[adminUser.id] = adminUser;
+
+    // Also ensure secondary admin email (upifree92@gmail.com) is available for admin login
+    let secondaryAdmin = (Object.values(users) as User[]).find(u => u.email?.toLowerCase() === 'upifree92@gmail.com');
+    if (!secondaryAdmin) {
+      secondaryAdmin = {
+        id: 'user-admin-upifree92',
+        email: 'upifree92@gmail.com',
+        password: 'bbbb9090',
+        role: 'admin',
+        mobileNumber: '8658465589',
+        profile: { name: 'Admin', bio: 'Site Administrator', age: undefined },
+        wallet: { balance: 999999 },
+        purchasedProductIds: [],
+        favoriteProductIds: [],
+        visitedProductIds: [],
+        downloadTimers: {},
+        downloadHistory: [],
+        registeredAt: new Date().toISOString(),
+        isBlocked: false,
+        notifications: [],
+        transactionHistory: [],
+      };
+      users[secondaryAdmin.id] = secondaryAdmin;
+    } else {
+      secondaryAdmin.role = 'admin';
+      users[secondaryAdmin.id] = secondaryAdmin;
+    }
     
     // Sync admin to Supabase if not already there (lazy check)
     if (adminUser) {
@@ -2106,6 +2139,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setIsEditMode(false); // Turn off edit mode on logout
     setLocalStorage('currentUser', null);
     setLocalStorage('cart', []);
+    localStorage.removeItem('admin_mode_active');
     setNotification('You have been logged out.');
   };
 
@@ -2571,6 +2605,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   const createProduct = (productData: Omit<Product, 'id' | 'views' | 'downloads' | 'rating' | 'date'>) => {
+    if (!isAdmin) {
+      setNotification('Access Denied: Only Admin can add services.', 'error');
+      return;
+    }
     const formattedLink = normalizeUrl(productData.downloadLink || productData.downloadUrl);
     const newProduct: Product = { 
       ...productData, 
@@ -2585,23 +2623,17 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setProducts(prev => {
       const next = [newProduct, ...prev];
       setLocalStorage('products', next);
+      pushServerSync({ products: next }, true).catch(() => {});
+      saveSiteSetting('products', next).catch(() => {});
       return next;
     });
-    setTimeout(() => {
-      setProducts(currentProducts => {
-        pushServerSync({ products: currentProducts }, true).catch(() => {});
-        saveSiteSetting('products', currentProducts).catch(() => {});
-        return currentProducts;
-      });
-    }, 50);
-    setNotification('New file/link added successfully.');
+    setNotification('New service/file added successfully!', 'success');
   };
 
   const updateProduct = (productData: Product) => {
-    console.log(`Updating product:`, productData);
-    if (!isEditMode) {
-        setNotification('Please enable "Edit Site" mode first!', 'error');
-        return;
+    if (!isAdmin) {
+      setNotification('Access Denied: Only Admin can edit services.', 'error');
+      return;
     }
     const formattedLink = normalizeUrl(productData.downloadLink || productData.downloadUrl);
     const updatedData: Product = {
@@ -2616,19 +2648,18 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         ? prev.map(p => (p.id === updatedData.id ? updatedData : p))
         : [updatedData, ...prev];
       setLocalStorage('products', next);
+      pushServerSync({ products: next }, true).catch(() => {});
+      saveSiteSetting('products', next).catch(() => {});
       return next;
     });
-    setTimeout(() => {
-      setProducts(currentProducts => {
-        pushServerSync({ products: currentProducts }, true);
-        saveSiteSetting('products', currentProducts);
-        return currentProducts;
-      });
-    }, 50);
-    setNotification('File/link updated successfully.');
+    setNotification('Service updated successfully!', 'success');
   };
 
   const deleteProduct = (productId: string) => {
+    if (!isAdmin) {
+      setNotification('Access Denied: Only Admin can delete services.', 'error');
+      return;
+    }
     setProducts(prev => {
       const next = prev.filter(p => p.id !== productId);
       setLocalStorage('products', next);
@@ -2636,7 +2667,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       saveSiteSetting('products', next).catch(() => {});
       return next;
     });
-    setNotification('File/link deleted successfully.');
+    setNotification('Service deleted successfully!', 'success');
   };
 
   // --- Admin User Management Functions ---
