@@ -276,9 +276,10 @@ interface ProductModalProps {
   product: Product | null;
   isOpen: boolean;
   onClose: () => void;
+  onDelete?: (productId: string) => void;
 }
 
-const ProductModal = ({ product, isOpen, onClose }: ProductModalProps) => {
+const ProductModal = ({ product, isOpen, onClose, onDelete }: ProductModalProps) => {
   const { createProduct, updateProduct, categories } = useAppContext();
 
   const [name, setName] = useState('');
@@ -420,9 +421,23 @@ const ProductModal = ({ product, isOpen, onClose }: ProductModalProps) => {
             <textarea value={description} onChange={e => setDescription(e.target.value)} rows={3} className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-500/40 text-sm" placeholder="Tell users what this file contains..." />
           </div>
 
-          <button type="submit" className="w-full mt-4 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-bold py-3 px-4 rounded-xl shadow-lg shadow-orange-500/10 transition-all text-sm">
-            {product ? 'Save File Settings' : 'Create Product File'}
-          </button>
+          <div className="flex gap-3 mt-4 pt-2">
+            {product && onDelete && (
+              <button
+                type="button"
+                onClick={() => {
+                  onDelete(product.id);
+                  onClose();
+                }}
+                className="px-4 py-3 bg-rose-950/40 hover:bg-rose-900/60 border border-rose-800/60 text-rose-400 font-bold rounded-xl text-xs transition-all"
+              >
+                Delete Service
+              </button>
+            )}
+            <button type="submit" className="flex-1 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-bold py-3 px-4 rounded-xl shadow-lg shadow-orange-500/10 transition-all text-sm">
+              {product ? 'Save File Settings' : 'Create Product File'}
+            </button>
+          </div>
         </form>
       </div>
     </div>
@@ -468,6 +483,7 @@ const AdminProductsPage = () => {
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
+  const [doubleClickProduct, setDoubleClickProduct] = useState<Product | null>(null);
 
   const getProductServiceType = (p: Product): 'imei' | 'server' | 'remote' | 'file' => {
     if (p.serviceType) return p.serviceType;
@@ -527,8 +543,69 @@ const AdminProductsPage = () => {
     <div className="bg-gradient-to-b from-slate-900/90 to-slate-950/90 backdrop-blur-md p-6 sm:p-8 rounded-2xl border border-slate-800/80 shadow-2xl animate-in fade-in duration-300">
       
       {/* Modals */}
-      <ProductModal product={selectedProduct} isOpen={isProductModalOpen} onClose={() => { setIsProductModalOpen(false); setSelectedProduct(null); }} />
+      <ProductModal product={selectedProduct} isOpen={isProductModalOpen} onClose={() => { setIsProductModalOpen(false); setSelectedProduct(null); }} onDelete={handleDeleteProduct} />
       <CategoryModal category={selectedCategory} isOpen={isCategoryModalOpen} onClose={() => { setIsCategoryModalOpen(false); setSelectedCategory(null); }} />
+
+      {/* Double-Click Service Action Modal */}
+      {doubleClickProduct && (
+        <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-md flex justify-center items-center z-50 p-4 animate-in fade-in duration-150" onClick={() => setDoubleClickProduct(null)}>
+          <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-2xl max-w-sm w-full animate-in zoom-in-95 duration-150" onClick={e => e.stopPropagation()}>
+            <div className="flex justify-between items-start mb-4">
+              <div>
+                <span className="text-[10px] font-bold font-mono uppercase tracking-wider text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
+                  Service Action
+                </span>
+                <h3 className="text-base font-bold text-slate-100 mt-1.5 line-clamp-1">{doubleClickProduct.name}</h3>
+                <p className="text-[11px] text-slate-400 mt-0.5">Select action to perform on this service:</p>
+              </div>
+              <button onClick={() => setDoubleClickProduct(null)} className="text-slate-400 hover:text-white text-2xl font-bold leading-none">&times;</button>
+            </div>
+
+            <div className="space-y-3 my-5">
+              <button
+                onClick={() => {
+                  setSelectedProduct(doubleClickProduct);
+                  setIsProductModalOpen(true);
+                  setDoubleClickProduct(null);
+                }}
+                className="w-full flex items-center gap-3.5 p-3.5 bg-slate-950 hover:bg-amber-500/10 border border-slate-800 hover:border-amber-500/40 rounded-xl transition-all group"
+              >
+                <div className="w-10 h-10 rounded-lg bg-amber-500/10 text-amber-400 flex items-center justify-center font-bold text-lg group-hover:bg-amber-500 group-hover:text-slate-950 transition-all">
+                  ✏️
+                </div>
+                <div className="text-left">
+                  <div className="font-bold text-sm text-slate-100 group-hover:text-amber-400 transition-colors">Edit Service</div>
+                  <div className="text-[11px] text-slate-400">Modify price, name, type, or download link</div>
+                </div>
+              </button>
+
+              <button
+                onClick={() => {
+                  const pid = doubleClickProduct.id;
+                  setDoubleClickProduct(null);
+                  handleDeleteProduct(pid);
+                }}
+                className="w-full flex items-center gap-3.5 p-3.5 bg-slate-950 hover:bg-rose-500/10 border border-slate-800 hover:border-rose-500/40 rounded-xl transition-all group"
+              >
+                <div className="w-10 h-10 rounded-lg bg-rose-500/10 text-rose-400 flex items-center justify-center font-bold text-lg group-hover:bg-rose-500 group-hover:text-white transition-all">
+                  🗑️
+                </div>
+                <div className="text-left">
+                  <div className="font-bold text-sm text-slate-100 group-hover:text-rose-400 transition-colors">Delete Service</div>
+                  <div className="text-[11px] text-slate-400">Permanently delete from database</div>
+                </div>
+              </button>
+            </div>
+
+            <button
+              onClick={() => setDoubleClickProduct(null)}
+              className="w-full py-2.5 bg-slate-950 hover:bg-slate-800 text-slate-400 font-bold rounded-xl text-xs transition-all border border-slate-800"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6 border-b border-slate-800/80 pb-5">
         <div className="flex items-center space-x-2.5">
@@ -687,8 +764,8 @@ const AdminProductsPage = () => {
                 ))}
               </select>
             </div>
-            <div className="text-[11px] text-amber-400/80 font-medium flex items-center gap-1.5 self-start md:self-center bg-amber-500/5 px-3 py-1.5 rounded-lg border border-amber-500/10 whitespace-nowrap">
-              <span>💡 Double-click any row to quick edit</span>
+            <div className="text-[11px] text-amber-400 font-medium flex items-center gap-1.5 self-start md:self-center bg-amber-500/10 px-3.5 py-1.5 rounded-lg border border-amber-500/20 shadow-sm whitespace-nowrap">
+              <span>🖱️ Double-click any row for Edit / Delete options</span>
             </div>
           </div>
 
@@ -703,7 +780,6 @@ const AdminProductsPage = () => {
                   <th className="p-3 pb-4">Size</th>
                   <th className="p-3 pb-4">Price</th>
                   <th className="p-3 pb-4">Stats</th>
-                  <th className="p-3 pb-4 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/40">
@@ -713,9 +789,9 @@ const AdminProductsPage = () => {
                   return (
                     <tr 
                       key={p.id} 
-                      onDoubleClick={() => { setSelectedProduct(p); setIsProductModalOpen(true); }}
+                      onDoubleClick={() => setDoubleClickProduct(p)}
                       className="group hover:bg-slate-900/60 transition-colors duration-150 cursor-pointer select-none"
-                      title="Double click to edit this service"
+                      title="Double click for Edit / Delete options"
                     >
                       <td className="p-3 py-4">
                         <div className="font-bold text-slate-100 text-sm sm:text-base flex items-center gap-2">
@@ -770,28 +846,6 @@ const AdminProductsPage = () => {
                         <div className="flex items-center gap-1 font-mono">
                           <span className="text-slate-500">Dl:</span>
                           <span className="text-slate-300 font-semibold">{p.downloads || 0}</span>
-                        </div>
-                      </td>
-                      <td className="p-3 py-4 text-right">
-                        <div className="flex justify-end gap-2 opacity-30 group-hover:opacity-100 transition-opacity duration-200">
-                          <button
-                            onClick={(e) => { e.stopPropagation(); setSelectedProduct(p); setIsProductModalOpen(true); }}
-                            className="p-2 bg-slate-900 border border-slate-800 text-amber-400 hover:bg-amber-500 hover:text-slate-950 rounded-xl transition-all duration-200 shadow-sm"
-                            title="Edit Product (or double-click row)"
-                          >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                              <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
-                            </svg>
-                          </button>
-                          <button
-                            onClick={(e) => { e.stopPropagation(); handleDeleteProduct(p.id); }}
-                            className="p-2 bg-slate-900 border border-slate-800 text-rose-400 hover:bg-rose-500 hover:text-white rounded-xl transition-all duration-200 shadow-sm"
-                            title="Delete Product"
-                          >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                              <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
-                            </svg>
-                          </button>
                         </div>
                       </td>
                     </tr>
