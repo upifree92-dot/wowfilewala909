@@ -760,6 +760,19 @@ const Header = () => {
               </div>
             )}
 
+            {/* SERVICE LIST Button - Always visible in header whether logged in or not */}
+            <button
+              type="button"
+              onClick={() => setShowServiceListModal(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#0d7474] hover:bg-[#0f8b8b] text-white font-extrabold text-xs uppercase tracking-wide border border-[#2dd4bf]/40 shadow-sm transition-all cursor-pointer shrink-0"
+              title="Open Service List (IMEI, Server, Remote Tool Rent, File, Service By Group)"
+            >
+              <svg className="w-4 h-4 stroke-[2.5]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+              </svg>
+              <span>SERVICE LIST</span>
+            </button>
+
             {user ? (
               <div className="flex items-center gap-1.5 sm:gap-3" ref={dropdownRef}>
                 {/* 1. Wallet Pill */}
@@ -1101,18 +1114,6 @@ const Header = () => {
               </div>
             ) : (
               <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setShowServiceListModal(true)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#0d7474] hover:bg-[#0f8b8b] text-white font-extrabold text-xs uppercase tracking-wide border border-[#2dd4bf]/40 shadow-sm transition-all cursor-pointer"
-                  title="Open Service List"
-                >
-                  <svg className="w-4 h-4 stroke-[2.5]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
-                  </svg>
-                  <span>SERVICE LIST</span>
-                </button>
-
                 <Link
                   to="/login"
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#0d7474] hover:bg-[#0f8b8b] text-white font-extrabold text-xs tracking-wide border border-[#2dd4bf]/40 shadow-sm transition-all"
