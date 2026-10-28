@@ -238,13 +238,47 @@ const AppContent = () => {
 };
 
 
+class ErrorBoundary extends React.Component<{ children: ReactNode }, { hasError: boolean; error: any }> {
+  constructor(props: { children: ReactNode }) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error: any) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error: any, errorInfo: any) {
+    console.error("ErrorBoundary caught error:", error, errorInfo);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen bg-slate-950 text-white flex flex-col items-center justify-center p-6 text-center font-['Poppins',_sans-serif]">
+          <div className="bg-slate-900 border border-slate-800 p-8 rounded-2xl max-w-md shadow-2xl">
+            <h2 className="text-xl font-bold text-amber-400 mb-2">Display Recovery Notice</h2>
+            <p className="text-xs text-slate-400 mb-6">The display interface recovered from a rendering exception. Click below to continue.</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-5 py-2.5 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold rounded-xl text-xs transition-all cursor-pointer"
+            >
+              Refresh Application
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 function App() {
   return (
-    <AppProvider>
-      <HashRouter>
-        <AppContent />
-      </HashRouter>
-    </AppProvider>
+    <ErrorBoundary>
+      <AppProvider>
+        <HashRouter>
+          <AppContent />
+        </HashRouter>
+      </AppProvider>
+    </ErrorBoundary>
   );
 }
 

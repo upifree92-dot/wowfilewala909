@@ -297,9 +297,10 @@ const ProductModal = ({ product, isOpen, onClose, onDelete }: ProductModalProps)
   const [isFeatured, setIsFeatured] = useState(false);
 
   useEffect(() => {
+    const defaultCatId = categories && categories.length > 0 ? categories[0].id : 'cat-imei';
     if (product) {
       setName(product.name || '');
-      setCategoryId(product.categoryId || (categories.length > 0 ? categories[0].id : ''));
+      setCategoryId(product.categoryId || defaultCatId);
       setServiceType(product.serviceType || 'server');
       setPrice(product.price ?? 0);
       setDealerPrice(product.dealerPrice ?? Math.round((product.price ?? 0) * 0.85));
@@ -312,7 +313,7 @@ const ProductModal = ({ product, isOpen, onClose, onDelete }: ProductModalProps)
       setIsFeatured(Array.isArray(product.tags) ? product.tags.includes('featured') : false);
     } else {
       setName('');
-      setCategoryId(categories.length > 0 ? categories[0].id : '');
+      setCategoryId(defaultCatId);
       setServiceType('server');
       setPrice(0);
       setDealerPrice(0);
@@ -330,32 +331,39 @@ const ProductModal = ({ product, isOpen, onClose, onDelete }: ProductModalProps)
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !categoryId) return;
+    try {
+      const defaultCatId = categories && categories.length > 0 ? categories[0].id : 'cat-imei';
+      const finalCatId = categoryId || defaultCatId;
+      if (!name.trim()) return;
 
-    const tags: ('new' | 'featured' | 'paid')[] = [];
-    if (isPaid) tags.push('paid');
-    if (isNew) tags.push('new');
-    if (isFeatured) tags.push('featured');
+      const tags: ('new' | 'featured' | 'paid')[] = [];
+      if (isPaid) tags.push('paid');
+      if (isNew) tags.push('new');
+      if (isFeatured) tags.push('featured');
 
-    const productData: any = {
-      name,
-      categoryId,
-      serviceType,
-      price: Number(price),
-      dealerPrice: Number(dealerPrice),
-      deliveryTime,
-      downloadLink: downloadLink || '#',
-      description,
-      size,
-      tags
-    };
+      const productData: any = {
+        name: name.trim(),
+        categoryId: finalCatId,
+        serviceType,
+        price: Number(price) || 0,
+        dealerPrice: Number(dealerPrice) || 0,
+        deliveryTime: deliveryTime || 'Instant',
+        downloadLink: downloadLink || '#',
+        description: description || '',
+        size: size || '1.0 MB',
+        tags
+      };
 
-    if (product) {
-      updateProduct({ ...product, ...productData });
-    } else {
-      createProduct(productData);
+      if (product) {
+        updateProduct({ ...product, ...productData });
+      } else {
+        createProduct(productData);
+      }
+      onClose();
+    } catch (err) {
+      console.error("Error saving product:", err);
+      alert("Error saving product. Please check values.");
     }
-    onClose();
   };
 
   return (
