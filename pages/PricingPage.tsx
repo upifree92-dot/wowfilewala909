@@ -1,5 +1,5 @@
 import React, { useState, FormEvent } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import type { BalancePackage } from '../types';
 import { useAppContext } from '../context/AppContext';
 import BackButton from '../components/BackButton';
