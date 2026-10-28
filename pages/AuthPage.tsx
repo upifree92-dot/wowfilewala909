@@ -95,9 +95,34 @@ const AuthPage = () => {
     setNotification(`New verification code sent to ${email}!`, "success");
   };
 
+  // Strong Password Validation: Minimum 4 letters (like ABCD) followed by Minimum 4 numbers (like 1234)
+  const passwordLettersCount = (password.match(/[a-zA-Z]/g) || []).length;
+  const passwordDigitsCount = (password.match(/[0-9]/g) || []).length;
+  const isLettersFirstThenDigits = /^[a-zA-Z]+.*[0-9]+$/.test(password);
+  const hasMin4Letters = passwordLettersCount >= 4;
+  const hasMin4Digits = passwordDigitsCount >= 4;
+  const isStrongPassword = hasMin4Letters && hasMin4Digits && isLettersFirstThenDigits && password.length >= 8;
+
+  const validateStrongPassword = (pwd: string): string | null => {
+    const letters = (pwd.match(/[a-zA-Z]/g) || []).length;
+    const digits = (pwd.match(/[0-9]/g) || []).length;
+    const validOrder = /^[a-zA-Z]+.*[0-9]+$/.test(pwd);
+    if (letters < 4 || digits < 4 || !validOrder || pwd.length < 8) {
+      return 'Strong Password Required! Pahle ABCD jaise kam se kam 4 letters aur uske baad 1234 jaise 4 numbers dalein (Example: ABCD1234).';
+    }
+    return null;
+  };
+
   const handleOtpVerifyAndRegister = async (e: FormEvent) => {
     e.preventDefault();
     clearNotification();
+
+    const pwdError = validateStrongPassword(password);
+    if (pwdError) {
+      setNotification(pwdError, 'error');
+      return;
+    }
+
     const enteredCode = otpInputs.join('');
     
     const now = new Date();
@@ -155,6 +180,11 @@ const AuthPage = () => {
         setIsSubmitting(false);
       }
     } else {
+      const pwdError = validateStrongPassword(password);
+      if (pwdError) {
+        setNotification(pwdError, "error");
+        return;
+      }
       if (password !== confirmPassword) {
         setNotification("Passwords do not match.", "error");
         return;
@@ -421,17 +451,34 @@ const AuthPage = () => {
 
                 {/* Password Field */}
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Password
-                  </label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                      Password
+                    </label>
+                    {!isLogin && password.length > 0 && (
+                      <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
+                        isStrongPassword
+                          ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400'
+                          : 'bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-400'
+                      }`}>
+                        {isStrongPassword ? '✓ Strong Password Set' : '⚠ Enter ABCD + 1234 Format'}
+                      </span>
+                    )}
+                  </div>
                   <div className="relative">
                     <input 
                       type={showPassword ? "text" : "password"} 
                       value={password} 
                       onChange={(e) => setPassword(e.target.value)} 
-                      placeholder="••••••••" 
+                      placeholder={isLogin ? "••••••••" : "Example: ABCD1234"} 
                       required 
-                      className="w-full px-3.5 py-2.5 pr-10 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 focus:border-slate-800 dark:focus:border-slate-200 focus:ring-1 focus:ring-slate-800 outline-none transition-all text-sm"
+                      className={`w-full px-3.5 py-2.5 pr-10 rounded-lg border bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 outline-none transition-all text-sm ${
+                        !isLogin && password.length > 0
+                          ? isStrongPassword
+                            ? 'border-emerald-500 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-500'
+                            : 'border-amber-500 focus:border-amber-600 focus:ring-1 focus:ring-amber-500'
+                          : 'border-slate-300 dark:border-slate-700 focus:border-slate-800 dark:focus:border-slate-200 focus:ring-1 focus:ring-slate-800'
+                      }`}
                     />
                     <button 
                       type="button"
@@ -442,6 +489,32 @@ const AuthPage = () => {
                       {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                   </div>
+
+                  {/* Strong Password Guide on Create Account */}
+                  {!isLogin && (
+                    <div className="mt-2 p-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 space-y-1.5">
+                      <p className="text-[11px] font-bold text-slate-700 dark:text-slate-300 flex items-center justify-between">
+                        <span>Password Rule (Letters + Numbers):</span>
+                        <span className="font-mono text-teal-600 dark:text-teal-400 bg-teal-50 dark:bg-teal-950/50 px-1.5 py-0.5 rounded border border-teal-200 dark:border-teal-800">
+                          Ex: ABCD1234
+                        </span>
+                      </p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 text-[11px]">
+                        <div className={`flex items-center gap-1.5 font-medium ${hasMin4Letters ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-500 dark:text-slate-400'}`}>
+                          {hasMin4Letters ? <Check className="w-3.5 h-3.5 shrink-0 stroke-[3]" /> : <span className="w-3.5 h-3.5 rounded-full border border-slate-400 inline-block shrink-0" />}
+                          <span>4+ Letters (jaise <strong>ABCD</strong>)</span>
+                        </div>
+                        <div className={`flex items-center gap-1.5 font-medium ${hasMin4Digits ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-500 dark:text-slate-400'}`}>
+                          {hasMin4Digits ? <Check className="w-3.5 h-3.5 shrink-0 stroke-[3]" /> : <span className="w-3.5 h-3.5 rounded-full border border-slate-400 inline-block shrink-0" />}
+                          <span>4+ Numbers (jaise <strong>1234</strong>)</span>
+                        </div>
+                        <div className={`sm:col-span-2 flex items-center gap-1.5 font-medium ${isStrongPassword ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-500 dark:text-slate-400'}`}>
+                          {isStrongPassword ? <Check className="w-3.5 h-3.5 shrink-0 stroke-[3]" /> : <span className="w-3.5 h-3.5 rounded-full border border-slate-400 inline-block shrink-0" />}
+                          <span>Pahle ABCD letters uske baad 1234 code (Min 8 chars)</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Confirm Password Field (on Register) */}

@@ -2004,6 +2004,13 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   const register = async (email: string, pass: string, mobileNumber: string, referredByCode?: string): Promise<boolean> => {
+    const lettersCount = (pass.match(/[a-zA-Z]/g) || []).length;
+    const digitsCount = (pass.match(/[0-9]/g) || []).length;
+    const validOrder = /^[a-zA-Z]+.*[0-9]+$/.test(pass);
+    if (lettersCount < 4 || digitsCount < 4 || !validOrder || pass.length < 8) {
+      setNotification('Strong Password Required! Pahle ABCD jaise kam se kam 4 letters aur uske baad 1234 jaise 4 numbers dalein (Example: ABCD1234).', 'error');
+      return false;
+    }
     try {
       if (isSandboxMode) {
         throw new Error('Local auth mode');
