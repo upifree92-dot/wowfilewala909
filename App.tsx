@@ -41,6 +41,7 @@ import HostingraConnectorPage from './pages/admin/HostingraConnectorPage';
 import AdminTokensPage from './pages/admin/AdminTokensPage';
 import { TokenVerificationModal } from './components/TokenVerificationModal';
 import TextColorEditor from './components/TextColorEditor';
+import SecurityShield from './components/SecurityShield';
 
 
 
@@ -190,6 +191,7 @@ const AppContent = () => {
         <EditModal />
         <BackToTop />
         <TextColorEditor />
+        <SecurityShield />
       </div>
     )
   }
@@ -233,6 +235,7 @@ const AppContent = () => {
       <WhatsAppButton />
       <BackToTop />
       <TextColorEditor />
+      <SecurityShield />
     </div>
   );
 };

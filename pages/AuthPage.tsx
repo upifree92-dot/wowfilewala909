@@ -1,10 +1,10 @@
-import React, { useState, FormEvent } from 'react';
+import React, { useState, useEffect, FormEvent } from 'react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
 import Editable from '../components/Editable';
 import { ADMIN_EMAIL } from '../constants';
 import { useSEO } from '../hooks/useSEO';
-import { Eye, EyeOff, Check, X, ShieldCheck, Mail, User as UserIcon } from 'lucide-react';
+import { Eye, EyeOff, Check, X, ShieldCheck, Mail, User as UserIcon, Lock, RefreshCw, ShieldAlert } from 'lucide-react';
 
 const generateDateTimeOTP = () => {
   const now = new Date();
@@ -12,6 +12,22 @@ const generateDateTimeOTP = () => {
   const MM = String(now.getMonth() + 1).padStart(2, '0');
   const YY = String(now.getFullYear()).substring(2);
   return `${DD}${MM}${YY}`;
+};
+
+const generateSecurityPin = () => {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let result = '';
+  for (let i = 0; i < 5; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+};
+
+// Detect SQL Injection or XSS hacking attempts in form fields
+const containsMaliciousInput = (input: string): boolean => {
+  if (!input) return false;
+  const pattern = /(<script\b[^>]*>|javascript\s*:|\bUNION\s+SELECT\b|\bDROP\s+TABLE\b|\bOR\s+['"]?1['"]?\s*=\s*['"]?1|--\s|;\s*DROP\b)/i;
+  return pattern.test(input);
 };
 
 const AuthPage = () => {
@@ -40,6 +56,42 @@ const AuthPage = () => {
   const [referralCode] = useState(() => searchParams.get('ref') || searchParams.get('referral') || '');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [copiedHwid, setCopiedHwid] = useState(false);
+
+  // Anti-Hacker Brute-Force Protection & Captcha States
+  const [securityPin, setSecurityPin] = useState(() => generateSecurityPin());
+  const [userPinInput, setUserPinInput] = useState('');
+  const [failedAttempts, setFailedAttempts] = useState<number>(() => {
+    return parseInt(localStorage.getItem('wfw_failed_login_attempts') || '0', 10) || 0;
+  });
+  const [lockoutUntil, setLockoutUntil] = useState<number>(() => {
+    return parseInt(localStorage.getItem('wfw_login_lockout_until') || '0', 10) || 0;
+  });
+  const [lockoutRemainingSec, setLockoutRemainingSec] = useState<number>(0);
+
+  useEffect(() => {
+    const updateTimer = () => {
+      const now = Date.now();
+      if (lockoutUntil > now) {
+        setLockoutRemainingSec(Math.ceil((lockoutUntil - now) / 1000));
+      } else {
+        setLockoutRemainingSec(0);
+        if (lockoutUntil !== 0) {
+          setLockoutUntil(0);
+          setFailedAttempts(0);
+          localStorage.removeItem('wfw_login_lockout_until');
+          localStorage.setItem('wfw_failed_login_attempts', '0');
+        }
+      }
+    };
+    updateTimer();
+    const timer = setInterval(updateTimer, 1000);
+    return () => clearInterval(timer);
+  }, [lockoutUntil]);
+
+  const refreshCaptcha = () => {
+    setSecurityPin(generateSecurityPin());
+    setUserPinInput('');
+  };
 
   // Email OTP States
   const isOtpEnabled = siteContent?.auth?.emailOtpEnabled ?? true;
@@ -148,7 +200,7 @@ const AuthPage = () => {
 
     setIsSubmitting(true);
     try {
-      const success = await register(email, password, mobileNumber, referralCode);
+      const success = await register(email.trim(), password, mobileNumber.trim(), referralCode);
       if (success) {
         if (email.toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
           navigate('/'); 
@@ -166,13 +218,47 @@ const AuthPage = () => {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     clearNotification();
+
+    // 1. Check Brute-Force Lockout
+    if (lockoutRemainingSec > 0) {
+      setNotification(`🛡️ Anti-Hacker Lockout Active! Multiple wrong attempts detected. Please wait ${lockoutRemainingSec}s.`, 'error');
+      return;
+    }
+
+    // 2. Check SQL Injection / XSS Attack Payload
+    if (containsMaliciousInput(email) || containsMaliciousInput(fullName) || containsMaliciousInput(password)) {
+      setNotification('🚨 Security Firewall Alert: Invalid or malicious characters blocked!', 'error');
+      refreshCaptcha();
+      return;
+    }
+
+    // 3. Verify Anti-Bot Security Captcha Code
+    if (userPinInput.trim().toUpperCase() !== securityPin.toUpperCase()) {
+      setNotification('🛡️ Security Captcha Code match nahi hua! Sahi 5-character Security Code dalein.', 'error');
+      refreshCaptcha();
+      return;
+    }
     
     if (isLogin) {
       setIsSubmitting(true);
       try {
-        const success = await login(email, password);
+        const success = await login(email.trim(), password);
         if (success) {
+          localStorage.setItem('wfw_failed_login_attempts', '0');
+          localStorage.removeItem('wfw_login_lockout_until');
+          setFailedAttempts(0);
           navigate('/');
+        } else {
+          const nextAttempts = failedAttempts + 1;
+          setFailedAttempts(nextAttempts);
+          localStorage.setItem('wfw_failed_login_attempts', String(nextAttempts));
+          refreshCaptcha();
+          if (nextAttempts >= 5) {
+            const lockUntil = Date.now() + 60 * 1000; // 60 seconds lock
+            setLockoutUntil(lockUntil);
+            localStorage.setItem('wfw_login_lockout_until', String(lockUntil));
+            setNotification('🚨 Anti-Hacker Protection: 5 wrong login attempts! Account login locked for 60 seconds.', 'error');
+          }
         }
       } catch (err) {
         console.warn('Login issue:', err);
@@ -189,7 +275,7 @@ const AuthPage = () => {
         setNotification("Passwords do not match.", "error");
         return;
       }
-      if (checkUserExists(email, mobileNumber)) {
+      if (checkUserExists(email.trim(), mobileNumber.trim())) {
         return;
       }
       
@@ -203,7 +289,7 @@ const AuthPage = () => {
 
       setIsSubmitting(true);
       try {
-        const success = await register(email, password, mobileNumber, referralCode);
+        const success = await register(email.trim(), password, mobileNumber.trim(), referralCode);
         if (success) {
           if (email.toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
             navigate('/'); 
@@ -544,6 +630,49 @@ const AuthPage = () => {
                   </div>
                 )}
 
+                {/* Anti-Hacker Brute-Force Lockout Alert */}
+                {lockoutRemainingSec > 0 && (
+                  <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/50 border border-rose-300 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-xs flex items-center gap-2.5">
+                    <ShieldAlert className="w-5 h-5 shrink-0 text-rose-600 dark:text-rose-400" />
+                    <div>
+                      <p className="font-bold">Anti-Hacker Lockout Active ({lockoutRemainingSec}s)</p>
+                      <p className="text-[11px] opacity-90">5 galat attempts ke baad security lock lag gaya hai. Kripya {lockoutRemainingSec} sec intezar karein.</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Anti-Bot & Anti-Hacker Security Verification Code */}
+                <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700/80 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                      <Lock className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
+                      <span>Anti-Hacker Security Code</span>
+                    </label>
+                    <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800">
+                      🛡️ Bot &amp; Brute-Force Protected
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div
+                      onClick={refreshCaptcha}
+                      title="Click to generate new security code"
+                      className="px-3.5 py-2 rounded-lg bg-slate-900 dark:bg-slate-950 text-teal-400 font-mono font-black text-sm tracking-[0.28em] select-none cursor-pointer border border-teal-500/30 shadow-inner flex items-center gap-2 shrink-0"
+                    >
+                      <span className="line-through decoration-rose-500/50">{securityPin}</span>
+                      <RefreshCw className="w-3.5 h-3.5 text-slate-400 hover:text-white transition-transform hover:rotate-180" />
+                    </div>
+                    <input
+                      type="text"
+                      maxLength={5}
+                      value={userPinInput}
+                      onChange={(e) => setUserPinInput(e.target.value.toUpperCase())}
+                      placeholder="Enter 5-digit code"
+                      required
+                      className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-mono font-bold uppercase tracking-widest text-sm placeholder:font-sans placeholder:font-normal placeholder:tracking-normal placeholder:text-xs focus:border-teal-600 outline-none"
+                    />
+                  </div>
+                </div>
+
                 {/* Trust Device & Forgot Row (on Login mode) */}
                 {isLogin && (
                   <div className="flex items-center justify-between pt-1 pb-1">
@@ -575,10 +704,14 @@ const AuthPage = () => {
                 {/* Primary Action Button (Solid Dark Button matching screenshot) */}
                 <button 
                   type="submit" 
-                  disabled={isSubmitting} 
+                  disabled={isSubmitting || lockoutRemainingSec > 0} 
                   className="w-full mt-2 bg-[#54595e] hover:bg-slate-700 text-white font-semibold py-3 px-4 rounded-lg transition-all text-sm shadow-sm disabled:opacity-50 cursor-pointer"
                 >
-                  {isSubmitting ? 'Processing...' : (isLogin ? 'Log In' : 'Create Account')}
+                  {lockoutRemainingSec > 0
+                    ? `Locked (${lockoutRemainingSec}s)`
+                    : isSubmitting
+                    ? 'Processing...'
+                    : (isLogin ? 'Log In' : 'Create Account')}
                 </button>
 
               </form>

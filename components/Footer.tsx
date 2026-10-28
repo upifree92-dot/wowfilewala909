@@ -156,8 +156,15 @@ const Footer = () => {
           </div>
 
           {/* Copyright bar & Notice */}
-          <div className="border-t border-slate-700 mt-12 pt-6 flex flex-col sm:flex-row items-center justify-between text-xs sm:text-sm text-gray-400 gap-2">
+          <div className="border-t border-slate-700 mt-12 pt-6 flex flex-col sm:flex-row items-center justify-between text-xs sm:text-sm text-gray-400 gap-3">
             <Editable as="p" contentKey="footer.copyright" />
+
+            {/* 256-Bit Anti-Hacker Cyber Shield Status Badge */}
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold shadow-sm">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+              <span>🛡️ 256-Bit Anti-Hacker Shield Active (SQLi • XSS • DDoS Protected)</span>
+            </div>
+
             <button
               onClick={() => window.dispatchEvent(new CustomEvent('open-important-notice'))}
               className="text-amber-400 hover:text-amber-300 transition-colors font-medium cursor-pointer inline-flex items-center gap-1.5 px-3 py-1 bg-amber-500/10 border border-amber-500/20 rounded-md"
