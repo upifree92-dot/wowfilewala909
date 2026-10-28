@@ -178,9 +178,9 @@ export const INITIAL_BALANCE_PACKAGES: BalancePackage[] = [
         period: '1 Year', 
         bandwidth: '1000 GB', 
         downloads: '500 Files', 
-        dailyLimit: '15 Files', 
+        dailyLimit: '10 Files', 
         dailyBandwidth: '25 GB Daily', 
-        devices: '30 Devices',
+        devices: '1 Devices',
         isBestSeller: true
     },
 ];

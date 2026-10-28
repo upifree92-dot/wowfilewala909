@@ -301,7 +301,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   });
   const [balancePackages, setBalancePackages] = useState<BalancePackage[]>(() => {
     const loaded = getLocalStorage<BalancePackage[]>('balancePackages', []);
-    if (!Array.isArray(loaded) || loaded.length === 0 || !loaded.some(p => p.id === 'plan-basic' || p.id === 'plan-1-file')) {
+    if (!Array.isArray(loaded) || loaded.length === 0 || !loaded.some(p => p.id === 'plan-basic' || p.id === 'plan-1-file') || loaded.some(p => p.id === 'plan-popular' && p.dailyLimit === '15 Files')) {
       setLocalStorage('balancePackages', INITIAL_BALANCE_PACKAGES);
       return INITIAL_BALANCE_PACKAGES;
     }
