@@ -26,7 +26,6 @@ import ToolsPage from './pages/ToolsPage';
 import NotificationsPage from './pages/NotificationsPage';
 import ImeiOrderPage from './pages/ImeiOrderPage';
 import OurUsersPage from './pages/OurUsersPage';
-import AppointmentBookingPage from './pages/AppointmentBookingPage';
 import AdminLayout from './pages/admin/AdminLayout';
 import DashboardPage from './pages/admin/DashboardPage';
 import AdminProductsPage from './pages/admin/AdminProductsPage';
@@ -221,7 +220,6 @@ const AppContent = () => {
           <Route path="/our-users" element={<OurUsersPage />} />
           <Route path="/notifications" element={<NotificationsPage />} />
           <Route path="/imei-order" element={<ImeiOrderPage />} />
-          <Route path="/appointment-booking" element={<AppointmentBookingPage />} />
           <Route path="/website" element={<WebsitePage />} />
           <Route path="/download-direct" element={<DirectDownloadPage />} />
         </Routes>

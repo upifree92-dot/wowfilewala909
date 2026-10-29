@@ -4,7 +4,7 @@ import { useAppContext } from '../context/AppContext';
 import Editable from '../components/Editable';
 import { ADMIN_EMAIL } from '../constants';
 import { useSEO } from '../hooks/useSEO';
-import { Eye, EyeOff, Check, X, ShieldCheck, Mail, User as UserIcon, Lock, RefreshCw, ShieldAlert } from 'lucide-react';
+import { Eye, EyeOff, Check, X, ShieldCheck, Mail, User as UserIcon, Lock, RefreshCw, ShieldAlert, Smartphone, ArrowRight, Shield, Sparkles } from 'lucide-react';
 
 const generateDateTimeOTP = () => {
   const now = new Date();
@@ -312,112 +312,172 @@ const AuthPage = () => {
   };
 
   return (
-    <div className="min-h-[calc(100vh-140px)] flex items-center justify-center py-10 px-4 bg-slate-100 dark:bg-slate-950">
+    <div className="min-h-[calc(100vh-140px)] flex items-center justify-center py-6 sm:py-10 px-3 sm:px-4 bg-slate-100 dark:bg-slate-950 font-sans">
       {/* Outer Card Container */}
-      <div className="w-full max-w-4xl bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col md:flex-row min-h-[520px] relative">
+      <div className="w-full max-w-4xl bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200/80 dark:border-slate-800 overflow-hidden flex flex-col md:flex-row relative">
         
         {/* Close Button top-right */}
         <button 
           onClick={() => navigate('/')} 
-          className="absolute top-4 right-4 z-20 text-slate-400 hover:text-slate-700 dark:hover:text-white p-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-all cursor-pointer"
+          className="absolute top-4 right-4 z-20 text-slate-400 hover:text-slate-700 dark:hover:text-white p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-all cursor-pointer"
           title="Close"
           aria-label="Close"
         >
-          <X className="w-6 h-6" />
+          <X className="w-5 h-5" />
         </button>
 
-        {/* LEFT COLUMN: Modern Graphic & Visual Branding */}
-        <div className="w-full md:w-1/2 bg-gradient-to-br from-slate-50 via-teal-50/30 to-slate-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-900 p-8 sm:p-12 flex flex-col items-center justify-center relative overflow-hidden border-b md:border-b-0 md:border-r border-slate-200 dark:border-slate-800">
+        {/* LEFT COLUMN: Modern Graphic & Visual Branding (Desktop Only to prevent pushing mobile form off-screen) */}
+        <div className="hidden md:flex md:w-1/2 bg-gradient-to-br from-slate-950 via-slate-900 to-teal-950 text-white p-8 sm:p-10 flex-col justify-between relative overflow-hidden border-r border-slate-800">
           
           {/* Ambient Glows */}
-          <div className="absolute -top-10 -left-10 w-40 h-40 bg-teal-400/20 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-emerald-400/20 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute -top-16 -left-16 w-48 h-48 bg-teal-500/20 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute -bottom-16 -right-16 w-48 h-48 bg-emerald-500/20 rounded-full blur-3xl pointer-events-none" />
 
-          {/* Graphic Composition matching the reference photo */}
-          <div className="relative w-64 h-64 flex items-center justify-center">
-            
-            {/* Background Circle */}
-            <div className="absolute w-44 h-44 rounded-full bg-teal-100/60 dark:bg-teal-950/40 blur-sm" />
-            
-            {/* White Base Card */}
-            <div className="relative z-10 w-52 h-36 bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-100 dark:border-slate-700 p-4 flex flex-col justify-between transform -rotate-3 hover:rotate-0 transition-transform duration-500">
-              <div className="flex items-center gap-2">
-                <div className="w-6 h-6 rounded-full bg-teal-600 flex items-center justify-center text-white">
-                  <UserIcon className="w-3.5 h-3.5" />
-                </div>
-                <div className="space-y-1 flex-1">
-                  <div className="h-2 bg-slate-200 dark:bg-slate-700 rounded-full w-20" />
-                  <div className="h-1.5 bg-slate-100 dark:bg-slate-700/60 rounded-full w-12" />
-                </div>
-              </div>
-              
-              <div className="space-y-1.5 my-2">
-                <div className="h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full w-full" />
-                <div className="h-1.5 bg-slate-100 dark:bg-slate-700/60 rounded-full w-3/4" />
-              </div>
-
-              <div className="w-full h-6 bg-teal-600 rounded-lg flex items-center justify-center">
-                <div className="w-12 h-1 bg-white/70 rounded-full" />
-              </div>
+          {/* Top Branding Pill */}
+          <div className="relative z-10 flex items-center justify-between">
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-800/80 border border-slate-700/80 text-[11px] font-semibold text-teal-300 backdrop-blur-sm">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span>Official GSM & Firmware Portal</span>
             </div>
+            <div className="flex items-center gap-1 text-[11px] text-slate-400">
+              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+              <span>24/7 API Active</span>
+            </div>
+          </div>
 
-            {/* Envelope floating card (Top Left) */}
-            <div className="absolute top-4 left-0 z-20 bg-white dark:bg-slate-800 p-3 rounded-xl shadow-lg border border-slate-100 dark:border-slate-700 transform -rotate-6 hover:scale-105 transition-transform">
-              <div className="relative">
-                <Mail className="w-8 h-8 text-teal-600 dark:text-teal-400" />
-                <span className="absolute -top-1.5 -right-1.5 bg-teal-600 text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
-                  6
+          {/* Graphic Composition */}
+          <div className="relative z-10 my-auto py-8 flex flex-col items-center justify-center">
+            <div className="relative w-56 h-56 flex items-center justify-center">
+              
+              {/* Background Glow Circle */}
+              <div className="absolute w-48 h-48 rounded-full bg-teal-500/10 dark:bg-teal-500/15 blur-xl" />
+              
+              {/* Center Shield Container */}
+              <div className="relative z-10 w-44 h-44 rounded-3xl bg-gradient-to-tr from-slate-800 to-slate-850 p-1 border border-slate-700/80 shadow-2xl flex flex-col items-center justify-center text-center">
+                <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-teal-500 to-emerald-400 flex items-center justify-center text-white shadow-lg shadow-teal-500/30 mb-2">
+                  <ShieldCheck className="w-10 h-10 stroke-[2.2]" />
+                </div>
+                <h4 className="text-sm font-bold text-white tracking-wide">WowFileWala Shield</h4>
+                <p className="text-[10px] text-teal-300/80 mt-0.5">Hardware-Bound Protection</p>
+              </div>
+
+              {/* Envelope Floating Card (Top Left) */}
+              <div className="absolute -top-1 -left-2 z-20 bg-slate-850 border border-slate-700 p-2.5 rounded-2xl shadow-xl transform -rotate-6 hover:scale-105 transition-transform">
+                <Mail className="w-6 h-6 text-teal-400" />
+                <span className="absolute -top-1 -right-1 bg-teal-500 text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
+                  ✦
                 </span>
               </div>
-            </div>
 
-            {/* Shield floating badge (Top Right) */}
-            <div className="absolute top-2 right-2 z-20 bg-teal-600 text-white p-3.5 rounded-2xl shadow-xl transform rotate-6 hover:scale-105 transition-transform flex items-center justify-center">
-              <ShieldCheck className="w-9 h-9 stroke-[2.2]" />
-            </div>
-
-            {/* Profile Avatar floating card (Bottom Right) */}
-            <div className="absolute bottom-4 right-1 z-20 bg-white dark:bg-slate-800 p-2.5 rounded-xl shadow-lg border border-slate-100 dark:border-slate-700 transform rotate-3 flex flex-col items-center">
-              <div className="w-7 h-7 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-teal-600 dark:text-teal-400">
-                <UserIcon className="w-4 h-4" />
+              {/* Security Lock Badge (Top Right) */}
+              <div className="absolute -top-2 -right-2 z-20 bg-gradient-to-tr from-emerald-600 to-teal-500 text-white p-2.5 rounded-2xl shadow-xl transform rotate-6 hover:scale-105 transition-transform flex items-center justify-center">
+                <Lock className="w-5 h-5" />
               </div>
-              <div className="w-5 h-1 bg-teal-600 rounded-full mt-1.5" />
+
+              {/* Technician Avatar Card (Bottom Right) */}
+              <div className="absolute -bottom-2 -right-1 z-20 bg-slate-850 border border-slate-700 p-2 rounded-xl shadow-xl transform rotate-3 flex items-center gap-1.5">
+                <div className="w-6 h-6 rounded-lg bg-teal-500/20 text-teal-300 flex items-center justify-center">
+                  <UserIcon className="w-3.5 h-3.5" />
+                </div>
+                <div className="text-[10px] text-slate-300 font-semibold pr-1">Pro Tech</div>
+              </div>
+
             </div>
 
-            {/* Sparkles & Accents */}
-            <div className="absolute top-8 left-20 text-amber-400 animate-pulse text-lg">✦</div>
-            <div className="absolute bottom-10 left-6 text-teal-400 text-sm">✦</div>
-            <div className="absolute bottom-2 left-28 w-2.5 h-2.5 rounded-full bg-rose-400/80" />
+            <div className="text-center mt-3 max-w-xs">
+              <h3 className="text-lg font-bold text-white">Technician Security Shield</h3>
+              <p className="text-xs text-slate-400 mt-1 leading-relaxed">
+                Secure, fast, and encrypted access for technician & repair firmware files.
+              </p>
+            </div>
           </div>
 
-          <div className="mt-6 text-center z-10">
-            <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100">WowFileWala Shield</h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-xs">
-              Secure, fast, and encrypted access for technician & repair firmware files.
-            </p>
+          {/* Bottom Security Highlights */}
+          <div className="relative z-10 pt-4 border-t border-slate-800/80 grid grid-cols-3 gap-2 text-center text-[10px] text-slate-300">
+            <div className="p-1.5 rounded-lg bg-slate-850/60 border border-slate-800">
+              <span className="block font-bold text-teal-400 text-xs">500+</span>
+              <span className="text-[9px] text-slate-400">Firmwares</span>
+            </div>
+            <div className="p-1.5 rounded-lg bg-slate-850/60 border border-slate-800">
+              <span className="block font-bold text-emerald-400 text-xs">Single-PC</span>
+              <span className="text-[9px] text-slate-400">HWID Lock</span>
+            </div>
+            <div className="p-1.5 rounded-lg bg-slate-850/60 border border-slate-800">
+              <span className="block font-bold text-cyan-400 text-xs">Instant</span>
+              <span className="text-[9px] text-slate-400">GSM API</span>
+            </div>
           </div>
+
         </div>
 
-
-        {/* RIGHT COLUMN: Form Panel */}
-        <div className="w-full md:w-1/2 p-8 sm:p-12 flex flex-col justify-center bg-white dark:bg-slate-900">
+        {/* RIGHT COLUMN: Modern Form Panel (Immediate on Mobile) */}
+        <div className="w-full md:w-1/2 p-6 sm:p-10 flex flex-col justify-center bg-white dark:bg-slate-900">
           
           <div className="max-w-md mx-auto w-full">
+
+            {/* Mobile-Only Sleek Brand Header */}
+            <div className="md:hidden flex items-center justify-between mb-4 pb-3 border-b border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-teal-600 to-emerald-500 flex items-center justify-center text-white shadow-md shadow-teal-600/25">
+                  <ShieldCheck className="w-5 h-5 stroke-[2.2]" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white leading-tight">WowFileWala Shield</h3>
+                  <p className="text-[10px] text-teal-600 dark:text-teal-400 font-semibold">GSM & Technician Cloud</p>
+                </div>
+              </div>
+              <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800">
+                ● Live
+              </span>
+            </div>
+
+            {/* Segmented Tab Switcher (Log In vs Create Account) */}
+            {!isOtpMode && (
+              <div className="grid grid-cols-2 p-1 bg-slate-100 dark:bg-slate-800/90 rounded-2xl mb-6 border border-slate-200/60 dark:border-slate-700/60">
+                <button
+                  type="button"
+                  onClick={() => { setIsLogin(true); clearNotification(); }}
+                  className={`py-2.5 text-xs font-bold rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                    isLogin 
+                      ? 'bg-white dark:bg-slate-900 text-teal-600 dark:text-teal-400 shadow-md font-extrabold' 
+                      : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+                  }`}
+                >
+                  <Lock className="w-3.5 h-3.5" />
+                  <span>Log In</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setIsLogin(false); clearNotification(); }}
+                  className={`py-2.5 text-xs font-bold rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                    !isLogin 
+                      ? 'bg-white dark:bg-slate-900 text-teal-600 dark:text-teal-400 shadow-md font-extrabold' 
+                      : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+                  }`}
+                >
+                  <UserIcon className="w-3.5 h-3.5" />
+                  <span>Create Account</span>
+                </button>
+              </div>
+            )}
+
             {/* Header Title */}
-            <div className="mb-6">
-              <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">
+            <div className="mb-5">
+              <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight">
                 {isOtpMode ? 'Email Verification' : (isLogin ? 'Log In' : 'Create Account')}
               </h2>
-              {isOtpMode && (
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                  Enter the 6-digit code sent to your email to complete registration.
-                </p>
-              )}
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                {isOtpMode 
+                  ? 'Enter the 6-digit code sent to your email to complete registration.' 
+                  : (isLogin 
+                      ? 'Enter your credentials to access firmware & tools.' 
+                      : 'Fill in your details to create a technician account.')}
+              </p>
             </div>
 
             {/* Notification Banner */}
             {notification && (
-              <div className={`p-3 rounded-lg text-xs font-semibold mb-5 border ${
+              <div className={`p-3 rounded-xl text-xs font-semibold mb-5 border ${
                 notification.type === 'error' 
                   ? 'bg-red-50 dark:bg-red-950/40 border-red-200 dark:border-red-900 text-red-600 dark:text-red-400' 
                   : 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-900 text-emerald-700 dark:text-emerald-400'
@@ -445,14 +505,14 @@ const AuthPage = () => {
                       onChange={(e) => handleOtpChange(idx, e.target.value)}
                       onKeyDown={(e) => handleOtpKeyDown(idx, e)}
                       onPaste={idx === 0 ? handleOtpPaste : undefined}
-                      className="w-10 h-12 text-center text-lg font-bold rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 focus:border-slate-800 dark:focus:border-slate-200 focus:ring-1 focus:ring-slate-800 text-slate-900 dark:text-white"
+                      className="w-10 h-12 text-center text-lg font-bold rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 focus:border-teal-600 dark:focus:border-teal-400 focus:ring-2 focus:ring-teal-500/20 text-slate-900 dark:text-white outline-none"
                       required
                     />
                   ))}
                 </div>
 
                 {/* Admin WhatsApp Banner */}
-                <div className="bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/50 rounded-xl p-3 text-center">
+                <div className="bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/50 rounded-2xl p-3 text-center">
                   <p className="text-[11px] text-emerald-800 dark:text-emerald-300 mb-2 font-medium">
                     Not receiving OTP? Get instant OTP from admin via WhatsApp
                   </p>
@@ -460,12 +520,12 @@ const AuthPage = () => {
                     href={`https://wa.me/${(((siteContent?.pricing?.adminWhatsappNumber || siteContent?.whatsapp?.phoneNumber || "8658465589").replace(/\D/g, '').length === 10 ? "91" : "") + (siteContent?.pricing?.adminWhatsappNumber || siteContent?.whatsapp?.phoneNumber || "8658465589").replace(/\D/g, ''))}?text=${encodeURIComponent(`Hi Admin, I am registering with email ${email}. Please provide me the OTP for verification.`)}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 bg-[#25D366] hover:bg-[#20ba5a] text-white font-bold py-1.5 px-3 rounded-lg text-xs shadow-sm transition-all"
+                    className="inline-flex items-center gap-2 bg-[#25D366] hover:bg-[#20ba5a] text-white font-bold py-2 px-3.5 rounded-xl text-xs shadow-sm transition-all"
                   >
                     <img 
                       src={siteContent?.whatsapp?.iconUrl || "https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg"} 
                       alt="WhatsApp" 
-                      className="w-4 h-4"
+                      className="w-4 h-4" 
                     />
                     Contact Admin for OTP
                   </a>
@@ -474,16 +534,17 @@ const AuthPage = () => {
                 <button 
                   type="submit" 
                   disabled={isSubmitting} 
-                  className="w-full bg-[#54595e] hover:bg-slate-700 text-white font-semibold py-3 px-4 rounded-lg transition-all text-sm shadow-sm disabled:opacity-50"
+                  className="w-full bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white font-bold py-3.5 px-4 rounded-xl transition-all text-sm shadow-lg shadow-teal-500/25 disabled:opacity-50 cursor-pointer flex items-center justify-center gap-2"
                 >
-                  {isSubmitting ? 'Verifying...' : 'Verify OTP & Create Account'}
+                  <span>{isSubmitting ? 'Verifying...' : 'Verify OTP & Create Account'}</span>
+                  <ArrowRight className="w-4 h-4" />
                 </button>
 
                 <div className="flex items-center justify-between text-xs text-slate-500 pt-1">
                   <button type="button" onClick={() => setIsOtpMode(false)} className="hover:underline">
                     ← Back to Register
                   </button>
-                  <button type="button" onClick={handleResendOtp} className="text-slate-700 dark:text-slate-300 font-semibold hover:underline">
+                  <button type="button" onClick={handleResendOtp} className="text-teal-600 dark:text-teal-400 font-semibold hover:underline">
                     Resend Code
                   </button>
                 </div>
@@ -498,14 +559,17 @@ const AuthPage = () => {
                     <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                       Full Name
                     </label>
-                    <input 
-                      type="text" 
-                      value={fullName} 
-                      onChange={(e) => setFullName(e.target.value)} 
-                      placeholder="Your full name" 
-                      required 
-                      className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 focus:border-slate-800 dark:focus:border-slate-200 focus:ring-1 focus:ring-slate-800 outline-none transition-all text-sm"
-                    />
+                    <div className="relative">
+                      <UserIcon className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                      <input 
+                        type="text" 
+                        value={fullName} 
+                        onChange={(e) => setFullName(e.target.value)} 
+                        placeholder="Your full name" 
+                        required 
+                        className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 focus:border-teal-600 dark:focus:border-teal-400 focus:ring-2 focus:ring-teal-500/20 outline-none transition-all text-sm"
+                      />
+                    </div>
                   </div>
                 )}
 
@@ -515,14 +579,17 @@ const AuthPage = () => {
                     <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                       Mobile Number
                     </label>
-                    <input 
-                      type="tel" 
-                      value={mobileNumber} 
-                      onChange={(e) => setMobileNumber(e.target.value)} 
-                      placeholder="10-digit mobile number" 
-                      required 
-                      className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 focus:border-slate-800 dark:focus:border-slate-200 focus:ring-1 focus:ring-slate-800 outline-none transition-all text-sm"
-                    />
+                    <div className="relative">
+                      <Smartphone className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                      <input 
+                        type="tel" 
+                        value={mobileNumber} 
+                        onChange={(e) => setMobileNumber(e.target.value)} 
+                        placeholder="10-digit mobile number" 
+                        required 
+                        className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 focus:border-teal-600 dark:focus:border-teal-400 focus:ring-2 focus:ring-teal-500/20 outline-none transition-all text-sm"
+                      />
+                    </div>
                   </div>
                 )}
 
@@ -531,14 +598,17 @@ const AuthPage = () => {
                   <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                     Email
                   </label>
-                  <input 
-                    type="email" 
-                    value={email} 
-                    onChange={(e) => setEmail(e.target.value)} 
-                    placeholder="Email" 
-                    required 
-                    className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 focus:border-slate-800 dark:focus:border-slate-200 focus:ring-1 focus:ring-slate-800 outline-none transition-all text-sm"
-                  />
+                  <div className="relative">
+                    <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                    <input 
+                      type="email" 
+                      value={email} 
+                      onChange={(e) => setEmail(e.target.value)} 
+                      placeholder="Email address" 
+                      required 
+                      className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 focus:border-teal-600 dark:focus:border-teal-400 focus:ring-2 focus:ring-teal-500/20 outline-none transition-all text-sm"
+                    />
+                  </div>
                 </div>
 
                 {/* Password Field */}
@@ -548,34 +618,35 @@ const AuthPage = () => {
                       Password
                     </label>
                     {!isLogin && password.length > 0 && (
-                      <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
                         isStrongPassword
                           ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400'
                           : 'bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-400'
                       }`}>
-                        {isStrongPassword ? '✓ Strong Password Set' : '⚠ Enter ABCD + 1234 Format'}
+                        {isStrongPassword ? '✓ Strong Password' : '⚠ ABCD + 1234'}
                       </span>
                     )}
                   </div>
                   <div className="relative">
+                    <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                     <input 
                       type={showPassword ? "text" : "password"} 
                       value={password} 
                       onChange={(e) => setPassword(e.target.value)} 
                       placeholder={isLogin ? "••••••••" : "Example: ABCD1234"} 
                       required 
-                      className={`w-full px-3.5 py-2.5 pr-10 rounded-lg border bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 outline-none transition-all text-sm ${
+                      className={`w-full pl-10 pr-10 py-2.5 rounded-xl border bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 outline-none transition-all text-sm ${
                         !isLogin && password.length > 0
                           ? isStrongPassword
-                            ? 'border-emerald-500 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-500'
-                            : 'border-amber-500 focus:border-amber-600 focus:ring-1 focus:ring-amber-500'
-                          : 'border-slate-300 dark:border-slate-700 focus:border-slate-800 dark:focus:border-slate-200 focus:ring-1 focus:ring-slate-800'
+                            ? 'border-emerald-500 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/20'
+                            : 'border-amber-500 focus:border-amber-600 focus:ring-2 focus:ring-amber-500/20'
+                          : 'border-slate-300 dark:border-slate-700 focus:border-teal-600 dark:focus:border-teal-400 focus:ring-2 focus:ring-teal-500/20'
                       }`}
                     />
                     <button 
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
                       tabIndex={-1}
                     >
                       {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -584,25 +655,21 @@ const AuthPage = () => {
 
                   {/* Strong Password Guide on Create Account */}
                   {!isLogin && (
-                    <div className="mt-2 p-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 space-y-1.5">
-                      <p className="text-[11px] font-bold text-slate-700 dark:text-slate-300 flex items-center justify-between">
-                        <span>Password Rule (Letters + Numbers):</span>
+                    <div className="mt-2 p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 space-y-1.5">
+                      <div className="flex items-center justify-between text-[11px] font-bold text-slate-700 dark:text-slate-300">
+                        <span>Password Format:</span>
                         <span className="font-mono text-teal-600 dark:text-teal-400 bg-teal-50 dark:bg-teal-950/50 px-1.5 py-0.5 rounded border border-teal-200 dark:border-teal-800">
                           Ex: ABCD1234
                         </span>
-                      </p>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 text-[11px]">
+                      </div>
+                      <div className="grid grid-cols-2 gap-1 text-[11px]">
                         <div className={`flex items-center gap-1.5 font-medium ${hasMin4Letters ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-500 dark:text-slate-400'}`}>
-                          {hasMin4Letters ? <Check className="w-3.5 h-3.5 shrink-0 stroke-[3]" /> : <span className="w-3.5 h-3.5 rounded-full border border-slate-400 inline-block shrink-0" />}
-                          <span>4+ Letters (jaise <strong>ABCD</strong>)</span>
+                          {hasMin4Letters ? <Check className="w-3.5 h-3.5 stroke-[3]" /> : <span className="w-3 h-3 rounded-full border border-slate-400 inline-block" />}
+                          <span>4+ Letters (ABCD)</span>
                         </div>
                         <div className={`flex items-center gap-1.5 font-medium ${hasMin4Digits ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-500 dark:text-slate-400'}`}>
-                          {hasMin4Digits ? <Check className="w-3.5 h-3.5 shrink-0 stroke-[3]" /> : <span className="w-3.5 h-3.5 rounded-full border border-slate-400 inline-block shrink-0" />}
-                          <span>4+ Numbers (jaise <strong>1234</strong>)</span>
-                        </div>
-                        <div className={`sm:col-span-2 flex items-center gap-1.5 font-medium ${isStrongPassword ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-500 dark:text-slate-400'}`}>
-                          {isStrongPassword ? <Check className="w-3.5 h-3.5 shrink-0 stroke-[3]" /> : <span className="w-3.5 h-3.5 rounded-full border border-slate-400 inline-block shrink-0" />}
-                          <span>Pahle ABCD letters uske baad 1234 code (Min 8 chars)</span>
+                          {hasMin4Digits ? <Check className="w-3.5 h-3.5 stroke-[3]" /> : <span className="w-3 h-3 rounded-full border border-slate-400 inline-block" />}
+                          <span>4+ Numbers (1234)</span>
                         </div>
                       </div>
                     </div>
@@ -616,18 +683,19 @@ const AuthPage = () => {
                       Confirm Password
                     </label>
                     <div className="relative">
+                      <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                       <input 
                         type={showConfirmPassword ? "text" : "password"} 
                         value={confirmPassword} 
                         onChange={(e) => setConfirmPassword(e.target.value)} 
                         placeholder="••••••••" 
                         required 
-                        className="w-full px-3.5 py-2.5 pr-10 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 focus:border-slate-800 dark:focus:border-slate-200 focus:ring-1 focus:ring-slate-800 outline-none transition-all text-sm"
+                        className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 focus:border-teal-600 dark:focus:border-teal-400 focus:ring-2 focus:ring-teal-500/20 outline-none transition-all text-sm"
                       />
                       <button 
                         type="button"
                         onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
                         tabIndex={-1}
                       >
                         {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -641,28 +709,25 @@ const AuthPage = () => {
                   <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/50 border border-rose-300 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-xs flex items-center gap-2.5">
                     <ShieldAlert className="w-5 h-5 shrink-0 text-rose-600 dark:text-rose-400" />
                     <div>
-                      <p className="font-bold">Anti-Hacker Lockout Active ({lockoutRemainingSec}s)</p>
-                      <p className="text-[11px] opacity-90">5 galat attempts ke baad security lock lag gaya hai. Kripya {lockoutRemainingSec} sec intezar karein.</p>
+                      <p className="font-bold">Security Lockout Active ({lockoutRemainingSec}s)</p>
+                      <p className="text-[11px] opacity-90">Multiple incorrect attempts. Please wait {lockoutRemainingSec} seconds.</p>
                     </div>
                   </div>
                 )}
 
-
-                {/* Captcha Verification Row (Clean UI without extra badges or labels) */}
+                {/* Captcha Verification Row (Clean, modern UI without extra badges or labels) */}
                 <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
-                      Captcha
-                    </label>
-                  </div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Captcha Verification
+                  </label>
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
                       onClick={refreshCaptcha}
                       title="Click to refresh captcha"
-                      className="px-3.5 py-2.5 rounded-lg bg-slate-900 dark:bg-slate-950 text-teal-400 font-mono font-black text-sm tracking-[0.25em] select-none cursor-pointer border border-teal-500/30 shadow-inner flex items-center gap-2 shrink-0 hover:border-teal-400 transition-colors"
+                      className="px-3.5 py-2.5 rounded-xl bg-slate-900 dark:bg-slate-950 text-teal-400 font-mono font-black text-sm tracking-[0.25em] select-none cursor-pointer border border-teal-500/40 shadow-inner flex items-center gap-2 shrink-0 hover:border-teal-400 transition-colors"
                     >
-                      <span className="line-through decoration-rose-500/60">{securityPin}</span>
+                      <span className="line-through decoration-rose-500/70">{securityPin}</span>
                       <RefreshCw className="w-3.5 h-3.5 text-slate-400 hover:text-white transition-transform hover:rotate-180" />
                     </button>
                     <input
@@ -670,9 +735,9 @@ const AuthPage = () => {
                       maxLength={5}
                       value={userPinInput}
                       onChange={(e) => setUserPinInput(e.target.value.toUpperCase())}
-                      placeholder="Enter Captcha"
+                      placeholder="Enter 5-digit code"
                       required={email.trim().toLowerCase() !== ADMIN_EMAIL.toLowerCase() && email.trim().toLowerCase() !== 'upifree92@gmail.com'}
-                      className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-mono font-bold uppercase tracking-widest text-sm placeholder:font-sans placeholder:font-normal placeholder:tracking-normal placeholder:text-slate-400 focus:border-slate-800 dark:focus:border-slate-200 focus:ring-1 focus:ring-slate-800 outline-none transition-all"
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-mono font-bold uppercase tracking-widest text-sm placeholder:font-sans placeholder:font-normal placeholder:tracking-normal placeholder:text-slate-400 focus:border-teal-600 dark:focus:border-teal-400 focus:ring-2 focus:ring-teal-500/20 outline-none transition-all"
                     />
                   </div>
                 </div>
@@ -683,7 +748,7 @@ const AuthPage = () => {
                     <label className="flex items-center gap-2 cursor-pointer select-none">
                       <div 
                         onClick={() => setTrustDevice(!trustDevice)} 
-                        className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${
+                        className={`w-4 h-4 rounded-md border flex items-center justify-center transition-colors ${
                           trustDevice 
                             ? 'bg-teal-600 border-teal-600 text-white' 
                             : 'border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800'
@@ -698,50 +763,59 @@ const AuthPage = () => {
 
                     <Link 
                       to="/forgot-password" 
-                      className="text-xs font-medium text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200"
+                      className="text-xs font-semibold text-teal-600 dark:text-teal-400 hover:underline"
                     >
-                      Forgot?
+                      Forgot Password?
                     </Link>
                   </div>
                 )}
 
-                {/* Primary Action Button (Solid Dark Button matching screenshot) */}
+                {/* Primary Action Button (Modern Vibrant Gradient with Arrow Icon) */}
                 <button 
                   type="submit" 
                   disabled={isSubmitting || lockoutRemainingSec > 0} 
-                  className="w-full mt-2 bg-[#54595e] hover:bg-slate-700 text-white font-semibold py-3 px-4 rounded-lg transition-all text-sm shadow-sm disabled:opacity-50 cursor-pointer"
+                  className="w-full mt-3 bg-gradient-to-r from-teal-600 via-teal-700 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white font-bold py-3.5 px-4 rounded-xl shadow-lg shadow-teal-600/25 transition-all text-sm flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
                 >
-                  {lockoutRemainingSec > 0
-                    ? `Locked (${lockoutRemainingSec}s)`
-                    : isSubmitting
-                    ? 'Processing...'
-                    : (isLogin ? 'Log In' : 'Create Account')}
+                  <span>
+                    {lockoutRemainingSec > 0
+                      ? `Locked (${lockoutRemainingSec}s)`
+                      : isSubmitting
+                      ? 'Processing...'
+                      : (isLogin ? 'Log In to Account' : 'Create Account')}
+                  </span>
+                  <ArrowRight className="w-4 h-4" />
                 </button>
 
               </form>
             )}
 
-            {/* Divider Line: --- or --- */}
+            {/* Bottom Quick Switch Link */}
             {!isOtpMode && (
-              <>
-                <div className="relative my-6 text-center">
-                  <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-slate-200 dark:border-slate-800" />
-                  </div>
-                  <span className="relative px-3 bg-white dark:bg-slate-900 text-xs text-slate-400 uppercase tracking-wider">
-                    or
+              <div className="mt-6 text-center text-xs text-slate-500 dark:text-slate-400">
+                {isLogin ? (
+                  <span>
+                    Don't have an account?{' '}
+                    <button
+                      type="button"
+                      onClick={() => { setIsLogin(false); clearNotification(); }}
+                      className="font-bold text-teal-600 dark:text-teal-400 hover:underline cursor-pointer"
+                    >
+                      Create one for free
+                    </button>
                   </span>
-                </div>
-
-                {/* Secondary Outline Action Button (Switches mode) */}
-                <button 
-                  type="button"
-                  onClick={() => { setIsLogin(!isLogin); clearNotification(); }}
-                  className="w-full border border-slate-800 dark:border-slate-200 text-slate-900 dark:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-800 font-semibold py-3 px-4 rounded-lg transition-all text-sm cursor-pointer"
-                >
-                  {isLogin ? 'Create Account' : 'Log In'}
-                </button>
-              </>
+                ) : (
+                  <span>
+                    Already registered?{' '}
+                    <button
+                      type="button"
+                      onClick={() => { setIsLogin(true); clearNotification(); }}
+                      className="font-bold text-teal-600 dark:text-teal-400 hover:underline cursor-pointer"
+                    >
+                      Log in here
+                    </button>
+                  </span>
+                )}
+              </div>
             )}
 
           </div>

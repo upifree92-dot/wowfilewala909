@@ -77,25 +77,7 @@ CREATE TABLE IF NOT EXISTS `download_history` (
   `expiry_date` TIMESTAMP NULL DEFAULT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- 7. Table for Appointments & Support Bookings
-CREATE TABLE IF NOT EXISTS `appointments` (
-  `id` VARCHAR(191) NOT NULL,
-  `name` VARCHAR(191) NOT NULL,
-  `email` VARCHAR(191) NOT NULL,
-  `phone` VARCHAR(64) NOT NULL,
-  `device_model` VARCHAR(191) NOT NULL,
-  `service_needed` VARCHAR(191) NOT NULL,
-  `appointment_date` VARCHAR(64) NOT NULL,
-  `appointment_time` VARCHAR(64) NOT NULL,
-  `description` TEXT DEFAULT NULL,
-  `status` VARCHAR(64) NOT NULL DEFAULT 'pending',
-  `user_id` VARCHAR(191) DEFAULT 'anonymous',
-  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- 8. Table for Token Verification Keys
+-- 7. Table for Token Verification Keys
 CREATE TABLE IF NOT EXISTS `token_keys` (
   `id` VARCHAR(191) NOT NULL,
   `key` VARCHAR(191) NOT NULL,

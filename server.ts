@@ -284,17 +284,6 @@ function getParsedUserGsmServices(customRate = 85.5, customMargin = 15) {
     }
   });
 
-  app.post('/api/save-appointment', async (req, res) => {
-    try {
-      const data = req.body;
-      await pool.query('INSERT INTO appointments (name, email, phone, device_model, service_needed, appointment_date, appointment_time, description, status, user_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-        [data.name, data.email, data.phone, data.device_model, data.service_needed, data.appointment_date, data.appointment_time, data.description, 'pending', data.user_id || 'anonymous']);
-      res.json({ success: true });
-    } catch (err: any) {
-      res.status(500).json({ success: false, error: err.message });
-    }
-  });
-
   app.post('/api/save-user', async (req, res) => {
     try {
       const data = req.body;

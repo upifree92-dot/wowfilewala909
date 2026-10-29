@@ -1,19 +1,3 @@
-
-export interface AppointmentData {
-  id?: string;
-  name: string;
-  email: string;
-  phone: string;
-  device_model: string;
-  service_needed: string;
-  appointment_date: string;
-  appointment_time: string;
-  description: string;
-  status?: string;
-  created_at?: string;
-  user_id?: string;
-}
-
 export interface DownloadRecord {
   user_id: string;
   user_email: string;
@@ -63,10 +47,6 @@ async function apiCall(endpoint: string, method: string, body?: any) {
     body: body ? JSON.stringify(body) : undefined,
   });
   return response.json();
-}
-
-export async function saveAppointment(data: AppointmentData) {
-  return apiCall('save-appointment', 'POST', data);
 }
 
 export async function saveDownloadRecord(data: DownloadRecord) {
