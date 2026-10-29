@@ -352,7 +352,13 @@ const ProductModal = ({ product, isOpen, onClose, onDelete }: ProductModalProps)
       const defaultCatId = categories && categories.length > 0 ? categories[0].id : 'cat-imei';
       const finalCatId = categoryId || defaultCatId;
       if (!name.trim()) {
-        setNotification('Please enter a service/product name.', 'error');
+        setNotification('Service name zaroori hai.', 'error');
+        return;
+      }
+      
+      // Basic validation for numeric fields
+      if (price < 0 || dealerPrice < 0) {
+        setNotification('Price negative nahi ho sakta.', 'error');
         return;
       }
 
@@ -381,8 +387,8 @@ const ProductModal = ({ product, isOpen, onClose, onDelete }: ProductModalProps)
       }
       onClose();
     } catch (err) {
-      console.error("Error saving product:", err);
-      setNotification("Error saving service. Please check values.", "error");
+      console.error("Service save karte waqt error:", err);
+      setNotification("Service save nahi ho paya. Check karein ki saari values sahi hain.", "error");
     }
   };
 

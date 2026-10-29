@@ -22,73 +22,62 @@ const SecurityShield: React.FC = () => {
     setSecurityWarning(msg);
     setTimeout(() => {
       setSecurityWarning((prev) => (prev === msg ? null : prev));
-    }, 3500);
+    }, 3000);
   };
 
-  // 1. Protect against keyboard shortcuts used to inspect / tamper with code (F12, Ctrl+Shift+I/J/C, Ctrl+U)
+  // 1. Protect against hacker keyboard shortcuts (F12, Ctrl+Shift+I/J/C, Ctrl+U) for non-Admin users
+  // Admin has 100% unrestricted access to all tools, shortcuts, right-click, and editing
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Allow Admin full access
       if (isAdmin) return;
 
       const key = e.key?.toUpperCase();
       const isF12 = e.key === 'F12' || e.keyCode === 123;
       const isInspect = (e.ctrlKey || e.metaKey) && e.shiftKey && ['I', 'J', 'C'].includes(key);
       const isViewSource = (e.ctrlKey || e.metaKey) && key === 'U';
-      const isSavePage = (e.ctrlKey || e.metaKey) && key === 'S';
 
-      if (isF12 || isInspect || isViewSource || isSavePage) {
+      if (isF12 || isInspect || isViewSource) {
         e.preventDefault();
         e.stopPropagation();
-        triggerWarning('🛡️ Anti-Hacker Shield Active: Inspect Element & Source Code access is restricted!');
+        triggerWarning('🛡️ Anti-Hacker Shield Active: Source Code & Inspect Element is restricted!');
         return false;
       }
     };
 
-    const handleContextMenu = (e: MouseEvent) => {
-      if (isAdmin) return;
-      const target = e.target as HTMLElement;
-      // Allow right-click inside normal input/textarea fields so users can paste OTP/IMEI/passwords
-      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) {
-        return;
-      }
-      e.preventDefault();
-      triggerWarning('🛡️ Website Protected by WowFileWala 256-Bit Anti-Hacker Shield.');
-    };
-
     window.addEventListener('keydown', handleKeyDown, true);
-    window.addEventListener('contextmenu', handleContextMenu);
-
     return () => {
       window.removeEventListener('keydown', handleKeyDown, true);
-      window.removeEventListener('contextmenu', handleContextMenu);
     };
   }, [isAdmin]);
 
-  // 2. Wallet Balance & Admin Role LocalStorage Anti-Tamper Guard
+  // 2. Admin Role Escalation Anti-Tamper Guard (prevents hackers from changing email to ADMIN_EMAIL in localStorage)
   useEffect(() => {
-    if (!user) return;
+    if (isAdmin) {
+      sessionStorage.setItem('wfw_admin_verified', 'true');
+      return;
+    }
 
-    // Store valid signature whenever legitimate context state updates
-    const validSig = computeSecuritySignature(user.id, user.email, user.walletBalance || 0);
-    sessionStorage.setItem('wfw_integrity_sig', validSig);
-    sessionStorage.setItem('wfw_verified_balance', String(user.walletBalance || 0));
-    sessionStorage.setItem('wfw_verified_email', user.email.toLowerCase());
+    if (user) {
+      sessionStorage.setItem('wfw_verified_email', user.email.toLowerCase());
+    }
 
     const handleStorageTamper = (e: StorageEvent) => {
+      if (isAdmin) return;
       if (e.key === 'user' && e.newValue) {
         try {
           const parsed = JSON.parse(e.newValue);
           const expectedEmail = sessionStorage.getItem('wfw_verified_email');
-          const expectedBalance = parseFloat(sessionStorage.getItem('wfw_verified_balance') || '0');
+          const isVerifiedAdmin = sessionStorage.getItem('wfw_admin_verified') === 'true';
 
-          // Detect unauthorized privilege escalation to Admin email or manual wallet balance inflation in localStorage
+          // Block if someone manually edits localStorage "user" email to Admin email without logging in as Admin
           if (
-            (parsed.email && parsed.email.toLowerCase() === ADMIN_EMAIL.toLowerCase() && expectedEmail !== ADMIN_EMAIL.toLowerCase()) ||
-            (typeof parsed.walletBalance === 'number' && parsed.walletBalance > expectedBalance + 0.01 && !isAdmin)
+            parsed.email &&
+            parsed.email.toLowerCase() === ADMIN_EMAIL.toLowerCase() &&
+            !isVerifiedAdmin &&
+            expectedEmail !== ADMIN_EMAIL.toLowerCase()
           ) {
-            triggerWarning('🚨 Security Alert: Unauthorized LocalStorage tampering detected! Session reset.');
-            setNotification('Security Violation: Unauthorized data modification blocked by Anti-Hacker Shield.', 'error');
+            triggerWarning('🚨 Security Alert: Unauthorized Admin role tampering blocked!');
+            setNotification('Security Violation: Unauthorized Admin access attempt blocked.', 'error');
             logout();
           }
         } catch {
@@ -101,32 +90,10 @@ const SecurityShield: React.FC = () => {
     return () => window.removeEventListener('storage', handleStorageTamper);
   }, [user, isAdmin, logout, setNotification]);
 
-  // 3. Anti-Clickjacking Frame Guard (allows trusted preview environments)
-  useEffect(() => {
-    try {
-      if (window.top !== window.self) {
-        const ancestorOrigins = document.location.ancestorOrigins;
-        if (ancestorOrigins && ancestorOrigins.length > 0) {
-          const topOrigin = ancestorOrigins[0];
-          const isTrusted =
-            topOrigin.includes('google') ||
-            topOrigin.includes('run.app') ||
-            topOrigin.includes('localhost') ||
-            topOrigin.includes('wowfilewala');
-          if (!isTrusted) {
-            console.warn('Untrusted frame detected by SecurityShield');
-          }
-        }
-      }
-    } catch {
-      // Cross-origin frame access restricted by browser
-    }
-  }, []);
-
   if (!securityWarning) return null;
 
   return (
-    <div className="fixed bottom-5 left-1/2 -translate-x-1/2 z-[9999] max-w-md w-[92%] pointer-events-none animate-bounce">
+    <div className="fixed bottom-5 left-1/2 -translate-x-1/2 z-[9999] max-w-md w-[92%] pointer-events-none">
       <div className="bg-slate-950/95 border-2 border-rose-500/80 text-white px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-3 backdrop-blur-md">
         <div className="w-9 h-9 rounded-xl bg-rose-500/20 border border-rose-500/40 flex items-center justify-center shrink-0 text-rose-400">
           <ShieldAlert className="w-5 h-5" />

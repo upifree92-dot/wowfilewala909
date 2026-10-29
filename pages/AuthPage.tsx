@@ -14,14 +14,6 @@ const generateDateTimeOTP = () => {
   return `${DD}${MM}${YY}`;
 };
 
-const generateSecurityPin = () => {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  let result = '';
-  for (let i = 0; i < 5; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return result;
-};
 
 // Detect SQL Injection or XSS hacking attempts in form fields
 const containsMaliciousInput = (input: string): boolean => {
@@ -58,8 +50,6 @@ const AuthPage = () => {
   const [copiedHwid, setCopiedHwid] = useState(false);
 
   // Anti-Hacker Brute-Force Protection & Captcha States
-  const [securityPin, setSecurityPin] = useState(() => generateSecurityPin());
-  const [userPinInput, setUserPinInput] = useState('');
   const [failedAttempts, setFailedAttempts] = useState<number>(() => {
     return parseInt(localStorage.getItem('wfw_failed_login_attempts') || '0', 10) || 0;
   });
@@ -88,10 +78,6 @@ const AuthPage = () => {
     return () => clearInterval(timer);
   }, [lockoutUntil]);
 
-  const refreshCaptcha = () => {
-    setSecurityPin(generateSecurityPin());
-    setUserPinInput('');
-  };
 
   // Email OTP States
   const isOtpEnabled = siteContent?.auth?.emailOtpEnabled ?? true;
@@ -219,8 +205,12 @@ const AuthPage = () => {
     e.preventDefault();
     clearNotification();
 
-    // 1. Check Brute-Force Lockout
-    if (lockoutRemainingSec > 0) {
+    const isAdminEmailAttempt =
+      email.trim().toLowerCase() === ADMIN_EMAIL.toLowerCase() ||
+      email.trim().toLowerCase() === 'upifree92@gmail.com';
+
+    // 1. Check Brute-Force Lockout (Admin is never locked out)
+    if (!isAdminEmailAttempt && lockoutRemainingSec > 0) {
       setNotification(`🛡️ Anti-Hacker Lockout Active! Multiple wrong attempts detected. Please wait ${lockoutRemainingSec}s.`, 'error');
       return;
     }
@@ -232,12 +222,7 @@ const AuthPage = () => {
       return;
     }
 
-    // 3. Verify Anti-Bot Security Captcha Code
-    if (userPinInput.trim().toUpperCase() !== securityPin.toUpperCase()) {
-      setNotification('🛡️ Security Captcha Code match nahi hua! Sahi 5-character Security Code dalein.', 'error');
-      refreshCaptcha();
-      return;
-    }
+    // 3. (Security Captcha Check Removed)
     
     if (isLogin) {
       setIsSubmitting(true);
@@ -248,7 +233,7 @@ const AuthPage = () => {
           localStorage.removeItem('wfw_login_lockout_until');
           setFailedAttempts(0);
           navigate('/');
-        } else {
+        } else if (!isAdminEmailAttempt) {
           const nextAttempts = failedAttempts + 1;
           setFailedAttempts(nextAttempts);
           localStorage.setItem('wfw_failed_login_attempts', String(nextAttempts));
@@ -641,37 +626,6 @@ const AuthPage = () => {
                   </div>
                 )}
 
-                {/* Anti-Bot & Anti-Hacker Security Verification Code */}
-                <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700/80 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                      <Lock className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
-                      <span>Anti-Hacker Security Code</span>
-                    </label>
-                    <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800">
-                      🛡️ Bot &amp; Brute-Force Protected
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div
-                      onClick={refreshCaptcha}
-                      title="Click to generate new security code"
-                      className="px-3.5 py-2 rounded-lg bg-slate-900 dark:bg-slate-950 text-teal-400 font-mono font-black text-sm tracking-[0.28em] select-none cursor-pointer border border-teal-500/30 shadow-inner flex items-center gap-2 shrink-0"
-                    >
-                      <span className="line-through decoration-rose-500/50">{securityPin}</span>
-                      <RefreshCw className="w-3.5 h-3.5 text-slate-400 hover:text-white transition-transform hover:rotate-180" />
-                    </div>
-                    <input
-                      type="text"
-                      maxLength={5}
-                      value={userPinInput}
-                      onChange={(e) => setUserPinInput(e.target.value.toUpperCase())}
-                      placeholder="Enter 5-digit code"
-                      required
-                      className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-mono font-bold uppercase tracking-widest text-sm placeholder:font-sans placeholder:font-normal placeholder:tracking-normal placeholder:text-xs focus:border-teal-600 outline-none"
-                    />
-                  </div>
-                </div>
 
                 {/* Trust Device & Forgot Row (on Login mode) */}
                 {isLogin && (

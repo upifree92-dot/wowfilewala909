@@ -100,11 +100,14 @@ async function startServer() {
   // 2. IP Rate Limiter & Anti-DDoS / Brute-Force Firewall for API Routes
   const ipRateMap = new Map<string, { count: number; resetTime: number }>();
   app.use('/api', (req, res, next) => {
+    if (req.path.startsWith('/cloud-sync') || req.path.startsWith('/fetch-gsm-services')) {
+      return next();
+    }
     const forwarded = req.headers['x-forwarded-for'];
     const clientIp = typeof forwarded === 'string' ? forwarded.split(',')[0].trim() : (req.socket.remoteAddress || 'unknown');
     const now = Date.now();
     const windowMs = 60 * 1000; // 1 minute window
-    const maxRequests = 180; // Max 180 API calls per minute per IP
+    const maxRequests = 600; // Generous limit for Admin operations while blocking DDoS bots
 
     const entry = ipRateMap.get(clientIp);
     if (!entry || now > entry.resetTime) {
