@@ -231,4 +231,5 @@ export interface ApiServerConfig {
   autoSyncPrice?: boolean;
   autoPlaceOrder?: boolean;
   autoOrderSuccess?: boolean;
+  dealerOrderMode?: 'dealer_live_sync' | 'instant_success';
 }

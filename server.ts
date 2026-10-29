@@ -258,7 +258,28 @@ function getParsedUserGsmServices(customRate = 85.5, customMargin = 15) {
     }
   });
 
-  // API Route: Forward User Order directly to Connected Dealer API & Auto-Success
+  // Helper: Normalize Dealer API status code/text into our internal status ('pending' | 'processing' | 'approved' | 'rejected')
+  const parseDealerStatus = (rawStatus: any): 'pending' | 'processing' | 'approved' | 'rejected' | null => {
+    if (rawStatus === undefined || rawStatus === null || rawStatus === '') return null;
+    const str = String(rawStatus).trim().toLowerCase();
+    // Numeric DHRU Fusion / GSM Theme / WebX codes:
+    // 0 = Waiting/New, 1 = InProcess/Pending, 2 = InProcess/Processing, 3 = Rejected, 4 = Success/Available
+    if (str === '4' || str === 'success' || str === 'completed' || str === 'approved' || str === 'available' || str === 'done') {
+      return 'approved';
+    }
+    if (str === '3' || str === 'rejected' || str === 'reject' || str === 'cancelled' || str === 'canceled' || str === 'failed' || str === 'error') {
+      return 'rejected';
+    }
+    if (str === '2' || str === '1' || str === 'processing' || str === 'inprocess' || str === 'in_process' || str === 'working') {
+      return 'processing';
+    }
+    if (str === '0' || str === 'waiting' || str === 'pending' || str === 'new' || str === 'queued') {
+      return 'pending';
+    }
+    return null;
+  };
+
+  // API Route: Forward User Order directly to Connected Dealer API
   app.post('/api/place-dealer-order', async (req, res) => {
     const {
       orderId,
@@ -276,7 +297,7 @@ function getParsedUserGsmServices(customRate = 85.5, customMargin = 15) {
     const apiUrl = (dealerApi.apiUrl || '').trim();
     const username = (dealerApi.username || '').trim();
     const apiAccessKey = (dealerApi.apiAccessKey || '').trim();
-    const autoOrderSuccess = dealerApi.autoOrderSuccess !== false;
+    const dealerOrderMode = dealerApi.dealerOrderMode || 'dealer_live_sync';
 
     const cleanInput = String(inputData || '')
       .replace(/^(IMEI:\s*|Account:\s*|WhatsApp:\s*)/i, '')
@@ -285,19 +306,20 @@ function getParsedUserGsmServices(customRate = 85.5, customMargin = 15) {
 
     let dealerRefId = `DLR-${Math.floor(100000 + Math.random() * 900000)}`;
     let dealerReply = '';
+    let dealerStatus: 'pending' | 'processing' | 'approved' | 'rejected' =
+      dealerOrderMode === 'instant_success' ? 'approved' : 'processing';
     let forwardedToUrl = false;
 
     // 1. If a real Dealer API URL is configured, immediately push/notify the Dealer API
     if (apiUrl && /^https?:\/\//i.test(apiUrl)) {
       try {
-        const xmlParams = `<PARAMETERS><IMEI>${cleanInput}</IMEI><ID>${serviceId || '1'}</ID><CUSTOMFIELD>${ Buffer.from(JSON.stringify({ input: cleanInput, serviceName, orderId, customerEmail })).toString('base64') }</CUSTOMFIELD></PARAMETERS>`;
+        const xmlParams = `<PARAMETERS><IMEI>${cleanInput}</IMEI><ID>${serviceId || '1'}</ID><CUSTOMFIELD>${Buffer.from(JSON.stringify({ input: cleanInput, serviceName, orderId, customerEmail })).toString('base64')}</CUSTOMFIELD></PARAMETERS>`;
         const formData = new URLSearchParams();
         formData.append('username', username);
         formData.append('apiaccesskey', apiAccessKey);
         formData.append('action', 'placeimeiorder');
         formData.append('requestformat', 'JSON');
         formData.append('parameters', xmlParams);
-        // Also include standard REST/Webhook fields for GSM Tool / WebX / Naksh Soft / Custom Dealer APIs
         formData.append('order_id', String(orderId || ''));
         formData.append('service_id', String(serviceId || ''));
         formData.append('service_name', String(serviceName || ''));
@@ -307,7 +329,7 @@ function getParsedUserGsmServices(customRate = 85.5, customMargin = 15) {
         formData.append('customer_email', String(customerEmail));
 
         const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 6000);
+        const timeout = setTimeout(() => controller.abort(), 7000);
 
         const response = await fetch(apiUrl, {
           method: 'POST',
@@ -325,15 +347,41 @@ function getParsedUserGsmServices(customRate = 85.5, customMargin = 15) {
         const rawText = await response.text();
         try {
           const json = JSON.parse(rawText);
-          // Parse DHRU / GSM Theme / WebX response structure
-          if (json?.SUCCESS && Array.isArray(json.SUCCESS) && json.SUCCESS[0]) {
+          // Check if Dealer API returned ERROR / Rejection immediately
+          if (json?.ERROR && Array.isArray(json.ERROR) && json.ERROR[0]) {
+            const errObj = json.ERROR[0];
+            const errMsg = errObj.MESSAGE || errObj.FULL_DESCRIPTION || 'Order rejected by Dealer API';
+            dealerStatus = 'rejected';
+            dealerReply = String(errMsg);
+          } else if (json?.error && typeof json.error === 'string') {
+            dealerStatus = 'rejected';
+            dealerReply = json.error;
+          } else if (json?.SUCCESS && Array.isArray(json.SUCCESS) && json.SUCCESS[0]) {
             const sObj = json.SUCCESS[0];
             if (sObj.REFERENCEID) dealerRefId = String(sObj.REFERENCEID);
-            if (sObj.MESSAGE) dealerReply = String(sObj.MESSAGE);
-          } else if (json?.referenceid || json?.order_id || json?.id) {
-            dealerRefId = String(json.referenceid || json.order_id || json.id);
-            if (json.reply || json.message || json.code) {
-              dealerReply = String(json.reply || json.message || json.code);
+            const parsedSt = parseDealerStatus(sObj.STATUS ?? sObj.status);
+            if (parsedSt) {
+              dealerStatus = parsedSt;
+            } else if (sObj.CODE) {
+              dealerStatus = 'approved';
+            } else if (dealerOrderMode === 'dealer_live_sync') {
+              dealerStatus = 'processing';
+            }
+            if (sObj.CODE) {
+              dealerReply = String(sObj.CODE);
+            } else if (sObj.MESSAGE) {
+              dealerReply = String(sObj.MESSAGE);
+            }
+          } else {
+            if (json?.referenceid || json?.order_id || json?.id) {
+              dealerRefId = String(json.referenceid || json.order_id || json.id);
+            }
+            const parsedSt = parseDealerStatus(json?.status ?? json?.STATUS ?? json?.order_status);
+            if (parsedSt) {
+              dealerStatus = parsedSt;
+            }
+            if (json?.code || json?.reply || json?.message || json?.reason) {
+              dealerReply = String(json.code || json.reply || json.message || json.reason);
             }
           }
         } catch {
@@ -346,21 +394,254 @@ function getParsedUserGsmServices(customRate = 85.5, customMargin = 15) {
       }
     }
 
-    // 2. Build clean automated reply if Dealer API didn't return a custom unlock code text
+    // 2. Build clean status message if Dealer API didn't return custom text yet
     if (!dealerReply) {
-      dealerReply = `[${apiName} - ${apiType}] Auto Order Success ✅ | Ref ID: #${dealerRefId} | Input: ${cleanInput} | Verified & Completed Instantly`;
+      if (dealerStatus === 'approved') {
+        dealerReply = `[${apiName}] Order Completed ✅ | Ref ID: #${dealerRefId} | Input: ${cleanInput}`;
+      } else if (dealerStatus === 'rejected') {
+        dealerReply = `[${apiName}] Order Rejected by Dealer Team | Ref ID: #${dealerRefId}`;
+      } else if (dealerStatus === 'processing') {
+        dealerReply = `Order sent to ${apiName} Team (Ref ID: #${dealerRefId}). Processing in progress - you will be notified automatically as soon as Dealer updates status.`;
+      } else {
+        dealerReply = `Waiting for ${apiName} Team action (Ref ID: #${dealerRefId}).`;
+      }
     }
 
     return res.json({
       success: true,
-      autoCompleted: autoOrderSuccess,
-      status: autoOrderSuccess ? 'approved' : 'processing',
+      status: dealerStatus,
       dealerRefId,
       forwardedToUrl,
       apiProvider: `${apiName} (${apiType} Auto API 24x7)`,
       reply: dealerReply,
-      repliedAt: new Date().toISOString()
+      repliedAt: (dealerStatus === 'approved' || dealerStatus === 'rejected') ? new Date().toISOString() : undefined
     });
+  });
+
+  // API Route: Poll / Check Live Order Status from Connected Dealer API (action=getimeiorder)
+  // Whatever the Dealer Team does (Processing / Success / Reject / Waiting), this fetches it live!
+  app.post('/api/check-dealer-orders', async (req, res) => {
+    const { orders = [], dealerApi = {} } = req.body || {};
+    const apiUrl = (dealerApi.apiUrl || '').trim();
+    const username = (dealerApi.username || '').trim();
+    const apiAccessKey = (dealerApi.apiAccessKey || '').trim();
+
+    if (!apiUrl || !/^https?:\/\//i.test(apiUrl) || !Array.isArray(orders) || orders.length === 0) {
+      return res.json({ success: true, updates: [] });
+    }
+
+    const updates: Array<{
+      orderId: string;
+      dealerRefId: string;
+      status: 'pending' | 'processing' | 'approved' | 'rejected';
+      reply: string;
+      repliedAt?: string;
+    }> = [];
+
+    for (const ord of orders.slice(0, 15)) {
+      const orderId = String(ord.orderId || '');
+      const dealerRefId = String(ord.dealerRefId || ord.orderId || '').replace(/^DLR-/i, '');
+      const fullRefId = String(ord.dealerRefId || ord.orderId || '');
+      if (!orderId) continue;
+
+      try {
+        const xmlParams = `<PARAMETERS><ID>${dealerRefId}</ID><ORDERID>${orderId}</ORDERID></PARAMETERS>`;
+        const formData = new URLSearchParams();
+        formData.append('username', username);
+        formData.append('apiaccesskey', apiAccessKey);
+        formData.append('action', 'getimeiorder');
+        formData.append('requestformat', 'JSON');
+        formData.append('parameters', xmlParams);
+        formData.append('id', dealerRefId);
+        formData.append('referenceid', fullRefId);
+        formData.append('order_id', orderId);
+
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 5000);
+
+        const response = await fetch(apiUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Accept': 'application/json, text/plain, */*',
+            'User-Agent': 'WowFileWala-AutoAPI/2.0'
+          },
+          body: formData.toString(),
+          signal: controller.signal
+        });
+        clearTimeout(timeout);
+
+        const rawText = await response.text();
+        const json = JSON.parse(rawText);
+
+        let detectedStatus: 'pending' | 'processing' | 'approved' | 'rejected' | null = null;
+        let detectedReply = '';
+
+        if (json?.SUCCESS && Array.isArray(json.SUCCESS) && json.SUCCESS[0]) {
+          const sObj = json.SUCCESS[0];
+          detectedStatus = parseDealerStatus(sObj.STATUS ?? sObj.status);
+          detectedReply = String(sObj.CODE || sObj.MESSAGE || sObj.REPLY || '').trim();
+        } else if (json?.ERROR && Array.isArray(json.ERROR) && json.ERROR[0]) {
+          const eObj = json.ERROR[0];
+          const errMsg = String(eObj.MESSAGE || eObj.FULL_DESCRIPTION || '');
+          if (/reject|cancel|fail|invalid|not found/i.test(errMsg)) {
+            detectedStatus = 'rejected';
+            detectedReply = errMsg;
+          }
+        } else if (json && typeof json === 'object') {
+          detectedStatus = parseDealerStatus(json.status ?? json.STATUS ?? json.order_status);
+          detectedReply = String(json.code || json.CODE || json.reply || json.message || json.reason || '').trim();
+        }
+
+        if (detectedStatus) {
+          updates.push({
+            orderId,
+            dealerRefId: fullRefId,
+            status: detectedStatus,
+            reply: detectedReply,
+            repliedAt: (detectedStatus === 'approved' || detectedStatus === 'rejected') ? new Date().toISOString() : undefined
+          });
+        }
+      } catch {
+        // Ignore individual network timeout and continue checking next order
+      }
+    }
+
+    return res.json({ success: true, updates });
+  });
+
+  // API Route: Direct Dealer Webhook / Callback (GET or POST)
+  // Allows Dealer API Server or Dealer Team to push status updates (waiting / processing / approved / rejected) directly
+  app.all('/api/dealer-webhook', async (req, res) => {
+    try {
+      const params = { ...(req.query || {}), ...(req.body || {}) };
+      const orderId = String(params.order_id || params.orderId || params.id || '').replace(/^#/, '').trim();
+      const dealerRefId = String(params.referenceid || params.dealerRefId || params.ref_id || '').trim();
+      const rawStatus = params.status ?? params.STATUS ?? params.order_status;
+      const replyText = String(params.reply || params.code || params.CODE || params.message || params.MESSAGE || params.reason || '').trim();
+
+      const newStatus = parseDealerStatus(rawStatus);
+      if ((!orderId && !dealerRefId) || !newStatus) {
+        return res.status(400).json({
+          success: false,
+          error: 'Required parameters: order_id (or referenceid) and status (waiting | processing | approved | rejected)'
+        });
+      }
+
+      const dataPath = path.join(process.cwd(), 'public', 'cloud-data.json');
+      let cloudData: any = {};
+      if (fs.existsSync(dataPath)) {
+        cloudData = JSON.parse(fs.readFileSync(dataPath, 'utf-8'));
+      }
+
+      const nowIso = new Date().toISOString();
+      let matchedOrderId = orderId;
+      let targetUserId = '';
+      let refundAmount = 0;
+      let serviceTitle = 'Order';
+      let previousStatus = '';
+
+      if (Array.isArray(cloudData.adminNotifications)) {
+        cloudData.adminNotifications = cloudData.adminNotifications.map((n: any) => {
+          const matchesId = orderId && String(n.orderId || '').replace(/^#/, '') === orderId;
+          const matchesRef = dealerRefId && String(n.orderDetails?.dealerRefId || '') === dealerRefId;
+          if (matchesId || matchesRef) {
+            matchedOrderId = String(n.orderId || orderId);
+            targetUserId = String(n.userId || '');
+            previousStatus = String(n.status || 'pending');
+            serviceTitle = String(n.orderDetails?.categoryName || 'Order');
+            refundAmount = Number(n.orderDetails?.totalPrice ?? n.orderDetails?.price ?? 0);
+            return {
+              ...n,
+              status: newStatus,
+              adminReply: replyText || n.adminReply,
+              rejectionReason: newStatus === 'rejected' ? (replyText || 'Rejected by Dealer API Team') : n.rejectionReason,
+              repliedAt: (newStatus === 'approved' || newStatus === 'rejected') ? nowIso : n.repliedAt,
+              read: false
+            };
+          }
+          return n;
+        });
+      }
+
+      // Update user's notifications & auto-refund wallet if rejected by Dealer Team
+      if (Array.isArray(cloudData.users)) {
+        cloudData.users = cloudData.users.map((u: any) => {
+          if (!u) return u;
+          const isOwner = (targetUserId && u.id === targetUserId) ||
+            (Array.isArray(u.notifications) && u.notifications.some((un: any) => String(un.orderId || '') === matchedOrderId));
+          if (!isOwner) return u;
+
+          let walletBal = Number(u.wallet?.balance || 0);
+          let txHistory = Array.isArray(u.transactionHistory) ? [...u.transactionHistory] : [];
+
+          if (newStatus === 'rejected' && previousStatus !== 'rejected' && refundAmount > 0) {
+            walletBal = Number((walletBal + refundAmount).toFixed(2));
+            txHistory.unshift({
+              id: `txn-dlr-refund-${Date.now()}`,
+              timestamp: nowIso,
+              type: 'refund',
+              amount: refundAmount,
+              description: `Auto Refund for Dealer Rejected Order #${matchedOrderId}: ${serviceTitle}`
+            });
+          }
+
+          const statusTitle =
+            newStatus === 'approved'
+              ? `Order #${matchedOrderId} Success ✅`
+              : newStatus === 'rejected'
+              ? `Order #${matchedOrderId} Rejected ❌`
+              : newStatus === 'processing'
+              ? `Order #${matchedOrderId} Processing ⏳`
+              : `Order #${matchedOrderId} Waiting Action`;
+
+          const statusMsg =
+            newStatus === 'approved'
+              ? `Order #${matchedOrderId} (${serviceTitle}) has been completed by Dealer Team! ${replyText ? 'Reply/Code: ' + replyText : ''}`
+              : newStatus === 'rejected'
+              ? `Order #${matchedOrderId} (${serviceTitle}) was rejected by Dealer Team. ${replyText ? 'Reason: ' + replyText + '. ' : ''}${refundAmount > 0 ? `₹${refundAmount.toFixed(2)} has been refunded to your wallet.` : ''}`
+              : `Order #${matchedOrderId} (${serviceTitle}) status updated to ${newStatus.toUpperCase()} by Dealer Team. ${replyText || ''}`;
+
+          const nextNotifs = Array.isArray(u.notifications)
+            ? u.notifications.map((un: any) => {
+                if (String(un.orderId || '') === matchedOrderId) {
+                  return {
+                    ...un,
+                    status: newStatus,
+                    title: statusTitle,
+                    message: statusMsg,
+                    adminReply: replyText || un.adminReply,
+                    rejectionReason: newStatus === 'rejected' ? (replyText || 'Rejected by Dealer API Team') : un.rejectionReason,
+                    read: false,
+                    timestamp: nowIso
+                  };
+                }
+                return un;
+              })
+            : [];
+
+          return {
+            ...u,
+            wallet: { ...(u.wallet || {}), balance: walletBal },
+            transactionHistory: txHistory,
+            notifications: nextNotifs
+          };
+        });
+      }
+
+      cloudData.updatedAt = Date.now();
+      fs.writeFileSync(dataPath, JSON.stringify(cloudData, null, 2), 'utf-8');
+
+      return res.json({
+        success: true,
+        orderId: matchedOrderId,
+        status: newStatus,
+        reply: replyText,
+        updatedAt: cloudData.updatedAt
+      });
+    } catch (err: any) {
+      return res.status(500).json({ success: false, error: err?.message || 'Webhook error' });
+    }
   });
 
   // API Route: Real-time test of Hostinger MySQL connection

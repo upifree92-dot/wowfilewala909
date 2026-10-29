@@ -171,7 +171,8 @@ const HostingraConnectorPage = () => {
                 balance: siteContent.apiServer.balance || '2778.068',
                 status: (siteContent.apiServer.status as 'Active' | 'Disabled') || 'Active',
                 autoPlaceOrder: siteContent.apiServer.autoPlaceOrder !== false,
-                autoOrderSuccess: siteContent.apiServer.autoOrderSuccess !== false
+                autoOrderSuccess: siteContent.apiServer.autoOrderSuccess !== false,
+                dealerOrderMode: siteContent.apiServer.dealerOrderMode || 'dealer_live_sync'
             }];
         }
         return [];
@@ -193,6 +194,7 @@ const HostingraConnectorPage = () => {
     const [formStatus, setFormStatus] = useState<'Active' | 'Disabled'>('Active');
     const [formAutoPlaceOrder, setFormAutoPlaceOrder] = useState<boolean>(true);
     const [formAutoOrderSuccess, setFormAutoOrderSuccess] = useState<boolean>(true);
+    const [formDealerOrderMode, setFormDealerOrderMode] = useState<'dealer_live_sync' | 'instant_success'>('dealer_live_sync');
     const [isTypeDropdownOpen, setIsTypeDropdownOpen] = useState(false);
 
     // Pricing & Global Rate state
@@ -260,6 +262,7 @@ const HostingraConnectorPage = () => {
         setFormStatus('Active');
         setFormAutoPlaceOrder(true);
         setFormAutoOrderSuccess(true);
+        setFormDealerOrderMode('dealer_live_sync');
         setIsTypeDropdownOpen(false);
         setIsModalOpen(true);
     };
@@ -275,30 +278,35 @@ const HostingraConnectorPage = () => {
         setFormStatus(api.status);
         setFormAutoPlaceOrder(api.autoPlaceOrder !== false);
         setFormAutoOrderSuccess(api.autoOrderSuccess !== false);
+        setFormDealerOrderMode(api.dealerOrderMode || 'dealer_live_sync');
         setIsTypeDropdownOpen(false);
         setIsModalOpen(true);
     };
 
-    // Quick 1-click toggle for Auto Order Success in table
+    // Quick 1-click toggle for Dealer Order Mode in table
     const handleQuickToggleAutoSuccess = (api: ApiServerConfig) => {
-        const nextVal = !(api.autoOrderSuccess !== false);
+        const currentMode = api.dealerOrderMode || 'dealer_live_sync';
+        const nextMode: 'dealer_live_sync' | 'instant_success' =
+            currentMode === 'dealer_live_sync' ? 'instant_success' : 'dealer_live_sync';
         const updatedApi: ApiServerConfig = {
             ...api,
-            autoPlaceOrder: nextVal,
-            autoOrderSuccess: nextVal
+            autoPlaceOrder: true,
+            autoOrderSuccess: true,
+            dealerOrderMode: nextMode
         };
         const updatedList = apiServersList.map(a => a.id === api.id ? updatedApi : a);
         updateSiteContent('apiServers', updatedList);
         const currentSavedApi = siteContent?.apiServer || {};
         updateSiteContent('apiServer', {
             ...currentSavedApi,
-            autoPlaceOrder: nextVal,
-            autoOrderSuccess: nextVal
+            autoPlaceOrder: true,
+            autoOrderSuccess: true,
+            dealerOrderMode: nextMode
         });
         setNotification(
-            nextVal
-                ? `Auto Order & Instant Dealer API Notification ENABLED for "${api.apiName}"!`
-                : `Auto Order switched to Manual Review for "${api.apiName}".`,
+            nextMode === 'dealer_live_sync'
+                ? `Dealer Team Live Control ON for "${api.apiName}": Dealer jo bhi karega (Processing / Success / Reject) wahi customer ko automatic notification jayega!`
+                : `Instant Auto Success Mode ON for "${api.apiName}"!`,
             'success'
         );
     };
@@ -323,6 +331,7 @@ const HostingraConnectorPage = () => {
             status: formStatus,
             autoPlaceOrder: formAutoPlaceOrder,
             autoOrderSuccess: formAutoOrderSuccess,
+            dealerOrderMode: formDealerOrderMode,
             createdAt: new Date().toISOString()
         };
 
@@ -351,13 +360,14 @@ const HostingraConnectorPage = () => {
             status: newOrUpdatedApi.status,
             autoPlaceOrder: newOrUpdatedApi.autoPlaceOrder,
             autoOrderSuccess: newOrUpdatedApi.autoOrderSuccess,
+            dealerOrderMode: newOrUpdatedApi.dealerOrderMode,
             marginPercent: finalMargin,
             exchangeRate: finalRate,
             autoSyncPrice: Boolean(autoSyncPrice)
         });
 
         setIsModalOpen(false);
-        setNotification(`API "${newOrUpdatedApi.apiName}" (${newOrUpdatedApi.apiType}) saved with Auto Order Success ${newOrUpdatedApi.autoOrderSuccess ? 'ON' : 'OFF'}!`, 'success');
+        setNotification(`API "${newOrUpdatedApi.apiName}" (${newOrUpdatedApi.apiType}) saved! Dealer Team Live Notification Sync is ACTIVE.`, 'success');
 
         // If URL provided, trigger service catalog sync
         if (newOrUpdatedApi.apiUrl) {
@@ -507,9 +517,9 @@ const HostingraConnectorPage = () => {
                     <div className="px-4 sm:px-5 py-3 bg-emerald-50/90 border-b border-emerald-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                         <div className="flex items-center gap-2 text-xs text-emerald-900">
                             <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse shrink-0"></span>
-                            <span className="font-bold">24x7 Auto Order Forward & Auto Success Active:</span>
+                            <span className="font-bold">Dealer API Live Team Sync Active (24x7):</span>
                             <span className="text-emerald-700">
-                                Jaise hi user order lagayega, connected Dealer API ke paas turant notification jayega aur order automatic <strong>Success</strong> ho jayega (Zero Admin Action).
+                                Dealer is API mein order ke saath jo bhi karega (<strong>Processing</strong>, <strong>Success</strong>, ya <strong>Reject + Auto Refund</strong>), wahi Dealer Team karegi aur customer ke paas notification <strong>automatically</strong> pahunch jayega.
                             </span>
                         </div>
                     </div>
@@ -552,7 +562,7 @@ const HostingraConnectorPage = () => {
                                     <th className="py-3 px-5">API NAME</th>
                                     <th className="py-3 px-4">API TYPE</th>
                                     <th className="py-3 px-4">API URL</th>
-                                    <th className="py-3 px-4">AUTO ORDER & NOTIFICATION</th>
+                                    <th className="py-3 px-4">DEALER TEAM AUTO SYNC</th>
                                     <th className="py-3 px-4">BALANCE</th>
                                     <th className="py-3 px-4">STATUS</th>
                                     <th className="py-3 px-4 text-right">ACTIONS</th>
@@ -568,7 +578,7 @@ const HostingraConnectorPage = () => {
                                 ) : (
                                     filteredApis.map((api) => {
                                         const typeCfg = API_TYPES_CONFIG[api.apiType] || API_TYPES_CONFIG['GSM Theme'];
-                                        const isAutoSuccess = api.autoOrderSuccess !== false;
+                                        const mode = api.dealerOrderMode || 'dealer_live_sync';
                                         return (
                                             <tr key={api.id} className="hover:bg-slate-50/70 transition-colors">
                                                 <td className="py-3.5 px-5 font-bold text-slate-900">
@@ -590,14 +600,18 @@ const HostingraConnectorPage = () => {
                                                         type="button"
                                                         onClick={() => handleQuickToggleAutoSuccess(api)}
                                                         className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold cursor-pointer transition-all border ${
-                                                            isAutoSuccess
+                                                            mode === 'dealer_live_sync'
                                                                 ? 'bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100'
-                                                                : 'bg-amber-50 text-amber-700 border-amber-300 hover:bg-amber-100'
+                                                                : 'bg-blue-50 text-blue-700 border-blue-300 hover:bg-blue-100'
                                                         }`}
-                                                        title="Click to toggle Auto Order Success & Dealer API Notification"
+                                                        title="Click to switch between Dealer Team Live Sync and Instant Success"
                                                     >
-                                                        <span className={`w-1.5 h-1.5 rounded-full ${isAutoSuccess ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
-                                                        <span>{isAutoSuccess ? 'Auto Success + API Notify: ON' : 'Manual Mode'}</span>
+                                                        <span className={`w-1.5 h-1.5 rounded-full animate-pulse ${mode === 'dealer_live_sync' ? 'bg-emerald-500' : 'bg-blue-500'}`}></span>
+                                                        <span>
+                                                            {mode === 'dealer_live_sync'
+                                                                ? 'Dealer Team Live (Success/Process/Reject + Auto Notify)'
+                                                                : 'Instant Auto Success: ON'}
+                                                        </span>
                                                     </button>
                                                 </td>
                                                 <td className="py-3.5 px-4 font-bold text-emerald-600 font-mono">
@@ -653,18 +667,18 @@ const HostingraConnectorPage = () => {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs text-slate-700">
                         <div className="p-4 bg-slate-50 rounded-lg border border-slate-200 space-y-2">
-                            <p className="font-bold text-slate-800">1. Local GSM Mirror Services API</p>
-                            <p className="text-slate-500">Provides instant automated catalog for Flash Files, Box Activations, and IMEI services.</p>
+                            <p className="font-bold text-slate-800">1. Direct Dealer Order Forward & Live Status Sync</p>
+                            <p className="text-slate-500">Automatically pushes customer orders to your connected Dealer API (`placeimeiorder`) and polls live status (`getimeiorder`) every 8 seconds for Processing / Success / Reject updates.</p>
                             <div className="font-mono text-[11px] bg-white p-2 rounded border border-slate-200 text-teal-700">
-                                POST /api/fetch-gsm-services
+                                POST /api/place-dealer-order &amp; /api/check-dealer-orders
                             </div>
                         </div>
 
                         <div className="p-4 bg-slate-50 rounded-lg border border-slate-200 space-y-2">
-                            <p className="font-bold text-slate-800">2. Direct Dealer Order Forward & Auto Success API</p>
-                            <p className="text-slate-500">Automatically forwards every new customer IMEI / Server / Activation order directly to your connected Dealer API URL and completes the order without manual admin intervention.</p>
-                            <div className="font-mono text-[11px] bg-white p-2 rounded border border-slate-200 text-emerald-700">
-                                POST /api/place-dealer-order
+                            <p className="font-bold text-slate-800">2. Dealer Team Instant Webhook / Callback URL</p>
+                            <p className="text-slate-500">When Dealer Team marks an order Processing, Success, or Rejected, it automatically updates customer status, refunds wallet on Reject, and sends instant customer notification.</p>
+                            <div className="font-mono text-[11px] bg-white p-2 rounded border border-slate-200 text-emerald-700 select-all">
+                                https://wowfilewala.com/cloud-sync.php?action=dealer_webhook
                             </div>
                         </div>
                     </div>
@@ -695,8 +709,8 @@ const HostingraConnectorPage = () => {
 
                         <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 flex items-center justify-between text-xs">
                             <div>
-                                <p className="font-bold text-slate-800">Auto Update Order Status & IMEI Reply (Every 5 Mins)</p>
-                                <p className="text-slate-500 font-mono text-[11px]">curl -s https://wowfilewala.com/cron/order-status</p>
+                                <p className="font-bold text-slate-800">Auto Sync Dealer Order Status: Processing / Success / Reject (Live Every 8 Secs)</p>
+                                <p className="text-slate-500 font-mono text-[11px]">curl -s https://wowfilewala.com/cloud-sync.php?action=check_dealer_orders</p>
                             </div>
                             <span className="text-emerald-600 font-bold">● Active</span>
                         </div>
@@ -912,38 +926,47 @@ const HostingraConnectorPage = () => {
                                         </div>
                                     </div>
 
-                                    {/* 6. Auto Order & Dealer Notification Options */}
+                                    {/* 6. Dealer Team Live Status & Auto Notification Settings */}
                                     <div className="pt-2 border-t border-slate-200 space-y-2.5">
-                                        <label className="flex items-start gap-2.5 p-2.5 rounded-lg bg-emerald-50/80 border border-emerald-200 cursor-pointer">
+                                        <label className="flex items-start gap-2.5 p-2.5 rounded-lg bg-emerald-50/90 border border-emerald-200 cursor-pointer">
                                             <input
-                                                type="checkbox"
-                                                checked={formAutoPlaceOrder}
-                                                onChange={(e) => setFormAutoPlaceOrder(e.target.checked)}
-                                                className="mt-0.5 w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                                                type="radio"
+                                                name="dealerOrderMode"
+                                                checked={formDealerOrderMode === 'dealer_live_sync'}
+                                                onChange={() => {
+                                                    setFormDealerOrderMode('dealer_live_sync');
+                                                    setFormAutoPlaceOrder(true);
+                                                }}
+                                                className="mt-0.5 w-4 h-4 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
                                             />
                                             <div className="text-[11px] leading-snug">
                                                 <span className="font-bold text-emerald-950 block">
-                                                    Instant Dealer API Notification (Auto Forward Order)
+                                                    Dealer Team Live Control (Processing / Success / Reject + Auto Notify)
                                                 </span>
                                                 <span className="text-emerald-700">
-                                                    Jaise hi user order lagayega, seedha is Dealer API ke paas order aur notification chala jayega.
+                                                    Dealer is API mein jo bhi karega (Reject, Processing, ya Success), wahi Dealer Team karegi aur customer ke paas automatic notification aur Reject par Wallet Refund pahunch jayega.
                                                 </span>
                                             </div>
                                         </label>
 
                                         <label className="flex items-start gap-2.5 p-2.5 rounded-lg bg-blue-50/80 border border-blue-200 cursor-pointer">
                                             <input
-                                                type="checkbox"
-                                                checked={formAutoOrderSuccess}
-                                                onChange={(e) => setFormAutoOrderSuccess(e.target.checked)}
-                                                className="mt-0.5 w-4 h-4 rounded text-blue-600 focus:ring-blue-500 cursor-pointer"
+                                                type="radio"
+                                                name="dealerOrderMode"
+                                                checked={formDealerOrderMode === 'instant_success'}
+                                                onChange={() => {
+                                                    setFormDealerOrderMode('instant_success');
+                                                    setFormAutoPlaceOrder(true);
+                                                    setFormAutoOrderSuccess(true);
+                                                }}
+                                                className="mt-0.5 w-4 h-4 text-blue-600 focus:ring-blue-500 cursor-pointer"
                                             />
                                             <div className="text-[11px] leading-snug">
                                                 <span className="font-bold text-blue-950 block">
-                                                    Auto Order Success (Zero Admin Action)
+                                                    Instant Auto Success Mode
                                                 </span>
                                                 <span className="text-blue-700">
-                                                    Bina Admin ke beech mein kuch kiye order automatic Success ho jayega (Waiting Action mein nahi rukega).
+                                                    User ke order dalte hi Dealer API ko notification bhej kar turant Success dikhayega.
                                                 </span>
                                             </div>
                                         </label>

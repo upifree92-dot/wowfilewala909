@@ -200,7 +200,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
-    // Special Action: Forward User Order directly to Connected Dealer API & Auto-Success
+    // Helper function to normalize Dealer API status into 'pending' | 'processing' | 'approved' | 'rejected'
+    function parseDealerStatusPhp($rawStatus) {
+        if ($rawStatus === null || $rawStatus === '') return null;
+        $str = strtolower(trim((string)$rawStatus));
+        if ($str === '4' || $str === 'success' || $str === 'completed' || $str === 'approved' || $str === 'available' || $str === 'done') {
+            return 'approved';
+        }
+        if ($str === '3' || $str === 'rejected' || $str === 'reject' || $str === 'cancelled' || $str === 'canceled' || $str === 'failed' || $str === 'error') {
+            return 'rejected';
+        }
+        if ($str === '2' || $str === '1' || $str === 'processing' || $str === 'inprocess' || $str === 'in_process' || $str === 'working') {
+            return 'processing';
+        }
+        if ($str === '0' || $str === 'waiting' || $str === 'pending' || $str === 'new' || $str === 'queued') {
+            return 'pending';
+        }
+        return null;
+    }
+
+    // Special Action 1: Forward User Order directly to Connected Dealer API
     if ((isset($_GET['action']) && $_GET['action'] === 'place_dealer_order') || (isset($input['action']) && $input['action'] === 'place_dealer_order')) {
         $orderId = $input['orderId'] ?? '';
         $serviceId = $input['serviceId'] ?? '1';
@@ -215,7 +234,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $apiUrl = trim($dealerApi['apiUrl'] ?? '');
         $username = trim($dealerApi['username'] ?? '');
         $apiAccessKey = trim($dealerApi['apiAccessKey'] ?? '');
-        $autoOrderSuccess = !isset($dealerApi['autoOrderSuccess']) || $dealerApi['autoOrderSuccess'] !== false;
+        $dealerOrderMode = $dealerApi['dealerOrderMode'] ?? 'dealer_live_sync';
 
         $cleanInput = preg_replace('/^(IMEI:\s*|Account:\s*|WhatsApp:\s*)/i', '', (string)$inputData);
         $parts = explode('|', $cleanInput);
@@ -223,6 +242,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $dealerRefId = 'DLR-' . rand(100000, 999999);
         $dealerReply = '';
+        $dealerStatus = ($dealerOrderMode === 'instant_success') ? 'approved' : 'processing';
         $forwardedToUrl = false;
 
         if (!empty($apiUrl) && preg_match('/^https?:\/\//i', $apiUrl)) {
@@ -253,7 +273,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 curl_setopt($ch, CURLOPT_POST, true);
                 curl_setopt($ch, CURLOPT_POSTFIELDS, $postFields);
                 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-                curl_setopt($ch, CURLOPT_TIMEOUT, 6);
+                curl_setopt($ch, CURLOPT_TIMEOUT, 7);
                 curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
                 curl_setopt($ch, CURLOPT_USERAGENT, 'WowFileWala-AutoAPI/2.0');
                 $rawResp = @curl_exec($ch);
@@ -263,13 +283,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if ($rawResp) {
                     $jsonResp = @json_decode($rawResp, true);
                     if (is_array($jsonResp)) {
-                        if (!empty($jsonResp['SUCCESS'][0]['REFERENCEID'])) {
-                            $dealerRefId = (string)$jsonResp['SUCCESS'][0]['REFERENCEID'];
-                        }
-                        if (!empty($jsonResp['SUCCESS'][0]['MESSAGE'])) {
-                            $dealerReply = (string)$jsonResp['SUCCESS'][0]['MESSAGE'];
-                        } elseif (!empty($jsonResp['reply']) || !empty($jsonResp['message']) || !empty($jsonResp['code'])) {
-                            $dealerReply = (string)($jsonResp['reply'] ?? $jsonResp['message'] ?? $jsonResp['code']);
+                        if (!empty($jsonResp['ERROR'][0])) {
+                            $errObj = $jsonResp['ERROR'][0];
+                            $dealerStatus = 'rejected';
+                            $dealerReply = (string)($errObj['MESSAGE'] ?? $errObj['FULL_DESCRIPTION'] ?? 'Order rejected by Dealer API');
+                        } elseif (!empty($jsonResp['error']) && is_string($jsonResp['error'])) {
+                            $dealerStatus = 'rejected';
+                            $dealerReply = $jsonResp['error'];
+                        } elseif (!empty($jsonResp['SUCCESS'][0])) {
+                            $sObj = $jsonResp['SUCCESS'][0];
+                            if (!empty($sObj['REFERENCEID'])) {
+                                $dealerRefId = (string)$sObj['REFERENCEID'];
+                            }
+                            $parsedSt = parseDealerStatusPhp($sObj['STATUS'] ?? $sObj['status'] ?? null);
+                            if ($parsedSt) {
+                                $dealerStatus = $parsedSt;
+                            } elseif (!empty($sObj['CODE'])) {
+                                $dealerStatus = 'approved';
+                            } elseif ($dealerOrderMode === 'dealer_live_sync') {
+                                $dealerStatus = 'processing';
+                            }
+                            if (!empty($sObj['CODE'])) {
+                                $dealerReply = (string)$sObj['CODE'];
+                            } elseif (!empty($sObj['MESSAGE'])) {
+                                $dealerReply = (string)$sObj['MESSAGE'];
+                            }
+                        } else {
+                            if (!empty($jsonResp['referenceid']) || !empty($jsonResp['order_id']) || !empty($jsonResp['id'])) {
+                                $dealerRefId = (string)($jsonResp['referenceid'] ?? $jsonResp['order_id'] ?? $jsonResp['id']);
+                            }
+                            $parsedSt = parseDealerStatusPhp($jsonResp['status'] ?? $jsonResp['STATUS'] ?? $jsonResp['order_status'] ?? null);
+                            if ($parsedSt) {
+                                $dealerStatus = $parsedSt;
+                            }
+                            if (!empty($jsonResp['code']) || !empty($jsonResp['reply']) || !empty($jsonResp['message']) || !empty($jsonResp['reason'])) {
+                                $dealerReply = (string)($jsonResp['code'] ?? $jsonResp['reply'] ?? $jsonResp['message'] ?? $jsonResp['reason']);
+                            }
                         }
                     }
                 }
@@ -277,19 +326,209 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         if (empty($dealerReply)) {
-            $dealerReply = "[{$apiName} - {$apiType}] Auto Order Success ✅ | Ref ID: #{$dealerRefId} | Input: {$cleanInput} | Verified & Completed Instantly";
+            if ($dealerStatus === 'approved') {
+                $dealerReply = "[{$apiName}] Order Completed ✅ | Ref ID: #{$dealerRefId} | Input: {$cleanInput}";
+            } elseif ($dealerStatus === 'rejected') {
+                $dealerReply = "[{$apiName}] Order Rejected by Dealer Team | Ref ID: #{$dealerRefId}";
+            } elseif ($dealerStatus === 'processing') {
+                $dealerReply = "Order sent to {$apiName} Team (Ref ID: #{$dealerRefId}). Processing in progress - you will be notified automatically as soon as Dealer updates status.";
+            } else {
+                $dealerReply = "Waiting for {$apiName} Team action (Ref ID: #{$dealerRefId}).";
+            }
         }
 
         echo json_encode([
             'success' => true,
-            'autoCompleted' => $autoOrderSuccess,
-            'status' => $autoOrderSuccess ? 'approved' : 'processing',
+            'status' => $dealerStatus,
             'dealerRefId' => $dealerRefId,
             'forwardedToUrl' => $forwardedToUrl,
             'apiProvider' => "{$apiName} ({$apiType} Auto API 24x7)",
             'reply' => $dealerReply,
-            'repliedAt' => gmdate('Y-m-d\TH:i:s\Z')
+            'repliedAt' => ($dealerStatus === 'approved' || $dealerStatus === 'rejected') ? gmdate('Y-m-d\TH:i:s\Z') : null
         ]);
+        exit;
+    }
+
+    // Special Action 2: Poll / Check Live Order Status from Connected Dealer API (action=getimeiorder)
+    if ((isset($_GET['action']) && $_GET['action'] === 'check_dealer_orders') || (isset($input['action']) && $input['action'] === 'check_dealer_orders')) {
+        $orders = is_array($input['orders'] ?? null) ? $input['orders'] : [];
+        $dealerApi = is_array($input['dealerApi'] ?? null) ? $input['dealerApi'] : [];
+        $apiUrl = trim($dealerApi['apiUrl'] ?? '');
+        $username = trim($dealerApi['username'] ?? '');
+        $apiAccessKey = trim($dealerApi['apiAccessKey'] ?? '');
+
+        if (empty($apiUrl) || !preg_match('/^https?:\/\//i', $apiUrl) || empty($orders) || !function_exists('curl_init')) {
+            echo json_encode(['success' => true, 'updates' => []]);
+            exit;
+        }
+
+        $updates = [];
+        $slice = array_slice($orders, 0, 15);
+        foreach ($slice as $ord) {
+            $orderId = (string)($ord['orderId'] ?? '');
+            $fullRefId = (string)($ord['dealerRefId'] ?? $orderId);
+            $dealerRefId = preg_replace('/^DLR-/i', '', $fullRefId);
+            if (empty($orderId)) continue;
+
+            $xmlParams = "<PARAMETERS><ID>{$dealerRefId}</ID><ORDERID>{$orderId}</ORDERID></PARAMETERS>";
+            $postFields = http_build_query([
+                'username' => $username,
+                'apiaccesskey' => $apiAccessKey,
+                'action' => 'getimeiorder',
+                'requestformat' => 'JSON',
+                'parameters' => $xmlParams,
+                'id' => $dealerRefId,
+                'referenceid' => $fullRefId,
+                'order_id' => $orderId
+            ]);
+
+            $ch = curl_init($apiUrl);
+            curl_setopt($ch, CURLOPT_POST, true);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $postFields);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 5);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+            curl_setopt($ch, CURLOPT_USERAGENT, 'WowFileWala-AutoAPI/2.0');
+            $rawResp = @curl_exec($ch);
+            curl_close($ch);
+
+            if ($rawResp) {
+                $json = @json_decode($rawResp, true);
+                if (is_array($json)) {
+                    $detectedStatus = null;
+                    $detectedReply = '';
+                    if (!empty($json['SUCCESS'][0])) {
+                        $sObj = $json['SUCCESS'][0];
+                        $detectedStatus = parseDealerStatusPhp($sObj['STATUS'] ?? $sObj['status'] ?? null);
+                        $detectedReply = trim((string)($sObj['CODE'] ?? $sObj['MESSAGE'] ?? $sObj['REPLY'] ?? ''));
+                    } elseif (!empty($json['ERROR'][0])) {
+                        $eObj = $json['ERROR'][0];
+                        $errMsg = (string)($eObj['MESSAGE'] ?? $eObj['FULL_DESCRIPTION'] ?? '');
+                        if (preg_match('/reject|cancel|fail|invalid|not found/i', $errMsg)) {
+                            $detectedStatus = 'rejected';
+                            $detectedReply = $errMsg;
+                        }
+                    } else {
+                        $detectedStatus = parseDealerStatusPhp($json['status'] ?? $json['STATUS'] ?? $json['order_status'] ?? null);
+                        $detectedReply = trim((string)($json['code'] ?? $json['CODE'] ?? $json['reply'] ?? $json['message'] ?? $json['reason'] ?? ''));
+                    }
+
+                    if ($detectedStatus) {
+                        $updates[] = [
+                            'orderId' => $orderId,
+                            'dealerRefId' => $fullRefId,
+                            'status' => $detectedStatus,
+                            'reply' => $detectedReply,
+                            'repliedAt' => ($detectedStatus === 'approved' || $detectedStatus === 'rejected') ? gmdate('Y-m-d\TH:i:s\Z') : null
+                        ];
+                    }
+                }
+            }
+        }
+
+        echo json_encode(['success' => true, 'updates' => $updates]);
+        exit;
+    }
+
+    // Special Action 3: Direct Dealer Webhook / Callback (GET or POST)
+    if ((isset($_GET['action']) && $_GET['action'] === 'dealer_webhook') || (isset($input['action']) && $input['action'] === 'dealer_webhook')) {
+        $params = array_merge($_GET, $_POST, is_array($input) ? $input : []);
+        $orderId = preg_replace('/^#/', '', trim((string)($params['order_id'] ?? $params['orderId'] ?? $params['id'] ?? '')));
+        $dealerRefId = trim((string)($params['referenceid'] ?? $params['dealerRefId'] ?? $params['ref_id'] ?? ''));
+        $rawStatus = $params['status'] ?? $params['STATUS'] ?? $params['order_status'] ?? null;
+        $replyText = trim((string)($params['reply'] ?? $params['code'] ?? $params['CODE'] ?? $params['message'] ?? $params['MESSAGE'] ?? $params['reason'] ?? ''));
+
+        $newStatus = parseDealerStatusPhp($rawStatus);
+        if ((empty($orderId) && empty($dealerRefId)) || !$newStatus) {
+            http_response_code(400);
+            echo json_encode(['success' => false, 'error' => 'Required: order_id (or referenceid) and status']);
+            exit;
+        }
+
+        $cloudData = [];
+        if (file_exists($dataFile)) {
+            $cloudData = json_decode(file_get_contents($dataFile), true) ?: [];
+        }
+
+        $nowIso = gmdate('Y-m-d\TH:i:s\Z');
+        $matchedOrderId = $orderId;
+        $targetUserId = '';
+        $refundAmount = 0;
+        $serviceTitle = 'Order';
+        $previousStatus = '';
+
+        if (!empty($cloudData['adminNotifications']) && is_array($cloudData['adminNotifications'])) {
+            foreach ($cloudData['adminNotifications'] as &$n) {
+                $matchesId = !empty($orderId) && preg_replace('/^#/', '', (string)($n['orderId'] ?? '')) === $orderId;
+                $matchesRef = !empty($dealerRefId) && (string)($n['orderDetails']['dealerRefId'] ?? '') === $dealerRefId;
+                if ($matchesId || $matchesRef) {
+                    $matchedOrderId = (string)($n['orderId'] ?? $orderId);
+                    $targetUserId = (string)($n['userId'] ?? '');
+                    $previousStatus = (string)($n['status'] ?? 'pending');
+                    $serviceTitle = (string)($n['orderDetails']['categoryName'] ?? 'Order');
+                    $refundAmount = (float)($n['orderDetails']['totalPrice'] ?? $n['orderDetails']['price'] ?? 0);
+                    $n['status'] = $newStatus;
+                    if (!empty($replyText)) $n['adminReply'] = $replyText;
+                    if ($newStatus === 'rejected') $n['rejectionReason'] = $replyText ?: 'Rejected by Dealer API Team';
+                    if ($newStatus === 'approved' || $newStatus === 'rejected') $n['repliedAt'] = $nowIso;
+                    $n['read'] = false;
+                }
+            }
+            unset($n);
+        }
+
+        if (!empty($cloudData['users']) && is_array($cloudData['users'])) {
+            foreach ($cloudData['users'] as &$u) {
+                if (!is_array($u)) continue;
+                $isOwner = (!empty($targetUserId) && ($u['id'] ?? '') === $targetUserId);
+                if (!$isOwner && !empty($u['notifications']) && is_array($u['notifications'])) {
+                    foreach ($u['notifications'] as $unCheck) {
+                        if ((string)($unCheck['orderId'] ?? '') === $matchedOrderId) {
+                            $isOwner = true;
+                            break;
+                        }
+                    }
+                }
+                if (!$isOwner) continue;
+
+                $walletBal = (float)($u['wallet']['balance'] ?? 0);
+                if ($newStatus === 'rejected' && $previousStatus !== 'rejected' && $refundAmount > 0) {
+                    $walletBal = round($walletBal + $refundAmount, 2);
+                    $u['wallet']['balance'] = $walletBal;
+                    if (!isset($u['transactionHistory']) || !is_array($u['transactionHistory'])) {
+                        $u['transactionHistory'] = [];
+                    }
+                    array_unshift($u['transactionHistory'], [
+                        'id' => 'txn-dlr-refund-' . round(microtime(true) * 1000),
+                        'timestamp' => $nowIso,
+                        'type' => 'refund',
+                        'amount' => $refundAmount,
+                        'description' => "Auto Refund for Dealer Rejected Order #{$matchedOrderId}: {$serviceTitle}"
+                    ]);
+                }
+
+                if (!empty($u['notifications']) && is_array($u['notifications'])) {
+                    foreach ($u['notifications'] as &$un) {
+                        if ((string)($un['orderId'] ?? '') === $matchedOrderId) {
+                            $un['status'] = $newStatus;
+                            $un['title'] = $newStatus === 'approved'
+                                ? "Order #{$matchedOrderId} Success ✅"
+                                : ($newStatus === 'rejected' ? "Order #{$matchedOrderId} Rejected ❌" : "Order #{$matchedOrderId} Processing ⏳");
+                            if (!empty($replyText)) $un['adminReply'] = $replyText;
+                            if ($newStatus === 'rejected') $un['rejectionReason'] = $replyText ?: 'Rejected by Dealer API Team';
+                            $un['read'] = false;
+                            $un['timestamp'] = $nowIso;
+                        }
+                    }
+                    unset($un);
+                }
+            }
+            unset($u);
+        }
+
+        $cloudData['updatedAt'] = round(microtime(true) * 1000);
+        file_put_contents($dataFile, json_encode($cloudData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+        echo json_encode(['success' => true, 'orderId' => $matchedOrderId, 'status' => $newStatus, 'reply' => $replyText]);
         exit;
     }
 
