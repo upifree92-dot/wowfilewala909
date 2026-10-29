@@ -41,12 +41,37 @@ export interface TransactionData {
 }
 
 async function apiCall(endpoint: string, method: string, body?: any) {
-  const response = await fetch(`/api/${endpoint}`, {
-    method,
-    headers: { 'Content-Type': 'application/json' },
-    body: body ? JSON.stringify(body) : undefined,
-  });
-  return response.json();
+  try {
+    const response = await fetch(`/api/${endpoint}`, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    const contentType = response.headers.get('content-type') || '';
+    if (response.ok && contentType.includes('application/json')) {
+      return await response.json();
+    }
+  } catch {
+    // Fallback to cloud-sync.php on Hostinger Apache/PHP
+  }
+
+  // Fallback for Hostinger PHP environment where /api/* Express routes are handled by /cloud-sync.php
+  try {
+    const actionName = endpoint.split('?')[0].replace(/-/g, '_');
+    const phpRes = await fetch(`/cloud-sync.php?action=${actionName}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: actionName, ...(body || {}) }),
+    });
+    const ct = phpRes.headers.get('content-type') || '';
+    if (phpRes.ok && ct.includes('application/json')) {
+      return await phpRes.json();
+    }
+  } catch {
+    // Ignore network fallback errors
+  }
+
+  return { success: false, data: null };
 }
 
 export async function saveDownloadRecord(data: DownloadRecord) {
@@ -58,7 +83,7 @@ export async function saveRegisteredUser(data: UserData) {
 }
 
 export async function getRegisteredUser(id: string) {
-  return apiCall(`get-user?id=${id}`, 'GET');
+  return apiCall(`get-user?id=${encodeURIComponent(id)}`, 'GET');
 }
 
 export async function getRegisteredUsers() {
@@ -80,3 +105,4 @@ export async function updateOrderStatus(orderId: string, status: string) {
 export async function adminResetHWID(userId: string) {
   return apiCall('admin-reset-hwid', 'POST', { userId });
 }
+

@@ -559,95 +559,235 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     if (!snapshot || typeof snapshot !== 'object') return false;
     const remoteUpdatedAt = Number(snapshot.updatedAt || 0);
     const localUpdatedAt = Number(localStorage.getItem('cloud_sync_timestamp') || 0);
+    const shouldApplyGlobalSettings = forceApply || remoteUpdatedAt > localUpdatedAt;
 
-    if (!forceApply && remoteUpdatedAt <= localUpdatedAt) {
-      return false;
-    }
-
-    if (snapshot.siteContent) {
-      const loadedCloudContent = { ...snapshot.siteContent };
-      if (loadedCloudContent?.whatsapp) {
-        loadedCloudContent.whatsapp.phoneNumber = loadedCloudContent.whatsapp.phoneNumber || "8658465589";
+    if (shouldApplyGlobalSettings) {
+      if (snapshot.siteContent) {
+        const loadedCloudContent = { ...snapshot.siteContent };
+        if (loadedCloudContent?.whatsapp) {
+          loadedCloudContent.whatsapp.phoneNumber = loadedCloudContent.whatsapp.phoneNumber || "8658465589";
+        }
+        setSiteContent(loadedCloudContent);
+        setLocalStorage('siteContent', loadedCloudContent);
       }
-      setSiteContent(loadedCloudContent);
-      setLocalStorage('siteContent', loadedCloudContent);
-    }
-    if (Array.isArray(snapshot.products) && snapshot.products.length > 0) {
-      const cleanProducts = snapshot.products.filter((p: any) => 
-        p && p.id && !['prod-zhizhen-demo', 'prod-realme-n55', 'prod-cph2691', 'prod-infinix-hot-50'].includes(p.id)
-      );
-      if (cleanProducts.length > 0) {
-        setProducts(cleanProducts);
-        setLocalStorage('products', cleanProducts);
+      if (Array.isArray(snapshot.products) && snapshot.products.length > 0) {
+        const cleanProducts = snapshot.products.filter((p: any) => 
+          p && p.id && !['prod-zhizhen-demo', 'prod-realme-n55', 'prod-cph2691', 'prod-infinix-hot-50'].includes(p.id)
+        );
+        if (cleanProducts.length > 0) {
+          setProducts(cleanProducts);
+          setLocalStorage('products', cleanProducts);
+        }
       }
-    }
-    if (Array.isArray(snapshot.categories)) {
-      setCategories(snapshot.categories);
-      setLocalStorage('categories', snapshot.categories);
-    }
-    if (Array.isArray(snapshot.balancePackages)) {
-      setBalancePackages(snapshot.balancePackages);
-      setLocalStorage('balancePackages', snapshot.balancePackages);
-    }
-    if (snapshot.autoWalletNewUser !== undefined) {
-      setAutoWalletNewUser(Boolean(snapshot.autoWalletNewUser));
-      setLocalStorage('autoWalletNewUser', Boolean(snapshot.autoWalletNewUser));
-    }
-    if (snapshot.tokenProtection) {
-      setTokenProtection(snapshot.tokenProtection);
-      setLocalStorage('tokenProtection', snapshot.tokenProtection);
-    }
-    if (Array.isArray(snapshot.tokenKeys)) {
-      setTokenKeys(prevKeys => {
-        const keyMap = new Map<string, TokenKey>();
-        INITIAL_TOKEN_KEYS.forEach(k => keyMap.set(k.key.trim().toUpperCase(), k));
-        prevKeys.forEach(k => keyMap.set(k.key.trim().toUpperCase(), k));
-        snapshot.tokenKeys.forEach((k: TokenKey) => {
-          if (k && k.key) keyMap.set(k.key.trim().toUpperCase(), k);
-        });
-        const merged = Array.from(keyMap.values());
-        setLocalStorage('tokenKeys', merged);
-        return merged;
-      });
-    }
-
-    if (snapshot.users) {
-      let remoteUsersMap: Record<string, User> = {};
-      if (Array.isArray(snapshot.users)) {
-        snapshot.users.forEach((u: User) => {
-          if (u && u.id) remoteUsersMap[u.id] = u;
-        });
-      } else if (typeof snapshot.users === 'object') {
-        remoteUsersMap = { ...snapshot.users };
+      if (Array.isArray(snapshot.categories)) {
+        setCategories(snapshot.categories);
+        setLocalStorage('categories', snapshot.categories);
       }
-      if (Object.keys(remoteUsersMap).length > 0) {
-        setAllUsers(prev => {
-          const merged = { ...prev, ...remoteUsersMap };
-          setLocalStorage('users', merged);
+      if (Array.isArray(snapshot.balancePackages)) {
+        setBalancePackages(snapshot.balancePackages);
+        setLocalStorage('balancePackages', snapshot.balancePackages);
+      }
+      if (snapshot.autoWalletNewUser !== undefined) {
+        setAutoWalletNewUser(Boolean(snapshot.autoWalletNewUser));
+        setLocalStorage('autoWalletNewUser', Boolean(snapshot.autoWalletNewUser));
+      }
+      if (snapshot.tokenProtection) {
+        setTokenProtection(snapshot.tokenProtection);
+        setLocalStorage('tokenProtection', snapshot.tokenProtection);
+      }
+      if (Array.isArray(snapshot.tokenKeys)) {
+        setTokenKeys(prevKeys => {
+          const keyMap = new Map<string, TokenKey>();
+          INITIAL_TOKEN_KEYS.forEach(k => keyMap.set(k.key.trim().toUpperCase(), k));
+          prevKeys.forEach(k => keyMap.set(k.key.trim().toUpperCase(), k));
+          snapshot.tokenKeys.forEach((k: TokenKey) => {
+            if (k && k.key) keyMap.set(k.key.trim().toUpperCase(), k);
+          });
+          const merged = Array.from(keyMap.values());
+          setLocalStorage('tokenKeys', merged);
           return merged;
         });
+      }
+    }
 
-        // Ensure currently logged in user gets the fresh wallet balance immediately!
+    // ALWAYS check and merge users & wallet balances even if global timestamp hasn't ticked
+    if (snapshot.users) {
+      const remoteUsersList: User[] = Array.isArray(snapshot.users)
+        ? snapshot.users.filter((u: any) => u && u.id)
+        : typeof snapshot.users === 'object'
+          ? (Object.values(snapshot.users) as User[]).filter((u: any) => u && u.id)
+          : [];
+
+      if (remoteUsersList.length > 0) {
+        setAllUsers(prev => {
+          const nextMap: Record<string, User> = { ...prev };
+          const emailIndex: Record<string, string> = {};
+          Object.values(nextMap).forEach((u: any) => {
+            if (u?.id && u?.email) {
+              emailIndex[String(u.email).trim().toLowerCase()] = u.id;
+            }
+          });
+
+          let changed = false;
+          remoteUsersList.forEach((rem: User) => {
+            if (!rem || !rem.id) return;
+            const emailKey = rem.email ? String(rem.email).trim().toLowerCase() : '';
+            const targetId = nextMap[rem.id]
+              ? rem.id
+              : (emailKey && emailIndex[emailKey] ? emailIndex[emailKey] : rem.id);
+            const localU = nextMap[targetId];
+
+            if (!localU) {
+              nextMap[targetId] = rem;
+              if (emailKey) emailIndex[emailKey] = targetId;
+              changed = true;
+              return;
+            }
+
+            const localWalletTs = Number(localU.walletUpdatedAt || 0);
+            const remoteWalletTs = Number(rem.walletUpdatedAt || 0);
+            const localBal = Number(localU.wallet?.balance || 0);
+            const remoteBal = Number(rem.wallet?.balance || 0);
+
+            let bestBalance = remoteBal;
+            const bestWalletTs = Math.max(localWalletTs, remoteWalletTs);
+            if (localWalletTs > remoteWalletTs) {
+              bestBalance = localBal;
+            } else if (remoteWalletTs === 0 && localWalletTs === 0 && localBal > 0 && remoteBal === 0) {
+              bestBalance = localBal;
+            }
+
+            const txSeen = new Set<string>();
+            const mergedTx: Transaction[] = [];
+            [...(Array.isArray(rem.transactionHistory) ? rem.transactionHistory : []), ...(Array.isArray(localU.transactionHistory) ? localU.transactionHistory : [])].forEach(tx => {
+              if (tx && tx.id && !txSeen.has(tx.id)) {
+                txSeen.add(tx.id);
+                mergedTx.push(tx);
+              }
+            });
+
+            const notifSeen = new Set<string>();
+            const mergedNotifs: UserNotification[] = [];
+            [...(Array.isArray(rem.notifications) ? rem.notifications : []), ...(Array.isArray(localU.notifications) ? localU.notifications : [])].forEach(n => {
+              if (n && n.id && !notifSeen.has(n.id)) {
+                notifSeen.add(n.id);
+                mergedNotifs.push(n);
+              }
+            });
+
+            if (
+              bestBalance !== localBal ||
+              bestWalletTs !== localWalletTs ||
+              mergedTx.length !== (localU.transactionHistory?.length || 0) ||
+              mergedNotifs.length !== (localU.notifications?.length || 0) ||
+              rem.isBlocked !== localU.isBlocked ||
+              rem.hwid !== localU.hwid
+            ) {
+              changed = true;
+            }
+
+            nextMap[targetId] = {
+              ...localU,
+              ...rem,
+              id: targetId,
+              wallet: { balance: bestBalance },
+              walletUpdatedAt: bestWalletTs,
+              transactionHistory: mergedTx,
+              notifications: mergedNotifs
+            };
+          });
+
+          if (!changed && !shouldApplyGlobalSettings) return prev;
+          setLocalStorage('users', nextMap);
+          return nextMap;
+        });
+
+        // Ensure currently logged-in user (matched by ID, Email, or Mobile Number) gets the fresh wallet balance immediately!
         setUser(prevUser => {
-          if (!prevUser?.id || !remoteUsersMap[prevUser.id]) return prevUser;
-          const fresh = remoteUsersMap[prevUser.id];
-          const updated = {
+          if (!prevUser) return prevUser;
+          const prevEmail = prevUser.email ? prevUser.email.trim().toLowerCase() : '';
+          const prevMobile = prevUser.mobileNumber ? prevUser.mobileNumber.replace(/\D/g, '') : '';
+
+          const fresh = remoteUsersList.find(u => {
+            if (!u) return false;
+            if (u.id === prevUser.id) return true;
+            if (prevEmail && u.email && u.email.trim().toLowerCase() === prevEmail) return true;
+            const uMob = u.mobileNumber ? u.mobileNumber.replace(/\D/g, '') : '';
+            if (prevMobile.length >= 10 && uMob.length >= 10 && uMob.slice(-10) === prevMobile.slice(-10)) return true;
+            return false;
+          });
+
+          if (!fresh) return prevUser;
+
+          const prevWalletTs = Number(prevUser.walletUpdatedAt || 0);
+          const freshWalletTs = Number(fresh.walletUpdatedAt || 0);
+          const prevBal = Number(prevUser.wallet?.balance || 0);
+          const freshBal = Number(fresh.wallet?.balance ?? prevBal);
+
+          // Do not overwrite if local state has a newer wallet timestamp
+          if (prevWalletTs > freshWalletTs && freshWalletTs > 0) {
+            return prevUser;
+          }
+          if (freshWalletTs === 0 && prevWalletTs > 0 && freshBal === 0 && prevBal > 0) {
+            return prevUser;
+          }
+
+          const txSeen = new Set<string>();
+          const mergedTx: Transaction[] = [];
+          [...(Array.isArray(fresh.transactionHistory) ? fresh.transactionHistory : []), ...(Array.isArray(prevUser.transactionHistory) ? prevUser.transactionHistory : [])].forEach(tx => {
+            if (tx && tx.id && !txSeen.has(tx.id)) {
+              txSeen.add(tx.id);
+              mergedTx.push(tx);
+            }
+          });
+
+          const notifSeen = new Set<string>();
+          const mergedNotifs: UserNotification[] = [];
+          [...(Array.isArray(fresh.notifications) ? fresh.notifications : []), ...(Array.isArray(prevUser.notifications) ? prevUser.notifications : [])].forEach(n => {
+            if (n && n.id && !notifSeen.has(n.id)) {
+              notifSeen.add(n.id);
+              mergedNotifs.push(n);
+            }
+          });
+
+          const hasBalanceChanged = Math.abs(freshBal - prevBal) > 0.001;
+          const hasTxChanged = mergedTx.length !== (prevUser.transactionHistory?.length || 0);
+          const hasNotifChanged = mergedNotifs.length !== (prevUser.notifications?.length || 0);
+
+          if (!hasBalanceChanged && !hasTxChanged && !hasNotifChanged && freshWalletTs === prevWalletTs) {
+            return prevUser;
+          }
+
+          if (freshBal > prevBal) {
+            const addedAmt = (freshBal - prevBal).toFixed(2);
+            playSuccessSound();
+            setInternalNotification({
+              message: `🎉 ₹${addedAmt} aapke Wallet mein add ho gaya hai! Total Balance: ₹${freshBal.toFixed(2)}`,
+              type: 'success'
+            });
+            setTimeout(() => setInternalNotification(null), 5000);
+          }
+
+          const updated: User = {
             ...prevUser,
             ...fresh,
-            wallet: fresh.wallet || prevUser.wallet,
-            transactionHistory: fresh.transactionHistory || prevUser.transactionHistory,
+            id: prevUser.id,
+            wallet: { balance: freshBal },
+            walletUpdatedAt: Math.max(prevWalletTs, freshWalletTs),
+            transactionHistory: mergedTx,
+            notifications: mergedNotifs,
           };
           setLocalStorage('currentUser', updated);
           return updated;
         });
       }
     }
+
     if (Array.isArray(snapshot.adminNotifications)) {
       setAdminNotifications(prev => {
         const merged: AdminNotification[] = [];
         const seen = new Set<string>();
 
-        // Remote snapshot notifications take precedence
         snapshot.adminNotifications.forEach((r: any) => {
           if (r && r.id && !seen.has(r.id)) {
             merged.push(r);
@@ -655,7 +795,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           }
         });
 
-        // Keep local notifications that are recent and not yet in remote
         prev.forEach(l => {
           if (l && l.id && !seen.has(l.id)) {
             merged.push(l);
@@ -668,10 +807,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         return merged;
       });
     }
-    if (remoteUpdatedAt > 0) {
+    if (remoteUpdatedAt > localUpdatedAt) {
       localStorage.setItem('cloud_sync_timestamp', String(remoteUpdatedAt));
     }
-    return true;
+    return shouldApplyGlobalSettings;
   }, []);
 
   const pullServerSync = useCallback(async (forceApply = false) => {
@@ -1640,20 +1779,79 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   }, [allUsers, user?.id]);
 
-  // Sync latest user details from Supabase on mount/auth to ensure fresh wallet balance
+  // Cross-tab instant synchronization via browser storage events
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (!e.newValue) return;
+      try {
+        if (e.key === 'users') {
+          const parsedUsers = JSON.parse(e.newValue);
+          if (parsedUsers && typeof parsedUsers === 'object') {
+            setAllUsers(parsedUsers);
+            setUser(prev => {
+              if (!prev) return prev;
+              const match = parsedUsers[prev.id] || (Object.values(parsedUsers) as User[]).find(
+                u => u && u.email && prev.email && u.email.toLowerCase() === prev.email.toLowerCase()
+              );
+              if (match && match.wallet && match.wallet.balance !== prev.wallet.balance) {
+                const updated = {
+                  ...prev,
+                  ...match,
+                  id: prev.id,
+                  wallet: { balance: Number(match.wallet.balance) }
+                };
+                return updated;
+              }
+              return prev;
+            });
+          }
+        } else if (e.key === 'currentUser') {
+          const parsedUser = JSON.parse(e.newValue);
+          if (parsedUser && parsedUser.id) {
+            setUser(prev => {
+              if (!prev || prev.id !== parsedUser.id) return prev;
+              if (parsedUser.wallet?.balance !== prev.wallet?.balance) {
+                return parsedUser;
+              }
+              return prev;
+            });
+          }
+        }
+      } catch (_err) {
+        // Ignore JSON parse error
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
+  // Sync latest user details from server & database on mount/auth to ensure fresh wallet balance
   useEffect(() => {
     if (user?.id) {
+      pullServerSync(true).catch(() => {});
       getRegisteredUser(user.id).then(res => {
         if (res.success && res.data) {
           setUser(prev => {
             if (!prev) return prev;
-            const newBalance = Number(res.data.wallet_balance);
-            if (prev.wallet.balance === newBalance && prev.profile.name === res.data.name && prev.profile.bio === res.data.bio) {
-                return prev;
+            const dbBalance = Number(res.data.wallet_balance || 0);
+            const dbWalletTs = Number(res.data.walletUpdatedAt || 0);
+            const localWalletTs = Number(prev.walletUpdatedAt || 0);
+
+            // Never overwrite a non-zero local balance or newer walletUpdatedAt with a stale 0 balance
+            if (dbBalance === 0 && prev.wallet.balance > 0 && dbWalletTs === 0) {
+              return prev;
             }
-            const updatedUser = {
+            if (localWalletTs > dbWalletTs && dbWalletTs > 0) {
+              return prev;
+            }
+
+            if (prev.wallet.balance === dbBalance && prev.profile.name === res.data.name && prev.profile.bio === res.data.bio) {
+              return prev;
+            }
+            const updatedUser: User = {
               ...prev,
-              wallet: { balance: newBalance },
+              wallet: { balance: dbBalance },
+              walletUpdatedAt: Math.max(localWalletTs, dbWalletTs),
               profile: {
                 ...prev.profile,
                 name: res.data.name || prev.profile.name || '',
@@ -1668,7 +1866,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         }
       });
     }
-  }, [user?.id]);
+  }, [user?.id, pullServerSync]);
   useEffect(() => { setLocalStorage('cart', cart); }, [cart]);
   useEffect(() => {
     setLocalStorage('products', products);
@@ -1719,23 +1917,27 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   useEffect(() => { setLocalStorage('anonymousRecents', anonymousRecents); }, [anonymousRecents]);
   useEffect(() => { 
     setLocalStorage('users', allUsers); 
-    const usersList = Object.values(allUsers);
-    if (usersList.length > 0) {
-      const timer = setTimeout(() => {
-        pushServerSync({ users: usersList });
-      }, 1000);
-      return () => clearTimeout(timer);
+    // Only auto-push the full users list when Admin is logged in and initial cloud sync has completed,
+    // so visitor browsers never overwrite newer wallet balances with stale local storage
+    if (isAdmin && cloudSettingsSynced) {
+      const usersList = Object.values(allUsers);
+      if (usersList.length > 0) {
+        const timer = setTimeout(() => {
+          pushServerSync({ users: usersList });
+        }, 1000);
+        return () => clearTimeout(timer);
+      }
     }
-  }, [allUsers, pushServerSync]);
+  }, [allUsers, isAdmin, cloudSettingsSynced, pushServerSync]);
   useEffect(() => { 
     setLocalStorage('adminNotifications', adminNotifications); 
-    if (adminNotifications.length > 0) {
+    if (cloudSettingsSynced && adminNotifications.length > 0) {
       const timer = setTimeout(() => {
         pushServerSync({ adminNotifications });
       }, 1000);
       return () => clearTimeout(timer);
     }
-  }, [adminNotifications, pushServerSync]);
+  }, [adminNotifications, cloudSettingsSynced, pushServerSync]);
 
   // --- Theme Toggle Function ---
   const toggleTheme = () => {
@@ -2704,32 +2906,43 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   // --- Admin User Management Functions ---
   const syncUsersFromSupabase = async () => {
     try {
+      // First pull latest cloud snapshot so cloud-data.json wallet balances are loaded
+      await pullServerSync(true).catch(() => {});
+
       const response = await getRegisteredUsers();
       if (response.success && response.data) {
         const dbUsers = response.data;
         
-        // Push any local users in our localStorage who do not exist on the cloud Supabase database yet.
-        const dbUserIds = new Set(dbUsers.map((u: any) => u.id));
-        const dbEmails = new Set(dbUsers.map((u: any) => u.email?.toLowerCase()));
+        // Push any local users in our localStorage who do not exist on the cloud database yet,
+        // or whose local wallet balance is higher/newer than the database record.
+        const dbUserById = new Map<string, any>();
+        const dbUserByEmail = new Map<string, any>();
+        dbUsers.forEach((u: any) => {
+          if (u?.id) dbUserById.set(u.id, u);
+          if (u?.email) dbUserByEmail.set(String(u.email).toLowerCase(), u);
+        });
         
         const localUsers = Object.values(allUsers) as User[];
         for (const localUser of localUsers) {
           if (localUser.email === ADMIN_EMAIL) continue;
-          
-          if (!dbUserIds.has(localUser.id) && !dbEmails.has(localUser.email?.toLowerCase())) {
-            console.log(`Pushing offline local user to Supabase: ${localUser.email}`);
+          const matchingDb = dbUserById.get(localUser.id) || (localUser.email ? dbUserByEmail.get(localUser.email.toLowerCase()) : null);
+          const localBal = Number(localUser.wallet?.balance || 0);
+          const dbBal = matchingDb ? Number(matchingDb.wallet_balance || 0) : 0;
+
+          if (!matchingDb || (localBal !== dbBal && (localUser.walletUpdatedAt || localBal > dbBal))) {
             await saveRegisteredUser({
               id: localUser.id,
               email: localUser.email,
               mobile_number: localUser.mobileNumber,
               name: localUser.profile.name || '',
               bio: localUser.profile.bio || '',
-              wallet_balance: localUser.wallet.balance
-            }).catch(e => console.warn(`Failed to push user ${localUser.email} to Supabase (non-blocking):`, e));
+              wallet_balance: localBal,
+              hwid: localUser.hwid || ''
+            }).catch(e => console.warn(`Failed to push user ${localUser.email} to DB (non-blocking):`, e));
           }
         }
         
-        // Re-fetch to get the complete merged list from Supabase
+        // Re-fetch to get the complete merged list
         const refreshedResponse = await getRegisteredUsers();
         const finalDbUsers = refreshedResponse.success && refreshedResponse.data ? refreshedResponse.data : dbUsers;
 
@@ -2737,9 +2950,18 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           const updated = { ...prev };
           finalDbUsers.forEach((dbUser: any) => {
             const userId = dbUser.id;
-            const existingUser = updated[userId];
+            const existingUser = updated[userId] || (Object.values(updated) as User[]).find(
+              u => u && u.email && dbUser.email && u.email.toLowerCase() === String(dbUser.email).toLowerCase()
+            );
+            const targetKey = existingUser ? existingUser.id : userId;
+
             if (existingUser) {
-              updated[userId] = {
+              const existingBal = Number(existingUser.wallet?.balance || 0);
+              const dbBal = dbUser.wallet_balance !== undefined && dbUser.wallet_balance !== null ? Number(dbUser.wallet_balance) : existingBal;
+              // Never overwrite a non-zero existing wallet balance with a 0 database balance
+              const resolvedBalance = (dbBal === 0 && existingBal > 0) ? existingBal : dbBal;
+
+              updated[targetKey] = {
                 ...existingUser,
                 email: dbUser.email || existingUser.email,
                 mobileNumber: dbUser.mobile_number || existingUser.mobileNumber,
@@ -2749,11 +2971,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
                   bio: dbUser.bio || existingUser.profile.bio || ''
                 },
                 wallet: {
-                  balance: dbUser.wallet_balance !== undefined && dbUser.wallet_balance !== null ? Number(dbUser.wallet_balance) : existingUser.wallet.balance
+                  balance: resolvedBalance
                 }
               };
             } else {
-              updated[userId] = {
+              updated[targetKey] = {
                 id: dbUser.id,
                 email: dbUser.email || '',
                 mobileNumber: dbUser.mobile_number || '',
@@ -2777,6 +2999,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
               };
             }
           });
+          setLocalStorage('users', updated);
           return updated;
         });
       }
@@ -2842,7 +3065,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         mobile_number: updatedUser.mobileNumber,
         name: updatedUser.profile.name || '',
         bio: updatedUser.profile.bio || '',
-        wallet_balance: updatedUser.wallet.balance
+        wallet_balance: updatedUser.wallet.balance,
+        hwid: updatedUser.hwid || ''
     }).catch(err => {
         console.warn('Failed to sync updated user details to Supabase (non-blocking):', err);
     });
@@ -2878,6 +3102,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         mobileNumber,
         profile: { name, bio: '', emailNotifications: { systemUpdates: true, newFileReleases: true } },
         wallet: { balance: autoWalletNewUser ? 25 : 0 },
+        walletUpdatedAt: Date.now(),
         purchasedProductIds: [],
         favoriteProductIds: [],
         visitedProductIds: [],
@@ -2903,7 +3128,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         mobile_number: mobileNumber,
         name,
         bio: '',
-        wallet_balance: autoWalletNewUser ? 25 : 0
+        wallet_balance: autoWalletNewUser ? 25 : 0,
+        hwid: ''
       });
 
       setNotification(`User ${email} created successfully.`, 'success');
@@ -2917,60 +3143,153 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const adminAdjustUserBalance = (userId: string, amount: number, reason: string) => {
     if (!isAdmin) return;
-    const userToUpdate = allUsers[userId];
-    if (!userToUpdate) return;
+    const userToUpdate = allUsers[userId] || (Object.values(allUsers) as User[]).find(
+      u => u && (u.id === userId || (u.email && u.email.toLowerCase() === userId.toLowerCase()))
+    );
+    if (!userToUpdate) {
+      setNotification('User not found. Please refresh or sync users.', 'error');
+      return;
+    }
     
-    const newBalance = Math.max(0, userToUpdate.wallet.balance + amount);
+    const nowMs = Date.now();
+    const nowIso = new Date(nowMs).toISOString();
+    const currentBal = Number(userToUpdate.wallet?.balance || 0);
+    const newBalance = Math.max(0, Number((currentBal + amount).toFixed(2)));
+    const cleanReason = reason?.trim() || (amount > 0 ? 'Wallet Payment Added by Admin' : 'Wallet Balance Adjusted by Admin');
     
     const newTransaction: Transaction = {
-      id: `txn-${Date.now()}`,
-      timestamp: new Date().toISOString(),
-      type: 'admin_adjustment',
+      id: `txn-${nowMs}`,
+      timestamp: nowIso,
+      type: amount > 0 ? 'deposit' : 'admin_adjustment',
       amount: amount,
-      description: reason || `Admin adjustment.`
+      description: cleanReason
     };
 
-    const updatedUser = { 
-        ...userToUpdate, 
-        wallet: { balance: newBalance },
-        transactionHistory: [newTransaction, ...(userToUpdate.transactionHistory || [])],
-        lifetimePointsPurchased: (userToUpdate.lifetimePointsPurchased || 0) + (amount > 0 ? amount : 0)
+    const newNotification: UserNotification = {
+      id: `notif-wallet-${nowMs}`,
+      title: amount > 0
+        ? `Wallet Credited: +₹${amount.toFixed(2)} ✅`
+        : `Wallet Deducted: -₹${Math.abs(amount).toFixed(2)}`,
+      message: amount > 0
+        ? `Admin has added ₹${amount.toFixed(2)} to your wallet (${cleanReason}). Your updated wallet balance is ₹${newBalance.toFixed(2)}.`
+        : `Admin adjusted ₹${Math.abs(amount).toFixed(2)} from your wallet (${cleanReason}). Your updated wallet balance is ₹${newBalance.toFixed(2)}.`,
+      timestamp: nowIso,
+      read: false,
+      status: 'approved'
     };
 
-    const updatedUsersMap = { ...allUsers, [userId]: updatedUser };
+    const updatedUser: User = { 
+      ...userToUpdate, 
+      wallet: { balance: newBalance },
+      walletUpdatedAt: nowMs,
+      transactionHistory: [newTransaction, ...(userToUpdate.transactionHistory || [])],
+      notifications: [newNotification, ...(userToUpdate.notifications || [])],
+      lifetimePointsPurchased: (userToUpdate.lifetimePointsPurchased || 0) + (amount > 0 ? amount : 0)
+    };
+
+    // Update any duplicate entries sharing the same email or mobile so user always receives balance regardless of session ID
+    const updatedUsersMap: Record<string, User> = { ...allUsers };
+    const targetEmail = (userToUpdate.email || '').trim().toLowerCase();
+    const targetMobile = (userToUpdate.mobileNumber || '').replace(/\D/g, '');
+
+    Object.keys(updatedUsersMap).forEach(k => {
+      const candidate = updatedUsersMap[k];
+      if (!candidate) return;
+      const emailMatches = targetEmail && candidate.email && candidate.email.trim().toLowerCase() === targetEmail;
+      const candMobile = (candidate.mobileNumber || '').replace(/\D/g, '');
+      const mobileMatches = targetMobile.length >= 10 && candMobile.length >= 10 && candMobile.slice(-10) === targetMobile.slice(-10);
+      if (k === userToUpdate.id || emailMatches || mobileMatches) {
+        updatedUsersMap[k] = {
+          ...candidate,
+          wallet: { balance: newBalance },
+          walletUpdatedAt: nowMs,
+          transactionHistory: [newTransaction, ...(candidate.transactionHistory || []).filter(t => t.id !== newTransaction.id)],
+          notifications: [newNotification, ...(candidate.notifications || []).filter(n => n.id !== newNotification.id)],
+          lifetimePointsPurchased: (candidate.lifetimePointsPurchased || 0) + (amount > 0 ? amount : 0)
+        };
+      }
+    });
+    updatedUsersMap[userToUpdate.id] = updatedUser;
+
     setAllUsers(updatedUsersMap);
     setLocalStorage('users', updatedUsersMap);
 
-    if (user && user.id === userId) {
-      setUser(updatedUser);
-      setLocalStorage('currentUser', updatedUser);
+    if (
+      user &&
+      (user.id === userToUpdate.id ||
+        (targetEmail && user.email?.trim().toLowerCase() === targetEmail) ||
+        (targetMobile.length >= 10 && (user.mobileNumber || '').replace(/\D/g, '').slice(-10) === targetMobile.slice(-10)))
+    ) {
+      const updatedCurrentUser = {
+        ...user,
+        wallet: { balance: newBalance },
+        walletUpdatedAt: nowMs,
+        transactionHistory: updatedUser.transactionHistory,
+        notifications: updatedUser.notifications,
+      };
+      setUser(updatedCurrentUser);
+      setLocalStorage('currentUser', updatedCurrentUser);
     }
 
-    // Immediately push to server & Hostinger MySQL so refresh NEVER loses it!
+    // 1. Atomic server endpoint call (both Express /api/admin-adjust-balance and Hostinger /cloud-sync.php?action=admin_adjust_balance)
+    const adjustPayload = {
+      action: 'admin_adjust_balance',
+      userId: updatedUser.id,
+      email: updatedUser.email,
+      mobileNumber: updatedUser.mobileNumber,
+      name: updatedUser.profile?.name || '',
+      amount,
+      newBalance,
+      reason: cleanReason,
+      transactionId: newTransaction.id
+    };
+
+    ['/api/admin-adjust-balance', '/cloud-sync.php?action=admin_adjust_balance'].forEach(endpoint => {
+      fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(adjustPayload)
+      })
+        .then(res => res.json())
+        .then(resJson => {
+          if (resJson?.updatedAt) {
+            localStorage.setItem('cloud_sync_timestamp', String(resJson.updatedAt));
+          }
+        })
+        .catch(() => {});
+    });
+
+    // 2. Push full users snapshot to server & Hostinger MySQL
     pushServerSync({ users: Object.values(updatedUsersMap) }, true).catch(err => {
       console.warn('Failed to sync adjusted balance to server:', err);
     });
 
+    // 3. Save to registered_users & broadcast realtime event
     saveRegisteredUser({
         id: updatedUser.id,
         email: updatedUser.email,
         mobile_number: updatedUser.mobileNumber,
         name: updatedUser.profile.name || '',
         bio: updatedUser.profile.bio || '',
-        wallet_balance: updatedUser.wallet.balance
+        wallet_balance: updatedUser.wallet.balance,
+        hwid: updatedUser.hwid || ''
     }).then(() => {
         supabase.channel('public:site_settings').send({
           type: 'broadcast',
           event: 'user_wallet_updated',
-          payload: { userId: updatedUser.id, wallet_balance: updatedUser.wallet.balance }
+          payload: { userId: updatedUser.id, email: updatedUser.email, wallet_balance: updatedUser.wallet.balance }
         });
     }).catch(err => {
         console.warn('Failed to sync adjusted user balance to Supabase (non-blocking):', err);
     });
 
     syncTransaction(updatedUser.id, updatedUser.email, newTransaction);
+    playSuccessSound();
 
-    setNotification(`₹${Math.abs(amount)} ${amount > 0 ? 'added' : 'removed'}.`);
+    setNotification(
+      `✅ ₹${Math.abs(amount).toFixed(2)} ${amount > 0 ? 'added to' : 'deducted from'} ${updatedUser.profile?.name || updatedUser.email}'s Wallet! (New Balance: ₹${newBalance.toFixed(2)})`,
+      'success'
+    );
   };
 
   const adminToggleUserBlockStatus = (userId: string) => {
@@ -3105,7 +3424,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     delete newAllUsers[userId];
     setAllUsers(newAllUsers);
     setLocalStorage('users', newAllUsers);
-    pushServerSync({ users: Object.values(newAllUsers) }, true).catch(e => console.warn('Sync user error:', e));
+    pushServerSync({ users: Object.values(newAllUsers), isUserDeletion: true }, true).catch(e => console.warn('Sync user error:', e));
     setNotification(`User ${userToDelete.email} has been deleted.`);
   };
 
@@ -3130,7 +3449,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
     setAllUsers(updatedUsers);
     setLocalStorage('users', updatedUsers);
-    pushServerSync({ users: Object.values(updatedUsers) }, true).catch(e => console.warn('Sync user error:', e));
+    pushServerSync({ users: Object.values(updatedUsers), isUserDeletion: true }, true).catch(e => console.warn('Sync user error:', e));
     setNotification(`Successfully deleted all non-admin users.`);
   };
 

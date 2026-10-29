@@ -5,9 +5,9 @@ import type { User, Transaction } from '../../types';
 import CopyButton from '../../components/CopyButton';
 
 // --- Comprehensive User Management Modal ---
-const UserManagementModal = ({ user, isOpen, onClose }: { user: User | null, isOpen: boolean, onClose: () => void }) => {
+const UserManagementModal = ({ user, isOpen, onClose, initialTab = 'credentials' }: { user: User | null, isOpen: boolean, onClose: () => void, initialTab?: string }) => {
     const { adminUpdateUser, adminAdjustUserBalance } = useAppContext();
-    const [activeTab, setActiveTab] = useState('credentials');
+    const [activeTab, setActiveTab] = useState(initialTab);
     
     // Profile & Credentials state
     const [email, setEmail] = useState('');
@@ -29,11 +29,11 @@ const UserManagementModal = ({ user, isOpen, onClose }: { user: User | null, isO
             setMobileNumber(user.mobileNumber || '');
             setReferralCode(user.referralCode || '');
             setReferredBy(user.referredBy || '');
-            setActiveTab('credentials'); // Reset to first tab on open
-            setBalanceAmount(''); // Clear balance input on open
+            setActiveTab(initialTab || 'credentials');
+            setBalanceAmount('');
             setAdjustmentReason('');
         }
-    }, [user?.id, isOpen]);
+    }, [user?.id, isOpen, initialTab]);
 
     if (!isOpen || !user) return null;
 
@@ -46,7 +46,7 @@ const UserManagementModal = ({ user, isOpen, onClose }: { user: User | null, isO
     const handleAdjustBalance = (isAdding: boolean) => {
         const amount = Number(balanceAmount);
         if (isNaN(amount) || amount <= 0) return;
-        const reason = adjustmentReason || `Admin ${isAdding ? 'deposit' : 'withdrawal'}.`;
+        const reason = adjustmentReason || (isAdding ? 'Wallet Payment Added by Admin' : 'Wallet Deducted by Admin');
         adminAdjustUserBalance(user.id, isAdding ? amount : -amount, reason);
         setBalanceAmount('');
         setAdjustmentReason('');
@@ -69,14 +69,14 @@ const UserManagementModal = ({ user, isOpen, onClose }: { user: User | null, isO
                 <div className="border-b border-slate-800 mb-6 overflow-x-auto">
                     <nav className="-mb-px flex space-x-2 min-w-max">
                         <button className={tabClasses('credentials')} onClick={() => setActiveTab('credentials')}>Profile & Details</button>
-                        <button className={tabClasses('balance')} onClick={() => setActiveTab('balance')}>Wallet</button>
+                        <button className={tabClasses('balance')} onClick={() => setActiveTab('balance')}>Wallet (₹{user.wallet.balance.toFixed(2)})</button>
                         <button className={tabClasses('transactions')} onClick={() => setActiveTab('transactions')}>Transactions</button>
                         <button className={tabClasses('downloads')} onClick={() => setActiveTab('downloads')}>Downloads</button>
                         <button className={tabClasses('notifications')} onClick={() => setActiveTab('notifications')}>Notifications</button>
                     </nav>
                 </div>
                 
-                <div className="max-h-[50vh] overflow-y-auto pr-2">
+                <div className="max-h-[55vh] overflow-y-auto pr-2">
                     {activeTab === 'credentials' && (
                         <form onSubmit={handleSaveProfile} className="space-y-4">
                             <div>
@@ -117,20 +117,43 @@ const UserManagementModal = ({ user, isOpen, onClose }: { user: User | null, isO
                     {activeTab === 'balance' && (
                         <div className="space-y-4">
                             <div className="text-center bg-slate-900 p-5 rounded-2xl border border-slate-800/60">
-                                <p className="text-xs text-slate-400 uppercase tracking-wider font-semibold">Current Balance</p>
-                                <p className="text-3xl font-bold text-amber-400 mt-1 font-mono">₹{user.wallet.balance.toFixed(2)}</p>
+                                <p className="text-xs text-slate-400 uppercase tracking-wider font-semibold">Current User Wallet Balance</p>
+                                <p className="text-3xl font-bold text-emerald-400 mt-1 font-mono">₹{user.wallet.balance.toFixed(2)}</p>
                             </div>
                             <div>
-                                <label className="block text-slate-400 font-bold text-xs uppercase tracking-wider mb-2">Amount to Add/Remove</label>
-                                <input type="number" placeholder="e.g., 100" value={balanceAmount} onChange={e => setBalanceAmount(e.target.value)} className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-500/40 text-sm" />
+                                <label className="block text-slate-400 font-bold text-xs uppercase tracking-wider mb-2">Quick Select Amount</label>
+                                <div className="flex flex-wrap gap-2">
+                                    {[100, 200, 500, 1000, 2000, 5000].map(preset => (
+                                        <button
+                                            key={preset}
+                                            type="button"
+                                            onClick={() => setBalanceAmount(preset)}
+                                            className={`px-3 py-1.5 rounded-lg text-xs font-bold font-mono border transition-all ${
+                                                Number(balanceAmount) === preset
+                                                    ? 'bg-emerald-600 text-white border-emerald-500'
+                                                    : 'bg-slate-900 text-emerald-400 border-slate-800 hover:border-emerald-500/50'
+                                            }`}
+                                        >
+                                            +₹{preset}
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
                             <div>
-                                <label className="block text-slate-400 font-bold text-xs uppercase tracking-wider mb-2">Reason (Optional)</label>
-                                <input type="text" placeholder="e.g., Bonus for loyalty" value={adjustmentReason} onChange={e => setAdjustmentReason(e.target.value)} className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-500/40 text-sm" />
+                                <label className="block text-slate-400 font-bold text-xs uppercase tracking-wider mb-2">Amount to Add / Remove (₹)</label>
+                                <input type="number" placeholder="Enter amount e.g. 500" value={balanceAmount} onChange={e => setBalanceAmount(e.target.value)} className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 text-sm font-mono font-bold" />
                             </div>
-                            <div className="flex gap-4 pt-3">
-                                <button onClick={() => handleAdjustBalance(true)} className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 px-4 rounded-xl transition-all shadow-lg shadow-emerald-600/10 text-xs sm:text-sm">Add Balance</button>
-                                <button onClick={() => handleAdjustBalance(false)} className="w-full bg-rose-600 hover:bg-rose-500 text-white font-bold py-3 px-4 rounded-xl transition-all shadow-lg shadow-rose-600/10 text-xs sm:text-sm">Remove Balance</button>
+                            <div>
+                                <label className="block text-slate-400 font-bold text-xs uppercase tracking-wider mb-2">Note / Payment Reference (Optional)</label>
+                                <input type="text" placeholder="e.g., UPI Payment Received / Wallet Recharge" value={adjustmentReason} onChange={e => setAdjustmentReason(e.target.value)} className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-500/40 text-sm" />
+                            </div>
+                            <div className="flex gap-4 pt-2">
+                                <button onClick={() => handleAdjustBalance(true)} className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 px-4 rounded-xl transition-all shadow-lg shadow-emerald-600/20 text-xs sm:text-sm">
+                                    + Add Payment to User Wallet
+                                </button>
+                                <button onClick={() => handleAdjustBalance(false)} className="w-full bg-rose-600 hover:bg-rose-500 text-white font-bold py-3 px-4 rounded-xl transition-all shadow-lg shadow-rose-600/10 text-xs sm:text-sm">
+                                    - Deduct Balance
+                                </button>
                             </div>
                         </div>
                     )}
@@ -270,15 +293,22 @@ const maskHwid = (hwidString: string | undefined): string => {
 
 // --- Main Page Component ---
 const UsersPage = () => {
-    const { isAdmin, getAllUsers, adminDeleteUser, adminToggleUserBlockStatus, adminResetUserHWID, autoWalletNewUser, updateAutoWalletNewUser, syncUsersFromSupabase, adminDeleteAllUsers, setNotification } = useAppContext();
+    const { isAdmin, getAllUsers, adminAdjustUserBalance, adminDeleteUser, adminToggleUserBlockStatus, adminResetUserHWID, autoWalletNewUser, updateAutoWalletNewUser, syncUsersFromSupabase, adminDeleteAllUsers, setNotification } = useAppContext();
     const navigate = useNavigate();
 
     const [searchQuery, setSearchQuery] = useState('');
     const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'blocked'>('all');
     const [managingUser, setManagingUser] = useState<User | null>(null);
+    const [modalInitialTab, setModalInitialTab] = useState<string>('credentials');
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [currentPage, setCurrentPage] = useState(1);
     const [isSyncing, setIsSyncing] = useState(false);
+
+    // Quick Add Wallet Payment bar state
+    const [quickTargetUser, setQuickTargetUser] = useState('');
+    const [quickAmount, setQuickAmount] = useState<string>('');
+    const [quickNote, setQuickNote] = useState('');
+
     const ITEMS_PER_PAGE = 10;
 
     useEffect(() => {
@@ -321,6 +351,33 @@ const UsersPage = () => {
         return filteredUsers.slice(startIndex, startIndex + ITEMS_PER_PAGE);
     }, [filteredUsers, currentPage]);
 
+    const handleQuickAddPayment = (e: FormEvent) => {
+        e.preventDefault();
+        const amt = Number(quickAmount);
+        if (!quickTargetUser.trim()) {
+            setNotification('Please select a user or enter Email / Mobile number.', 'error');
+            return;
+        }
+        if (isNaN(amt) || amt <= 0) {
+            setNotification('Please enter a valid payment amount greater than ₹0.', 'error');
+            return;
+        }
+        const query = quickTargetUser.trim().toLowerCase();
+        const cleanDigits = query.replace(/\D/g, '');
+        const found = users.find(u =>
+            u.id === quickTargetUser.trim() ||
+            u.email.toLowerCase() === query ||
+            (cleanDigits.length >= 10 && u.mobileNumber.replace(/\D/g, '').slice(-10) === cleanDigits.slice(-10))
+        );
+        if (!found) {
+            setNotification(`User "${quickTargetUser}" not found. Check email or mobile number.`, 'error');
+            return;
+        }
+        adminAdjustUserBalance(found.id, amt, quickNote.trim() || 'Wallet Payment Added by Admin');
+        setQuickAmount('');
+        setQuickNote('');
+    };
+
     const handleDelete = (userId: string) => {
         if (window.confirm("Are you sure you want to permanently delete this user? This action cannot be undone.")) {
             adminDeleteUser(userId);
@@ -343,20 +400,25 @@ const UsersPage = () => {
 
     return (
         <div className="bg-gradient-to-b from-slate-900/90 to-slate-950/90 backdrop-blur-md p-6 sm:p-8 rounded-2xl border border-slate-800/80 shadow-2xl animate-in fade-in duration-300">
-             <UserManagementModal user={managingUser ? (users.find(u => u.id === managingUser.id) || managingUser) : null} isOpen={!!managingUser} onClose={() => setManagingUser(null)} />
+             <UserManagementModal
+                 user={managingUser ? (users.find(u => u.id === managingUser.id) || managingUser) : null}
+                 isOpen={!!managingUser}
+                 initialTab={modalInitialTab}
+                 onClose={() => setManagingUser(null)}
+             />
              <CreateUserModal isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} />
             
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6 border-b border-slate-800/80 pb-5">
                 <div className="flex items-center space-x-2.5">
                     <div className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse"></div>
-                    <h1 className="text-xl font-bold tracking-wide text-slate-100">User Management</h1>
+                    <h1 className="text-xl font-bold tracking-wide text-slate-100">User Management & Wallet Recharge</h1>
                 </div>
                 <div className="flex flex-wrap items-center gap-3">
                     <button
                         onClick={() => {
                             setIsSyncing(true);
                             syncUsersFromSupabase()
-                                .then(() => setNotification('Successfully synchronized and backed up all users with Supabase!', 'success'))
+                                .then(() => setNotification('Successfully synchronized and backed up all users!', 'success'))
                                 .catch((e) => setNotification('Error syncing users: ' + (e?.message || String(e)), 'error'))
                                 .finally(() => setIsSyncing(false));
                         }}
@@ -377,7 +439,7 @@ const UsersPage = () => {
                                 d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 7.89M9 11l3 3L22 4"
                              />
                         </svg>
-                        {isSyncing ? 'Syncing...' : 'Sync with Supabase'}
+                        {isSyncing ? 'Syncing...' : 'Sync Users & Wallets'}
                     </button>
                     <button 
                         onClick={async () => {
@@ -404,6 +466,77 @@ const UsersPage = () => {
                     </button>
                 </div>
             </div>
+
+            {/* Instant Add Payment to User Wallet Box */}
+            <form onSubmit={handleQuickAddPayment} className="mb-6 p-5 bg-emerald-500/5 rounded-2xl border border-emerald-500/20 shadow-lg">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+                    <h3 className="font-bold text-emerald-300 flex items-center gap-2 text-sm sm:text-base">
+                        <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span>
+                        Instant Add Wallet Payment to User (Direct Wallet Credit)
+                    </h3>
+                    <div className="flex flex-wrap gap-1.5">
+                        {[100, 200, 500, 1000, 2000].map(preset => (
+                            <button
+                                key={preset}
+                                type="button"
+                                onClick={() => setQuickAmount(String(preset))}
+                                className={`px-2.5 py-1 rounded-lg text-xs font-bold font-mono border transition-all ${
+                                    Number(quickAmount) === preset
+                                        ? 'bg-emerald-600 text-white border-emerald-400'
+                                        : 'bg-slate-900 text-emerald-400 border-slate-800 hover:border-emerald-500/50'
+                                }`}
+                            >
+                                +₹{preset}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
+                    <div className="md:col-span-5">
+                        <input
+                            list="admin-users-datalist"
+                            type="text"
+                            placeholder="Select User or type Email / Mobile..."
+                            value={quickTargetUser}
+                            onChange={e => setQuickTargetUser(e.target.value)}
+                            className="w-full px-3.5 py-2.5 text-xs sm:text-sm bg-slate-950 border border-slate-800 rounded-xl text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+                        />
+                        <datalist id="admin-users-datalist">
+                            {users.map(u => (
+                                <option key={u.id} value={u.email}>
+                                    {u.profile.name || u.email} ({u.mobileNumber}) — Balance: ₹{u.wallet.balance.toFixed(2)}
+                                </option>
+                            ))}
+                        </datalist>
+                    </div>
+                    <div className="md:col-span-2">
+                        <input
+                            type="number"
+                            placeholder="Amount (₹)"
+                            value={quickAmount}
+                            onChange={e => setQuickAmount(e.target.value)}
+                            className="w-full px-3.5 py-2.5 text-xs sm:text-sm font-mono font-bold bg-slate-950 border border-slate-800 rounded-xl text-emerald-400 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+                        />
+                    </div>
+                    <div className="md:col-span-3">
+                        <input
+                            type="text"
+                            placeholder="Note (e.g. UPI Payment Added)"
+                            value={quickNote}
+                            onChange={e => setQuickNote(e.target.value)}
+                            className="w-full px-3.5 py-2.5 text-xs sm:text-sm bg-slate-950 border border-slate-800 rounded-xl text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+                        />
+                    </div>
+                    <div className="md:col-span-2">
+                        <button
+                            type="submit"
+                            className="w-full h-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 px-4 rounded-xl text-xs sm:text-sm shadow-lg shadow-emerald-600/20 transition-all"
+                        >
+                            + Add Payment
+                        </button>
+                    </div>
+                </div>
+            </form>
 
             {/* New User Welcome Bonus Toggle Option */}
             <div className="mb-6 p-4.5 bg-indigo-500/5 rounded-xl border border-indigo-500/15 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -482,7 +615,19 @@ const UsersPage = () => {
                                       </div>
                                     )}
                                 </td>
-                                <td className="p-3 py-4 font-bold text-amber-400 font-mono text-sm sm:text-base">₹{user.wallet.balance.toFixed(2)}</td>
+                                <td className="p-3 py-4">
+                                    <div className="font-bold text-amber-400 font-mono text-sm sm:text-base">₹{user.wallet.balance.toFixed(2)}</div>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setModalInitialTab('balance');
+                                            setManagingUser(user);
+                                        }}
+                                        className="mt-1.5 px-2.5 py-1 bg-emerald-600/20 hover:bg-emerald-600 text-emerald-300 hover:text-white border border-emerald-500/30 rounded-lg text-[11px] font-bold transition-all"
+                                    >
+                                        + Add Payment
+                                    </button>
+                                </td>
                                 <td className="p-3 py-4">
                                     <span className={`px-2.5 py-1 text-[11px] font-bold rounded-lg border capitalize ${user.isBlocked ? 'bg-rose-500/10 text-rose-400 border-rose-500/20' : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'}`}>
                                         {user.isBlocked ? 'Blocked' : 'Active'}
@@ -491,7 +636,24 @@ const UsersPage = () => {
                                 <td className="p-3 py-4 text-xs font-mono text-slate-400">{new Date(user.registeredAt).toLocaleDateString()}</td>
                                 <td className="p-3 py-4 text-right">
                                     <div className="flex justify-end gap-2">
-                                        <button onClick={() => setManagingUser(user)} className="p-2 bg-slate-950 border border-slate-800 text-amber-400 hover:bg-amber-500 hover:text-white rounded-xl transition-all duration-200 shadow-sm shadow-amber-500/5" title="Manage User">
+                                        <button
+                                            onClick={() => {
+                                                setModalInitialTab('balance');
+                                                setManagingUser(user);
+                                            }}
+                                            className="px-2.5 py-2 bg-emerald-600/15 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-600 hover:text-white rounded-xl transition-all duration-200 text-xs font-bold"
+                                            title="Add / Deduct Wallet Balance"
+                                        >
+                                            ₹ Wallet
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                setModalInitialTab('credentials');
+                                                setManagingUser(user);
+                                            }}
+                                            className="p-2 bg-slate-950 border border-slate-800 text-amber-400 hover:bg-amber-500 hover:text-white rounded-xl transition-all duration-200 shadow-sm shadow-amber-500/5"
+                                            title="Manage User"
+                                        >
                                             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
                                                 <path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" />
                                                 <path fillRule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clipRule="evenodd" />

@@ -6,9 +6,9 @@ import type { User, Transaction } from '../types';
 import BackButton from '../components/BackButton';
 
 // --- Comprehensive User Management Modal ---
-const UserManagementModal = ({ user, isOpen, onClose }: { user: User | null, isOpen: boolean, onClose: () => void }) => {
+const UserManagementModal = ({ user, isOpen, onClose, initialTab = 'credentials' }: { user: User | null, isOpen: boolean, onClose: () => void, initialTab?: string }) => {
     const { adminUpdateUser, adminAdjustUserBalance } = useAppContext();
-    const [activeTab, setActiveTab] = useState('credentials');
+    const [activeTab, setActiveTab] = useState(initialTab);
     
     // Credentials state
     const [email, setEmail] = useState('');
@@ -22,11 +22,11 @@ const UserManagementModal = ({ user, isOpen, onClose }: { user: User | null, isO
         if (user) {
             setEmail(user.email);
             setPassword(user.password);
-            setActiveTab('credentials'); // Reset to first tab on open
-            setBalanceAmount(''); // Clear balance input on open
+            setActiveTab(initialTab || 'credentials');
+            setBalanceAmount('');
             setAdjustmentReason('');
         }
-    }, [user?.id, isOpen]);
+    }, [user?.id, isOpen, initialTab]);
 
     if (!isOpen || !user) return null;
 
@@ -39,7 +39,7 @@ const UserManagementModal = ({ user, isOpen, onClose }: { user: User | null, isO
     const handleAdjustBalance = (isAdding: boolean) => {
         const amount = Number(balanceAmount);
         if (isNaN(amount) || amount <= 0) return;
-        const reason = adjustmentReason || `Admin ${isAdding ? 'deposit' : 'withdrawal'}.`;
+        const reason = adjustmentReason || (isAdding ? 'Wallet Payment Added by Admin' : 'Wallet Deducted by Admin');
         adminAdjustUserBalance(user.id, isAdding ? amount : -amount, reason);
         setBalanceAmount('');
         setAdjustmentReason('');
@@ -62,7 +62,7 @@ const UserManagementModal = ({ user, isOpen, onClose }: { user: User | null, isO
                 <div className="border-b border-slate-200 dark:border-slate-700 mb-6">
                     <nav className="-mb-px flex space-x-4">
                         <button className={tabClasses('credentials')} onClick={() => setActiveTab('credentials')}>Credentials</button>
-                        <button className={tabClasses('balance')} onClick={() => setActiveTab('balance')}>Wallet</button>
+                        <button className={tabClasses('balance')} onClick={() => setActiveTab('balance')}>Wallet (₹{user.wallet.balance.toFixed(2)})</button>
                         <button className={tabClasses('transactions')} onClick={() => setActiveTab('transactions')}>Transactions</button>
                         <button className={tabClasses('downloads')} onClick={() => setActiveTab('downloads')}>Downloads</button>
                         <button className={tabClasses('notifications')} onClick={() => setActiveTab('notifications')}>Notifications</button>
@@ -83,17 +83,29 @@ const UserManagementModal = ({ user, isOpen, onClose }: { user: User | null, isO
                                 <p className="text-lg text-slate-600 dark:text-slate-300">Current Balance</p>
                                 <p className="text-4xl font-bold text-cyan-500">₹{user.wallet.balance.toFixed(2)}</p>
                             </div>
+                            <div className="flex flex-wrap gap-2">
+                                {[100, 200, 500, 1000, 2000].map(preset => (
+                                    <button
+                                        key={preset}
+                                        type="button"
+                                        onClick={() => setBalanceAmount(preset)}
+                                        className="px-3 py-1 bg-cyan-500/10 hover:bg-cyan-500 hover:text-white text-cyan-600 dark:text-cyan-400 rounded font-bold text-xs transition-colors"
+                                    >
+                                        +₹{preset}
+                                    </button>
+                                ))}
+                            </div>
                             <div>
                                 <label className="block text-slate-600 dark:text-slate-400 font-semibold">Amount to Add/Remove</label>
                                 <input type="number" placeholder="e.g., 100" value={balanceAmount} onChange={e => setBalanceAmount(e.target.value)} className="w-full p-2 rounded bg-white dark:bg-slate-700 dark:border-slate-600 dark:text-white border border-slate-300" />
                             </div>
                             <div>
                                 <label className="block text-slate-600 dark:text-slate-400 font-semibold">Reason (Optional)</label>
-                                <input type="text" placeholder="e.g., Bonus for loyalty" value={adjustmentReason} onChange={e => setAdjustmentReason(e.target.value)} className="w-full p-2 rounded bg-white dark:bg-slate-700 dark:border-slate-600 dark:text-white border border-slate-300" />
+                                <input type="text" placeholder="e.g., UPI Payment Added" value={adjustmentReason} onChange={e => setAdjustmentReason(e.target.value)} className="w-full p-2 rounded bg-white dark:bg-slate-700 dark:border-slate-600 dark:text-white border border-slate-300" />
                             </div>
                             <div className="flex gap-4">
-                                <button onClick={() => handleAdjustBalance(true)} className="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-4 rounded-lg">Add Balance</button>
-                                <button onClick={() => handleAdjustBalance(false)} className="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-3 px-4 rounded-lg">Remove Balance</button>
+                                <button onClick={() => handleAdjustBalance(true)} className="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-4 rounded-lg">+ Add Balance</button>
+                                <button onClick={() => handleAdjustBalance(false)} className="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-3 px-4 rounded-lg">- Remove Balance</button>
                             </div>
                         </div>
                     )}
@@ -164,6 +176,7 @@ const UsersPage = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'blocked'>('all');
     const [managingUser, setManagingUser] = useState<User | null>(null);
+    const [modalInitialTab, setModalInitialTab] = useState<string>('credentials');
 
     useEffect(() => {
         if (!isAdmin) { navigate('/'); }
@@ -206,7 +219,12 @@ const UsersPage = () => {
 
     return (
         <div className="container mx-auto px-4 py-8">
-            <UserManagementModal user={managingUser ? (users.find(u => u.id === managingUser.id) || managingUser) : null} isOpen={!!managingUser} onClose={() => setManagingUser(null)} />
+            <UserManagementModal
+                user={managingUser ? (users.find(u => u.id === managingUser.id) || managingUser) : null}
+                isOpen={!!managingUser}
+                initialTab={modalInitialTab}
+                onClose={() => setManagingUser(null)}
+            />
             <div className="max-w-7xl mx-auto bg-white/70 dark:bg-slate-800/70 backdrop-blur-lg p-8 rounded-xl shadow-lg">
                 <BackButton />
                 <h1 className="text-4xl font-bold mb-6 text-slate-800 dark:text-slate-200">User Management</h1>
@@ -250,7 +268,19 @@ const UsersPage = () => {
                                           </div>
                                         )}
                                     </td>
-                                    <td className="p-3 font-semibold text-cyan-600 dark:text-cyan-400">₹{user.wallet.balance.toFixed(2)}</td>
+                                    <td className="p-3">
+                                        <div className="font-semibold text-cyan-600 dark:text-cyan-400">₹{user.wallet.balance.toFixed(2)}</div>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setModalInitialTab('balance');
+                                                setManagingUser(user);
+                                            }}
+                                            className="mt-1 px-2 py-0.5 bg-green-600 text-white rounded text-xs font-bold hover:bg-green-700"
+                                        >
+                                            + Add Payment
+                                        </button>
+                                    </td>
                                     <td className="p-3">
                                         <span className={`px-2 py-1 text-xs font-bold rounded-full ${user.isBlocked ? 'bg-red-200 text-red-800' : 'bg-green-200 text-green-800'}`}>
                                             {user.isBlocked ? 'Blocked' : 'Active'}
@@ -259,7 +289,7 @@ const UsersPage = () => {
                                     <td className="p-3 text-sm text-slate-500 dark:text-slate-400">{new Date(user.registeredAt).toLocaleDateString()}</td>
                                     <td className="p-3 text-right">
                                         <div className="flex justify-end gap-2">
-                                            <button onClick={() => setManagingUser(user)} className="p-2 bg-blue-500 text-white rounded hover:bg-blue-600" title="Manage User"><svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" /><path fillRule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clipRule="evenodd" /></svg></button>
+                                            <button onClick={() => { setModalInitialTab('credentials'); setManagingUser(user); }} className="p-2 bg-blue-500 text-white rounded hover:bg-blue-600" title="Manage User"><svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" /><path fillRule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clipRule="evenodd" /></svg></button>
                                             {/* Reset HWID Button */}
                                             <button 
                                                 onClick={() => {

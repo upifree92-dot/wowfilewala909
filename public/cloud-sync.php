@@ -148,8 +148,180 @@ if (isset($_GET['test'])) {
     exit;
 }
 
-// GET Request: Retrieve the latest synced data
+// Helper: Merge two user lists without overwriting newer wallet balances with stale visitor snapshots
+function mergeUsersListPhp($existingUsers, $incomingUsers, $isUserDeletion = false) {
+    if ($isUserDeletion && is_array($incomingUsers)) {
+        return array_values($incomingUsers);
+    }
+    $existingArr = is_array($existingUsers) ? array_values($existingUsers) : [];
+    $incomingArr = is_array($incomingUsers) ? array_values($incomingUsers) : [];
+    if (empty($incomingArr)) return $existingArr;
+    if (empty($existingArr)) return $incomingArr;
+
+    $mergedById = [];
+    $idByEmail = [];
+
+    foreach ($existingArr as $u) {
+        if (!is_array($u) || empty($u['id'])) continue;
+        $mergedById[$u['id']] = $u;
+        if (!empty($u['email'])) {
+            $idByEmail[strtolower(trim($u['email']))] = $u['id'];
+        }
+    }
+
+    foreach ($incomingArr as $inc) {
+        if (!is_array($inc) || empty($inc['id'])) continue;
+        $emailKey = !empty($inc['email']) ? strtolower(trim($inc['email'])) : '';
+        $matchedId = isset($mergedById[$inc['id']])
+            ? $inc['id']
+            : (($emailKey && isset($idByEmail[$emailKey])) ? $idByEmail[$emailKey] : $inc['id']);
+        $prev = $mergedById[$matchedId] ?? null;
+
+        if (!$prev) {
+            $mergedById[$matchedId] = $inc;
+            if ($emailKey) $idByEmail[$emailKey] = $matchedId;
+            continue;
+        }
+
+        $prevWalletTs = intval($prev['walletUpdatedAt'] ?? 0);
+        $incWalletTs = intval($inc['walletUpdatedAt'] ?? 0);
+        $prevBal = floatval($prev['wallet']['balance'] ?? 0);
+        $incBal = floatval($inc['wallet']['balance'] ?? 0);
+
+        $chosenBalance = $incBal;
+        $chosenWalletTs = max($prevWalletTs, $incWalletTs);
+        if ($prevWalletTs > $incWalletTs) {
+            $chosenBalance = $prevBal;
+        } elseif ($incWalletTs === 0 && $prevWalletTs === 0 && $prevBal > 0 && $incBal == 0) {
+            $chosenBalance = $prevBal;
+        }
+
+        // Merge transaction history by id
+        $txMap = [];
+        $txList = array_merge(
+            is_array($inc['transactionHistory'] ?? null) ? $inc['transactionHistory'] : [],
+            is_array($prev['transactionHistory'] ?? null) ? $prev['transactionHistory'] : []
+        );
+        foreach ($txList as $tx) {
+            if (is_array($tx) && !empty($tx['id']) && !isset($txMap[$tx['id']])) {
+                $txMap[$tx['id']] = $tx;
+            }
+        }
+
+        // Merge notifications by id
+        $notifMap = [];
+        $notifList = array_merge(
+            is_array($inc['notifications'] ?? null) ? $inc['notifications'] : [],
+            is_array($prev['notifications'] ?? null) ? $prev['notifications'] : []
+        );
+        foreach ($notifList as $n) {
+            if (is_array($n) && !empty($n['id']) && !isset($notifMap[$n['id']])) {
+                $notifMap[$n['id']] = $n;
+            }
+        }
+
+        $mergedUser = array_merge($prev, $inc);
+        $mergedUser['id'] = $matchedId;
+        $mergedUser['wallet'] = ['balance' => $chosenBalance];
+        $mergedUser['walletUpdatedAt'] = $chosenWalletTs;
+        $mergedUser['transactionHistory'] = array_values($txMap);
+        $mergedUser['notifications'] = array_values($notifMap);
+        $mergedById[$matchedId] = $mergedUser;
+        if ($emailKey) $idByEmail[$emailKey] = $matchedId;
+    }
+
+    return array_values($mergedById);
+}
+
+// GET Request: Retrieve the latest synced data or specific action
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
+    $action = $_GET['action'] ?? '';
+
+    if ($action === 'get_users') {
+        $rows = [];
+        if ($pdo) {
+            try {
+                $stmt = $pdo->query("SELECT * FROM registered_users ORDER BY created_at DESC");
+                $rows = $stmt->fetchAll();
+            } catch (Exception $e) {}
+        }
+        $cloudUsers = [];
+        if (file_exists($dataFile)) {
+            $decoded = @json_decode(@file_get_contents($dataFile), true);
+            if (!empty($decoded['users']) && is_array($decoded['users'])) {
+                $cloudUsers = $decoded['users'];
+            }
+        }
+        $mergedMap = [];
+        foreach ($rows as $r) {
+            $mergedMap[$r['id']] = $r;
+        }
+        foreach ($cloudUsers as $cu) {
+            if (!is_array($cu) || empty($cu['id'])) continue;
+            $existingRow = $mergedMap[$cu['id']] ?? null;
+            $cloudBal = floatval($cu['wallet']['balance'] ?? 0);
+            $dbBal = $existingRow ? floatval($existingRow['wallet_balance'] ?? 0) : 0;
+            $bestBal = (!empty($cu['walletUpdatedAt']) || $cloudBal > $dbBal) ? $cloudBal : $dbBal;
+            $mergedMap[$cu['id']] = [
+                'id' => $cu['id'],
+                'email' => $cu['email'] ?? ($existingRow['email'] ?? ''),
+                'mobile_number' => $cu['mobileNumber'] ?? ($existingRow['mobile_number'] ?? ''),
+                'name' => $cu['profile']['name'] ?? ($existingRow['name'] ?? ''),
+                'bio' => $cu['profile']['bio'] ?? ($existingRow['bio'] ?? ''),
+                'wallet_balance' => $bestBal,
+                'hwid' => $cu['hwid'] ?? ($existingRow['hwid'] ?? ''),
+                'created_at' => $cu['registeredAt'] ?? ($existingRow['created_at'] ?? gmdate('Y-m-d\TH:i:s\Z'))
+            ];
+        }
+        echo json_encode(['success' => true, 'data' => array_values($mergedMap)]);
+        exit;
+    }
+
+    if ($action === 'get_user') {
+        $userId = trim($_GET['id'] ?? '');
+        $foundCloud = null;
+        if (file_exists($dataFile)) {
+            $decoded = @json_decode(@file_get_contents($dataFile), true);
+            if (!empty($decoded['users']) && is_array($decoded['users'])) {
+                foreach ($decoded['users'] as $u) {
+                    if (is_array($u) && (($u['id'] ?? '') === $userId || strtolower($u['email'] ?? '') === strtolower($userId))) {
+                        $foundCloud = $u;
+                        break;
+                    }
+                }
+            }
+        }
+        $dbRow = null;
+        if ($pdo && !empty($userId)) {
+            try {
+                $stmt = $pdo->prepare("SELECT * FROM registered_users WHERE id = :id OR email = :email LIMIT 1");
+                $stmt->execute([':id' => $userId, ':email' => $userId]);
+                $dbRow = $stmt->fetch();
+            } catch (Exception $e) {}
+        }
+        if ($foundCloud || $dbRow) {
+            $cloudBal = $foundCloud ? floatval($foundCloud['wallet']['balance'] ?? 0) : 0;
+            $dbBal = $dbRow ? floatval($dbRow['wallet_balance'] ?? 0) : 0;
+            $bestBal = ($foundCloud && (!empty($foundCloud['walletUpdatedAt']) || $cloudBal >= $dbBal)) ? $cloudBal : $dbBal;
+            echo json_encode([
+                'success' => true,
+                'data' => [
+                    'id' => $foundCloud['id'] ?? $dbRow['id'],
+                    'email' => $foundCloud['email'] ?? $dbRow['email'] ?? '',
+                    'mobile_number' => $foundCloud['mobileNumber'] ?? $dbRow['mobile_number'] ?? '',
+                    'name' => $foundCloud['profile']['name'] ?? $dbRow['name'] ?? '',
+                    'bio' => $foundCloud['profile']['bio'] ?? $dbRow['bio'] ?? '',
+                    'wallet_balance' => $bestBal,
+                    'walletUpdatedAt' => intval($foundCloud['walletUpdatedAt'] ?? 0),
+                    'hwid' => $foundCloud['hwid'] ?? $dbRow['hwid'] ?? ''
+                ]
+            ]);
+        } else {
+            echo json_encode(['success' => true, 'data' => null]);
+        }
+        exit;
+    }
+
     $data = null;
 
     // 1. Try reading from Hostinger MySQL app_data
@@ -176,6 +348,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         if (is_array($decoded)) {
             $data = $decoded;
         }
+    } elseif (is_array($data) && file_exists($dataFile)) {
+        // Ensure file users with newer walletUpdatedAt are merged in
+        $rawFile = @file_get_contents($dataFile);
+        $decodedFile = @json_decode($rawFile, true);
+        if (is_array($decodedFile) && !empty($decodedFile['users'])) {
+            $data['users'] = mergeUsersListPhp($data['users'] ?? [], $decodedFile['users'], false);
+            $data['updatedAt'] = max(intval($data['updatedAt'] ?? 0), intval($decodedFile['updatedAt'] ?? 0));
+        }
     }
 
     echo json_encode([
@@ -200,6 +380,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
+    $action = $_GET['action'] ?? ($input['action'] ?? '');
+
     // Helper function to normalize Dealer API status into 'pending' | 'processing' | 'approved' | 'rejected'
     function parseDealerStatusPhp($rawStatus) {
         if ($rawStatus === null || $rawStatus === '') return null;
@@ -219,8 +401,244 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         return null;
     }
 
+    // Special Action 0: Atomic Admin Wallet Balance Add / Deduct (Guaranteed delivery to user)
+    if ($action === 'admin_adjust_balance') {
+        $userId = trim((string)($input['userId'] ?? ''));
+        $email = strtolower(trim((string)($input['email'] ?? '')));
+        $mobileNumber = preg_replace('/\D/', '', (string)($input['mobileNumber'] ?? ''));
+        $delta = floatval($input['amount'] ?? 0);
+        $reason = trim((string)($input['reason'] ?? ($delta >= 0 ? 'Wallet Payment Added by Admin' : 'Wallet Balance Adjusted by Admin')));
+
+        if ((empty($userId) && empty($email)) || $delta == 0) {
+            http_response_code(400);
+            echo json_encode(['success' => false, 'error' => 'Valid userId/email and non-zero amount required']);
+            exit;
+        }
+
+        $nowMs = round(microtime(true) * 1000);
+        $nowIso = gmdate('Y-m-d\TH:i:s\Z');
+        $txId = (string)($input['transactionId'] ?? ('txn-admin-' . $nowMs));
+        $notifId = 'notif-wallet-' . $nowMs;
+
+        $cloudData = [];
+        if (file_exists($dataFile)) {
+            $cloudData = @json_decode(@file_get_contents($dataFile), true) ?: [];
+        }
+        if (empty($cloudData['users']) && $pdo) {
+            try {
+                $stmtSnap = $pdo->prepare("SELECT data_val FROM app_data WHERE id = 'main_snapshot' LIMIT 1");
+                $stmtSnap->execute();
+                $rowSnap = $stmtSnap->fetch();
+                if ($rowSnap && !empty($rowSnap['data_val'])) {
+                    $fromDb = @json_decode($rowSnap['data_val'], true);
+                    if (is_array($fromDb)) $cloudData = $fromDb;
+                }
+            } catch (Exception $e) {}
+        }
+
+        if (!isset($cloudData['users']) || !is_array($cloudData['users'])) {
+            $cloudData['users'] = [];
+        }
+
+        $matchedUser = null;
+        $newBalance = isset($input['newBalance']) && is_numeric($input['newBalance']) ? max(0, round(floatval($input['newBalance']), 2)) : 0;
+
+        foreach ($cloudData['users'] as &$u) {
+            if (!is_array($u)) continue;
+            $uIdMatch = !empty($userId) && ($u['id'] ?? '') === $userId;
+            $uEmailMatch = !empty($email) && strtolower(trim((string)($u['email'] ?? ''))) === $email;
+            $uMobileClean = preg_replace('/\D/', '', (string)($u['mobileNumber'] ?? ''));
+            $uMobileMatch = strlen($mobileNumber) >= 10 && strlen($uMobileClean) >= 10 && substr($uMobileClean, -10) === substr($mobileNumber, -10);
+
+            if ($uIdMatch || $uEmailMatch || $uMobileMatch) {
+                $currentBal = floatval($u['wallet']['balance'] ?? 0);
+                $computedBalance = isset($input['newBalance']) && is_numeric($input['newBalance'])
+                    ? max(0, round(floatval($input['newBalance']), 2))
+                    : max(0, round($currentBal + $delta, 2));
+                $newBalance = $computedBalance;
+
+                $newTx = [
+                    'id' => $txId,
+                    'timestamp' => $nowIso,
+                    'type' => $delta > 0 ? 'deposit' : 'admin_adjustment',
+                    'amount' => $delta,
+                    'description' => $reason
+                ];
+
+                $newNotif = [
+                    'id' => $notifId,
+                    'title' => $delta > 0
+                        ? 'Wallet Credited: +₹' . number_format($delta, 2, '.', '') . ' ✅'
+                        : 'Wallet Deducted: -₹' . number_format(abs($delta), 2, '.', ''),
+                    'message' => $delta > 0
+                        ? 'Admin has added ₹' . number_format($delta, 2, '.', '') . ' to your wallet (' . $reason . '). Your updated wallet balance is ₹' . number_format($computedBalance, 2, '.', '') . '.'
+                        : 'Admin adjusted ₹' . number_format(abs($delta), 2, '.', '') . ' from your wallet (' . $reason . '). Your updated wallet balance is ₹' . number_format($computedBalance, 2, '.', '') . '.',
+                    'timestamp' => $nowIso,
+                    'read' => false,
+                    'status' => 'approved'
+                ];
+
+                $existingTx = is_array($u['transactionHistory'] ?? null) ? $u['transactionHistory'] : [];
+                $filteredTx = array_values(array_filter($existingTx, function($t) use ($txId) {
+                    return ($t['id'] ?? '') !== $txId;
+                }));
+                array_unshift($filteredTx, $newTx);
+
+                $existingNotifs = is_array($u['notifications'] ?? null) ? $u['notifications'] : [];
+                array_unshift($existingNotifs, $newNotif);
+
+                $u['wallet'] = ['balance' => $computedBalance];
+                $u['walletUpdatedAt'] = $nowMs;
+                $u['transactionHistory'] = $filteredTx;
+                $u['notifications'] = $existingNotifs;
+                $u['lifetimePointsPurchased'] = floatval($u['lifetimePointsPurchased'] ?? 0) + ($delta > 0 ? $delta : 0);
+
+                $matchedUser = $u;
+            }
+        }
+        unset($u);
+
+        if (!$matchedUser) {
+            $computedBalance = isset($input['newBalance']) && is_numeric($input['newBalance'])
+                ? max(0, round(floatval($input['newBalance']), 2))
+                : max(0, round($delta, 2));
+            $newBalance = $computedBalance;
+            $matchedUser = [
+                'id' => $userId ?: ('user-' . $nowMs),
+                'email' => $input['email'] ?? '',
+                'password' => 'password',
+                'mobileNumber' => $input['mobileNumber'] ?? '',
+                'profile' => [
+                    'name' => $input['name'] ?? (!empty($email) ? explode('@', $email)[0] : 'User'),
+                    'bio' => '',
+                    'emailNotifications' => ['systemUpdates' => true, 'newFileReleases' => true]
+                ],
+                'wallet' => ['balance' => $computedBalance],
+                'walletUpdatedAt' => $nowMs,
+                'purchasedProductIds' => [],
+                'favoriteProductIds' => [],
+                'visitedProductIds' => [],
+                'registeredAt' => $nowIso,
+                'isBlocked' => false,
+                'notifications' => [[
+                    'id' => $notifId,
+                    'title' => $delta > 0 ? 'Wallet Credited: +₹' . number_format($delta, 2, '.', '') . ' ✅' : 'Wallet Adjusted',
+                    'message' => 'Your updated wallet balance is ₹' . number_format($computedBalance, 2, '.', '') . '.',
+                    'timestamp' => $nowIso,
+                    'read' => false,
+                    'status' => 'approved'
+                ]],
+                'transactionHistory' => [[
+                    'id' => $txId,
+                    'timestamp' => $nowIso,
+                    'type' => $delta > 0 ? 'deposit' : 'admin_adjustment',
+                    'amount' => $delta,
+                    'description' => $reason
+                ]],
+                'referredUsers' => [],
+                'lifetimePointsPurchased' => $delta > 0 ? $delta : 0
+            ];
+            $cloudData['users'][] = $matchedUser;
+        }
+
+        $cloudData['updatedAt'] = $nowMs;
+        $encoded = json_encode($cloudData, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        file_put_contents($dataFile, $encoded);
+
+        if ($pdo) {
+            try {
+                $stmtApp = $pdo->prepare("
+                    INSERT INTO app_data (id, data_key, data_val, updated_at)
+                    VALUES ('main_snapshot', 'all', :val, :time)
+                    ON DUPLICATE KEY UPDATE data_val = VALUES(data_val), updated_at = VALUES(updated_at)
+                ");
+                $stmtApp->execute([':val' => $encoded, ':time' => $nowMs]);
+
+                $stmtUser = $pdo->prepare("
+                    INSERT INTO registered_users (id, email, mobile_number, name, bio, wallet_balance, hwid)
+                    VALUES (:id, :email, :mobile, :name, :bio, :balance, :hwid)
+                    ON DUPLICATE KEY UPDATE
+                        wallet_balance = VALUES(wallet_balance),
+                        mobile_number = COALESCE(NULLIF(VALUES(mobile_number), ''), mobile_number),
+                        name = COALESCE(NULLIF(VALUES(name), ''), name)
+                ");
+                $stmtUser->execute([
+                    ':id' => $matchedUser['id'],
+                    ':email' => $matchedUser['email'] ?? '',
+                    ':mobile' => $matchedUser['mobileNumber'] ?? '',
+                    ':name' => $matchedUser['profile']['name'] ?? '',
+                    ':bio' => $matchedUser['profile']['bio'] ?? '',
+                    ':balance' => $newBalance,
+                    ':hwid' => $matchedUser['hwid'] ?? ''
+                ]);
+
+                $stmtTx = $pdo->prepare("
+                    INSERT INTO wallet_transactions (transaction_id, user_id, user_email, type, amount, description)
+                    VALUES (:tid, :uid, :uemail, :type, :amount, :desc)
+                    ON DUPLICATE KEY UPDATE amount = VALUES(amount), description = VALUES(description)
+                ");
+                $stmtTx->execute([
+                    ':tid' => $txId,
+                    ':uid' => $matchedUser['id'],
+                    ':uemail' => $matchedUser['email'] ?? '',
+                    ':type' => $delta > 0 ? 'deposit' : 'admin_adjustment',
+                    ':amount' => $delta,
+                    ':desc' => $reason
+                ]);
+            } catch (Exception $e) {}
+        }
+
+        echo json_encode([
+            'success' => true,
+            'userId' => $matchedUser['id'],
+            'email' => $matchedUser['email'] ?? '',
+            'newBalance' => $newBalance,
+            'walletUpdatedAt' => $nowMs,
+            'updatedAt' => $nowMs,
+            'user' => $matchedUser
+        ]);
+        exit;
+    }
+
+    // Special Action 0b: Save single user (save_user)
+    if ($action === 'save_user') {
+        $uId = trim((string)($input['id'] ?? ''));
+        $uEmail = trim((string)($input['email'] ?? ''));
+        $uMobile = trim((string)($input['mobile_number'] ?? ($input['mobileNumber'] ?? '')));
+        $uName = trim((string)($input['name'] ?? ''));
+        $uBio = trim((string)($input['bio'] ?? ''));
+        $uBal = floatval($input['wallet_balance'] ?? 0);
+        $uHwid = isset($input['hwid']) ? (string)$input['hwid'] : '';
+
+        if ($pdo && !empty($uId)) {
+            try {
+                $stmt = $pdo->prepare("
+                    INSERT INTO registered_users (id, email, mobile_number, name, bio, wallet_balance, hwid)
+                    VALUES (:id, :email, :mobile, :name, :bio, :balance, :hwid)
+                    ON DUPLICATE KEY UPDATE
+                        email = VALUES(email),
+                        mobile_number = VALUES(mobile_number),
+                        name = VALUES(name),
+                        bio = VALUES(bio),
+                        wallet_balance = VALUES(wallet_balance)
+                ");
+                $stmt->execute([
+                    ':id' => $uId,
+                    ':email' => $uEmail,
+                    ':mobile' => $uMobile,
+                    ':name' => $uName,
+                    ':bio' => $uBio,
+                    ':balance' => $uBal,
+                    ':hwid' => $uHwid
+                ]);
+            } catch (Exception $e) {}
+        }
+        echo json_encode(['success' => true]);
+        exit;
+    }
+
     // Special Action 1: Forward User Order directly to Connected Dealer API
-    if ((isset($_GET['action']) && $_GET['action'] === 'place_dealer_order') || (isset($input['action']) && $input['action'] === 'place_dealer_order')) {
+    if ($action === 'place_dealer_order') {
         $orderId = $input['orderId'] ?? '';
         $serviceId = $input['serviceId'] ?? '1';
         $serviceName = $input['serviceName'] ?? 'GSM Service';
@@ -350,7 +768,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     // Special Action 2: Poll / Check Live Order Status from Connected Dealer API (action=getimeiorder)
-    if ((isset($_GET['action']) && $_GET['action'] === 'check_dealer_orders') || (isset($input['action']) && $input['action'] === 'check_dealer_orders')) {
+    if ($action === 'check_dealer_orders') {
         $orders = is_array($input['orders'] ?? null) ? $input['orders'] : [];
         $dealerApi = is_array($input['dealerApi'] ?? null) ? $input['dealerApi'] : [];
         $apiUrl = trim($dealerApi['apiUrl'] ?? '');
@@ -431,7 +849,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     // Special Action 3: Direct Dealer Webhook / Callback (GET or POST)
-    if ((isset($_GET['action']) && $_GET['action'] === 'dealer_webhook') || (isset($input['action']) && $input['action'] === 'dealer_webhook')) {
+    if ($action === 'dealer_webhook') {
         $params = array_merge($_GET, $_POST, is_array($input) ? $input : []);
         $orderId = preg_replace('/^#/', '', trim((string)($params['order_id'] ?? $params['orderId'] ?? $params['id'] ?? '')));
         $dealerRefId = trim((string)($params['referenceid'] ?? $params['dealerRefId'] ?? $params['ref_id'] ?? ''));
@@ -495,6 +913,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if ($newStatus === 'rejected' && $previousStatus !== 'rejected' && $refundAmount > 0) {
                     $walletBal = round($walletBal + $refundAmount, 2);
                     $u['wallet']['balance'] = $walletBal;
+                    $u['walletUpdatedAt'] = round(microtime(true) * 1000);
                     if (!isset($u['transactionHistory']) || !is_array($u['transactionHistory'])) {
                         $u['transactionHistory'] = [];
                     }
@@ -557,7 +976,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     foreach ($allowedKeys as $key) {
         if (array_key_exists($key, $input)) {
-            $existing[$key] = $input[$key];
+            if ($key === 'users' && is_array($input['users'])) {
+                $existing['users'] = mergeUsersListPhp(
+                    $existing['users'] ?? [],
+                    $input['users'],
+                    !empty($input['isUserDeletion'])
+                );
+            } else {
+                $existing[$key] = $input[$key];
+            }
         }
     }
 
@@ -583,8 +1010,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ]);
             $mysqlSaved = true;
 
-            // Also synchronize users into registered_users table if provided
-            if (!empty($input['users']) && is_array($input['users'])) {
+            // Synchronize merged users into registered_users table
+            $usersToSave = !empty($existing['users']) && is_array($existing['users']) ? $existing['users'] : [];
+            if (!empty($usersToSave)) {
                 $userStmt = $pdo->prepare("
                     INSERT INTO registered_users (id, email, mobile_number, name, bio, wallet_balance, hwid)
                     VALUES (:id, :email, :mobile, :name, :bio, :balance, :hwid)
@@ -596,7 +1024,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         wallet_balance = VALUES(wallet_balance),
                         hwid = VALUES(hwid)
                 ");
-                foreach ($input['users'] as $u) {
+                foreach ($usersToSave as $u) {
                     if (is_array($u) && !empty($u['id'])) {
                         $userStmt->execute([
                             ':id' => $u['id'],

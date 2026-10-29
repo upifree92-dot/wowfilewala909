@@ -115,6 +115,7 @@ export interface User {
   wallet: {
     balance: number;
   };
+  walletUpdatedAt?: number;
   purchasedProductIds: string[];
   favoriteProductIds: string[];
   visitedProductIds: string[];

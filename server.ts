@@ -49,12 +49,111 @@ function readCloudData(): any {
   return null;
 }
 
+function mergeServerUsers(existingRaw: any, incomingRaw: any, isUserDeletion = false): any[] {
+  const incomingList: any[] = Array.isArray(incomingRaw)
+    ? incomingRaw
+    : incomingRaw && typeof incomingRaw === 'object'
+    ? Object.values(incomingRaw)
+    : [];
+
+  if (isUserDeletion) {
+    return incomingList;
+  }
+
+  const existingList: any[] = Array.isArray(existingRaw)
+    ? existingRaw
+    : existingRaw && typeof existingRaw === 'object'
+    ? Object.values(existingRaw)
+    : [];
+
+  if (existingList.length === 0) return incomingList;
+  if (incomingList.length === 0) return existingList;
+
+  const byId = new Map<string, any>();
+  const emailToId = new Map<string, string>();
+
+  for (const u of existingList) {
+    if (!u || !u.id) continue;
+    byId.set(String(u.id), u);
+    if (u.email) {
+      emailToId.set(String(u.email).trim().toLowerCase(), String(u.id));
+    }
+  }
+
+  for (const inc of incomingList) {
+    if (!inc || !inc.id) continue;
+    const incId = String(inc.id);
+    const incEmail = inc.email ? String(inc.email).trim().toLowerCase() : '';
+    const matchedId = byId.has(incId) ? incId : (incEmail && emailToId.get(incEmail)) || incId;
+    const prev = byId.get(matchedId);
+
+    if (!prev) {
+      byId.set(incId, inc);
+      if (incEmail) emailToId.set(incEmail, incId);
+      continue;
+    }
+
+    const prevWalletTime = Number(prev.walletUpdatedAt || 0);
+    const incWalletTime = Number(inc.walletUpdatedAt || 0);
+    const usePrevWallet = prevWalletTime > incWalletTime;
+
+    // Merge transaction history without duplicates
+    const txMap = new Map<string, any>();
+    for (const tx of [...(inc.transactionHistory || []), ...(prev.transactionHistory || [])]) {
+      if (tx && tx.id && !txMap.has(tx.id)) {
+        txMap.set(tx.id, tx);
+      }
+    }
+    const mergedTx = Array.from(txMap.values()).sort(
+      (a, b) => new Date(b.timestamp || 0).getTime() - new Date(a.timestamp || 0).getTime()
+    );
+
+    // Merge user notifications without duplicates
+    const notifMap = new Map<string, any>();
+    for (const nf of [...(inc.notifications || []), ...(prev.notifications || [])]) {
+      if (nf && nf.id && !notifMap.has(nf.id)) {
+        notifMap.set(nf.id, nf);
+      }
+    }
+    const mergedNotifs = Array.from(notifMap.values()).sort(
+      (a, b) => new Date(b.timestamp || 0).getTime() - new Date(a.timestamp || 0).getTime()
+    );
+
+    const mergedUser = {
+      ...prev,
+      ...inc,
+      id: prev.id,
+      wallet: usePrevWallet ? prev.wallet : (inc.wallet || prev.wallet || { balance: 0 }),
+      walletUpdatedAt: Math.max(prevWalletTime, incWalletTime),
+      lifetimePointsPurchased: Math.max(
+        Number(prev.lifetimePointsPurchased || 0),
+        Number(inc.lifetimePointsPurchased || 0)
+      ),
+      transactionHistory: mergedTx,
+      notifications: mergedNotifs,
+    };
+
+    byId.set(matchedId, mergedUser);
+    if (incEmail) emailToId.set(incEmail, matchedId);
+  }
+
+  return Array.from(byId.values());
+}
+
 function writeCloudData(payload: any, updateSourceFiles = false) {
   ensurePublicDir();
   const existing = readCloudData() || {};
+  const nextPayload = { ...payload };
+  const isUserDeletion = Boolean(nextPayload.isUserDeletion);
+  delete nextPayload.isUserDeletion;
+
+  if (nextPayload.users !== undefined) {
+    nextPayload.users = mergeServerUsers(existing.users, nextPayload.users, isUserDeletion);
+  }
+
   const merged = {
     ...existing,
-    ...payload,
+    ...nextPayload,
     updatedAt: Date.now(),
   };
 
@@ -672,63 +771,397 @@ function getParsedUserGsmServices(customRate = 85.5, customMargin = 15) {
 
   app.post('/api/save-user', async (req, res) => {
     try {
-      const data = req.body;
-      await pool.query('INSERT INTO registered_users (id, email, mobile_number, name, bio, wallet_balance, hwid) VALUES (?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE email=?, mobile_number=?, name=?, bio=?, wallet_balance=?, hwid=?',
-        [data.id, data.email, data.mobile_number, data.name, data.bio, data.wallet_balance, data.hwid, data.email, data.mobile_number, data.name, data.bio, data.wallet_balance, data.hwid]);
+      const data = req.body || {};
+      const id = String(data.id || `user-${Date.now()}`);
+      const email = String(data.email || '').trim();
+      const mobile = String(data.mobile_number ?? data.mobileNumber ?? '');
+      const name = String(data.name ?? '');
+      const bio = String(data.bio ?? '');
+      const balance = Number(data.wallet_balance ?? data.wallet?.balance ?? 0);
+      const hwid = data.hwid !== undefined ? (data.hwid || null) : null;
+
+      await pool.query(
+        'INSERT INTO registered_users (id, email, mobile_number, name, bio, wallet_balance, hwid) VALUES (?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE email=?, mobile_number=?, name=?, bio=?, wallet_balance=?, hwid=COALESCE(?, hwid)',
+        [id, email, mobile, name, bio, balance, hwid, email, mobile, name, bio, balance, hwid]
+      );
       res.json({ success: true });
     } catch (err: any) {
-      res.status(500).json({ success: false, error: err.message });
+      // Return 200 with success: false so frontend never crashes when MySQL is unreachable in dev
+      res.json({ success: false, error: err.message });
     }
   });
 
-  app.get('/api/get-users', async (req, res) => {
+  app.get('/api/get-user', async (req, res) => {
     try {
-      const [rows] = await pool.query('SELECT * FROM registered_users');
-      res.json({ success: true, data: rows });
+      const id = String(req.query.id || '').trim();
+      const email = String(req.query.email || '').trim().toLowerCase();
+      const cloud = readCloudData();
+      const cloudUsers: any[] = Array.isArray(cloud?.users) ? cloud.users : [];
+      const matchedCloudUser = cloudUsers.find(
+        (u: any) => u && ((id && u.id === id) || (email && String(u.email || '').trim().toLowerCase() === email))
+      );
+
+      let dbRow: any = null;
+      try {
+        if (id) {
+          const [rows] = await pool.query('SELECT * FROM registered_users WHERE id = ? LIMIT 1', [id]);
+          if (Array.isArray(rows) && rows.length > 0) dbRow = rows[0];
+        }
+        if (!dbRow && email) {
+          const [rows] = await pool.query('SELECT * FROM registered_users WHERE LOWER(email) = ? LIMIT 1', [email]);
+          if (Array.isArray(rows) && rows.length > 0) dbRow = rows[0];
+        }
+      } catch {
+        // Ignore MySQL connection error and use cloud-data.json
+      }
+
+      if (matchedCloudUser) {
+        return res.json({
+          success: true,
+          data: {
+            id: matchedCloudUser.id,
+            email: matchedCloudUser.email,
+            mobile_number: matchedCloudUser.mobileNumber || dbRow?.mobile_number || '',
+            name: matchedCloudUser.profile?.name || dbRow?.name || '',
+            bio: matchedCloudUser.profile?.bio || dbRow?.bio || '',
+            wallet_balance: Number(matchedCloudUser.wallet?.balance ?? dbRow?.wallet_balance ?? 0),
+            walletUpdatedAt: Number(matchedCloudUser.walletUpdatedAt || 0),
+            hwid: matchedCloudUser.hwid ?? dbRow?.hwid ?? '',
+          },
+        });
+      }
+
+      if (dbRow) {
+        return res.json({ success: true, data: dbRow });
+      }
+
+      return res.json({ success: false, data: null });
     } catch (err: any) {
-      res.status(500).json({ success: false, error: err.message });
+      return res.json({ success: false, error: err.message });
+    }
+  });
+
+  app.get('/api/get-users', async (_req, res) => {
+    try {
+      const cloud = readCloudData();
+      const cloudUsers: any[] = Array.isArray(cloud?.users) ? cloud.users : [];
+      const cloudByEmail = new Map<string, any>();
+      const cloudById = new Map<string, any>();
+      cloudUsers.forEach((u: any) => {
+        if (!u) return;
+        if (u.id) cloudById.set(String(u.id), u);
+        if (u.email) cloudByEmail.set(String(u.email).trim().toLowerCase(), u);
+      });
+
+      let dbRows: any[] = [];
+      try {
+        const [rows] = await pool.query('SELECT * FROM registered_users');
+        if (Array.isArray(rows)) dbRows = rows as any[];
+      } catch {
+        // Fallback to cloudUsers if MySQL is offline
+      }
+
+      const combinedMap = new Map<string, any>();
+      for (const row of dbRows) {
+        const rId = String(row.id || '');
+        const rEmail = String(row.email || '').trim().toLowerCase();
+        const cUser = cloudById.get(rId) || (rEmail ? cloudByEmail.get(rEmail) : null);
+        const cloudBal = cUser?.wallet?.balance !== undefined ? Number(cUser.wallet.balance) : null;
+        const dbBal = Number(row.wallet_balance || 0);
+        const finalBalance =
+          cUser && (Number(cUser.walletUpdatedAt || 0) > 0 || (cloudBal !== null && cloudBal > dbBal))
+            ? cloudBal!
+            : dbBal;
+
+        combinedMap.set(rId || rEmail, {
+          ...row,
+          wallet_balance: finalBalance,
+          walletUpdatedAt: Number(cUser?.walletUpdatedAt || 0),
+        });
+      }
+
+      for (const cUser of cloudUsers) {
+        if (!cUser || !cUser.id) continue;
+        const cEmail = String(cUser.email || '').trim().toLowerCase();
+        const alreadyExists =
+          combinedMap.has(String(cUser.id)) ||
+          Array.from(combinedMap.values()).some((r: any) => String(r.email || '').trim().toLowerCase() === cEmail);
+        if (!alreadyExists) {
+          combinedMap.set(String(cUser.id), {
+            id: cUser.id,
+            email: cUser.email || '',
+            mobile_number: cUser.mobileNumber || '',
+            name: cUser.profile?.name || '',
+            bio: cUser.profile?.bio || '',
+            wallet_balance: Number(cUser.wallet?.balance || 0),
+            walletUpdatedAt: Number(cUser.walletUpdatedAt || 0),
+            hwid: cUser.hwid || '',
+            created_at: cUser.registeredAt || new Date().toISOString(),
+          });
+        }
+      }
+
+      res.json({ success: true, data: Array.from(combinedMap.values()) });
+    } catch (err: any) {
+      res.json({ success: false, error: err.message, data: [] });
+    }
+  });
+
+  // API Route: Atomic Admin Wallet Payment Add / Deduct (Guaranteed instant delivery to User)
+  app.post('/api/admin-adjust-balance', async (req, res) => {
+    try {
+      const {
+        userId,
+        email,
+        mobileNumber,
+        amount,
+        newBalance,
+        walletUpdatedAt,
+        reason,
+        transaction,
+        notification,
+        userSnapshot,
+      } = req.body || {};
+
+      const cleanId = String(userId || '').trim();
+      const cleanEmail = String(email || userSnapshot?.email || '').trim().toLowerCase();
+      const cleanMobile = String(mobileNumber || userSnapshot?.mobileNumber || '').replace(/\D/g, '');
+      const numAmount = Number(amount || 0);
+      const updatedTime = Number(walletUpdatedAt || Date.now());
+
+      const existing = readCloudData() || {};
+      const usersList: any[] = Array.isArray(existing.users)
+        ? [...existing.users]
+        : existing.users && typeof existing.users === 'object'
+        ? Object.values(existing.users)
+        : [];
+
+      let matchedAny = false;
+      let resolvedBalance = newBalance !== undefined ? Number(newBalance) : 0;
+      let updatedUserRecord: any = null;
+
+      const nextUsers = usersList.map((u: any) => {
+        if (!u) return u;
+        const uId = String(u.id || '').trim();
+        const uEmail = String(u.email || '').trim().toLowerCase();
+        const uMobile = String(u.mobileNumber || '').replace(/\D/g, '');
+
+        const isMatch =
+          (cleanId && uId === cleanId) ||
+          (cleanEmail && uEmail === cleanEmail) ||
+          (cleanMobile && cleanMobile.length >= 10 && uMobile && uMobile.slice(-10) === cleanMobile.slice(-10));
+
+        if (!isMatch) return u;
+
+        matchedAny = true;
+        const currentBal = Number(u.wallet?.balance || 0);
+        resolvedBalance =
+          newBalance !== undefined && !isNaN(Number(newBalance))
+            ? Math.max(0, Number(Number(newBalance).toFixed(2)))
+            : Math.max(0, Number((currentBal + numAmount).toFixed(2)));
+
+        const txList = Array.isArray(u.transactionHistory) ? [...u.transactionHistory] : [];
+        if (transaction && transaction.id && !txList.some((t: any) => t.id === transaction.id)) {
+          txList.unshift(transaction);
+        }
+
+        const notifList = Array.isArray(u.notifications) ? [...u.notifications] : [];
+        if (notification && notification.id && !notifList.some((n: any) => n.id === notification.id)) {
+          notifList.unshift(notification);
+        }
+
+        const updatedU = {
+          ...u,
+          wallet: { ...(u.wallet || {}), balance: resolvedBalance },
+          walletUpdatedAt: updatedTime,
+          transactionHistory: txList,
+          notifications: notifList,
+          lifetimePointsPurchased:
+            Number(u.lifetimePointsPurchased || 0) + (numAmount > 0 ? numAmount : 0),
+        };
+        updatedUserRecord = updatedU;
+        return updatedU;
+      });
+
+      if (!matchedAny && (userSnapshot || cleanEmail || cleanId)) {
+        resolvedBalance =
+          newBalance !== undefined && !isNaN(Number(newBalance))
+            ? Math.max(0, Number(Number(newBalance).toFixed(2)))
+            : Math.max(0, Number(numAmount.toFixed(2)));
+
+        const createdUser = {
+          id: cleanId || userSnapshot?.id || `user-${Date.now()}`,
+          email: cleanEmail || userSnapshot?.email || '',
+          mobileNumber: mobileNumber || userSnapshot?.mobileNumber || '',
+          password: userSnapshot?.password || 'abcd1234',
+          profile: userSnapshot?.profile || {
+            name: cleanEmail ? cleanEmail.split('@')[0] : 'Customer',
+            bio: '',
+            emailNotifications: { systemUpdates: true, newFileReleases: true },
+          },
+          wallet: { balance: resolvedBalance },
+          walletUpdatedAt: updatedTime,
+          purchasedProductIds: userSnapshot?.purchasedProductIds || [],
+          favoriteProductIds: userSnapshot?.favoriteProductIds || [],
+          visitedProductIds: userSnapshot?.visitedProductIds || [],
+          downloadTimers: userSnapshot?.downloadTimers || {},
+          downloadHistory: userSnapshot?.downloadHistory || [],
+          registeredAt: userSnapshot?.registeredAt || new Date().toISOString(),
+          isBlocked: false,
+          notifications: notification ? [notification] : [],
+          transactionHistory: transaction ? [transaction] : [],
+          lifetimePointsPurchased: numAmount > 0 ? numAmount : 0,
+          referralCode:
+            userSnapshot?.referralCode ||
+            'HUB-' + Math.random().toString(36).substring(2, 7).toUpperCase(),
+        };
+        nextUsers.push(createdUser);
+        updatedUserRecord = createdUser;
+      }
+
+      const savedCloud = writeCloudData({ users: nextUsers }, false);
+
+      // Also persist to MySQL registered_users & wallet_transactions (non-blocking if MySQL is offline)
+      try {
+        if (updatedUserRecord) {
+          await pool.query(
+            'INSERT INTO registered_users (id, email, mobile_number, name, bio, wallet_balance, hwid) VALUES (?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE wallet_balance = ?, mobile_number = COALESCE(NULLIF(?, ""), mobile_number), name = COALESCE(NULLIF(?, ""), name)',
+            [
+              updatedUserRecord.id,
+              updatedUserRecord.email || '',
+              updatedUserRecord.mobileNumber || '',
+              updatedUserRecord.profile?.name || '',
+              updatedUserRecord.profile?.bio || '',
+              resolvedBalance,
+              updatedUserRecord.hwid || null,
+              resolvedBalance,
+              updatedUserRecord.mobileNumber || '',
+              updatedUserRecord.profile?.name || '',
+            ]
+          );
+          if (cleanEmail) {
+            await pool.query(
+              'UPDATE registered_users SET wallet_balance = ? WHERE LOWER(email) = ?',
+              [resolvedBalance, cleanEmail]
+            );
+          }
+        }
+        if (transaction && transaction.id) {
+          await pool.query(
+            'INSERT IGNORE INTO wallet_transactions (transaction_id, user_id, user_email, type, amount, description, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
+            [
+              transaction.id,
+              updatedUserRecord?.id || cleanId || 'user',
+              updatedUserRecord?.email || cleanEmail || '',
+              transaction.type || 'deposit',
+              Number(transaction.amount || numAmount),
+              transaction.description || reason || 'Admin wallet update',
+              transaction.timestamp || new Date().toISOString(),
+            ]
+          );
+        }
+      } catch (dbErr: any) {
+        console.warn('MySQL sync during admin-adjust-balance (non-blocking):', dbErr?.message);
+      }
+
+      return res.json({
+        success: true,
+        newBalance: resolvedBalance,
+        walletUpdatedAt: updatedTime,
+        updatedAt: savedCloud.updatedAt,
+        user: updatedUserRecord,
+      });
+    } catch (err: any) {
+      console.error('Error in /api/admin-adjust-balance:', err);
+      return res.status(500).json({ success: false, error: err?.message || 'Failed to adjust balance' });
     }
   });
 
   app.post('/api/save-order', async (req, res) => {
     try {
-      const data = req.body;
-      await pool.query('INSERT INTO order_history (order_id, user_id, user_email, order_type, title, quantity, total_price, status, order_details, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-        [data.order_id, data.user_id, data.user_email, data.order_type, data.title, data.quantity, data.total_price, data.status, data.order_details, data.created_at]);
+      const data = req.body || {};
+      await pool.query(
+        'INSERT INTO order_history (order_id, user_id, user_email, order_type, title, quantity, total_price, status, order_details, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        [
+          String(data.order_id || ''),
+          String(data.user_id || ''),
+          String(data.user_email || ''),
+          String(data.order_type || 'imei'),
+          String(data.title || 'Order'),
+          Number(data.quantity || 1),
+          Number(data.total_price || 0),
+          String(data.status || 'pending'),
+          String(data.order_details || '{}'),
+          data.created_at || new Date().toISOString(),
+        ]
+      );
       res.json({ success: true });
     } catch (err: any) {
-      res.status(500).json({ success: false, error: err.message });
+      res.json({ success: false, error: err.message });
     }
   });
 
   app.post('/api/update-order-status', async (req, res) => {
     try {
-      const { orderId, status } = req.body;
-      await pool.query('UPDATE order_history SET status = ? WHERE order_id = ?', [status, orderId]);
+      const { orderId, status } = req.body || {};
+      await pool.query('UPDATE order_history SET status = ? WHERE order_id = ?', [
+        String(status || 'pending'),
+        String(orderId || ''),
+      ]);
       res.json({ success: true });
     } catch (err: any) {
-      res.status(500).json({ success: false, error: err.message });
+      res.json({ success: false, error: err.message });
     }
   });
 
   app.post('/api/save-transaction', async (req, res) => {
     try {
-      const data = req.body;
-      await pool.query('INSERT INTO wallet_transactions (transaction_id, user_id, user_email, type, amount, description, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
-        [data.transaction_id, data.user_id, data.user_email, data.type, data.amount, data.description, data.created_at]);
+      const data = req.body || {};
+      await pool.query(
+        'INSERT IGNORE INTO wallet_transactions (transaction_id, user_id, user_email, type, amount, description, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        [
+          String(data.transaction_id || `txn-${Date.now()}`),
+          String(data.user_id || ''),
+          String(data.user_email || ''),
+          String(data.type || 'deposit'),
+          Number(data.amount || 0),
+          String(data.description || ''),
+          data.created_at || new Date().toISOString(),
+        ]
+      );
       res.json({ success: true });
     } catch (err: any) {
-      res.status(500).json({ success: false, error: err.message });
+      res.json({ success: false, error: err.message });
+    }
+  });
+
+  app.post('/api/save-download-record', async (req, res) => {
+    try {
+      const data = req.body || {};
+      await pool.query(
+        'INSERT INTO download_history (user_id, user_email, product_id, product_name, downloaded_at, expiry_date) VALUES (?, ?, ?, ?, ?, ?)',
+        [
+          String(data.user_id || ''),
+          String(data.user_email || ''),
+          String(data.product_id || ''),
+          String(data.product_name || ''),
+          data.downloaded_at || new Date().toISOString(),
+          data.expiry_date || null,
+        ]
+      );
+      res.json({ success: true });
+    } catch (err: any) {
+      res.json({ success: false, error: err.message });
     }
   });
 
   app.post('/api/admin-reset-hwid', async (req, res) => {
     try {
-      const { userId } = req.body;
-      await pool.query('UPDATE registered_users SET hwid = NULL WHERE id = ?', [userId]);
+      const { userId } = req.body || {};
+      await pool.query('UPDATE registered_users SET hwid = NULL WHERE id = ?', [String(userId || '')]);
       res.json({ success: true });
     } catch (err: any) {
-      res.status(500).json({ success: false, error: err.message });
+      res.json({ success: false, error: err.message });
     }
   });
 
@@ -746,6 +1179,7 @@ function getParsedUserGsmServices(customRate = 85.5, customMargin = 15) {
         tokenProtection,
         tokenKeys,
         isManualSync,
+        isUserDeletion,
       } = req.body || {};
 
       const payload: Record<string, any> = {};
@@ -758,6 +1192,7 @@ function getParsedUserGsmServices(customRate = 85.5, customMargin = 15) {
       if (adminNotifications !== undefined) payload.adminNotifications = adminNotifications;
       if (tokenProtection !== undefined) payload.tokenProtection = tokenProtection;
       if (tokenKeys !== undefined) payload.tokenKeys = tokenKeys;
+      if (isUserDeletion !== undefined) payload.isUserDeletion = isUserDeletion;
 
       const saved = writeCloudData(payload, Boolean(isManualSync));
       res.json({
