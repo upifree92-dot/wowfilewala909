@@ -11,6 +11,16 @@ export interface ServerServiceItem {
 
 export const SERVER_SERVICES_LIST: ServerServiceItem[] = [
   {
+    "id": "srv-1",
+    "avatar": "MR",
+    "name": "MRST Pro Digital Activation Code [1 Year] New",
+    "category": "MRST Service",
+    "price": 2950.04,
+    "deliveryTime": "1-5 Minutes",
+    "isNew": true,
+    "hasDiscount": false
+  },
+  {
     "id": "srv-2",
     "avatar": "Xi",
     "name": "Xiaomi Mi UBL FRP Credits [xmubl.com] New",

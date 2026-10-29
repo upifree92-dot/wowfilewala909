@@ -75,6 +75,24 @@ export const DEFAULT_SERVICE_CATEGORIES: Category[] = [
 
 export const DEFAULT_SERVICES_CATALOG: Product[] = [
   {
+    "id": "gsm-server-306",
+    "name": "MRST Pro Digital Activation Code [1 Year] New",
+    "categoryId": "server-services",
+    "serviceType": "server",
+    "price": 2950.04,
+    "downloadLink": "#",
+    "description": "MRST Pro Digital Activation Code [1 Year] New - MRST Service",
+    "size": "1-5 Minutes",
+    "views": 0,
+    "downloads": 0,
+    "rating": 5,
+    "tags": [
+      "new",
+      "paid"
+    ],
+    "date": "2026-10-29"
+  },
+  {
     "id": "gsm-remote-1",
     "name": "360 Tool Rent [6 Hours]-[instant-Auto API 24x7] \u2705",
     "categoryId": "remote-tool-rent",

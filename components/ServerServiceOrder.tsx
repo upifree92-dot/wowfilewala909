@@ -58,9 +58,7 @@ const ServerServiceOrder: React.FC = () => {
         };
       });
 
-    return [...customServer, ...updatedBase].filter(
-      (srv) => !srv.name?.toLowerCase().includes('mrst pro digital activation code') && srv.id !== 'srv-1' && srv.id !== 'gsm-server-306'
-    );
+    return [...customServer, ...updatedBase];
   }, [products, categories]);
 
   // Extract all unique group names sorted alphabetically
