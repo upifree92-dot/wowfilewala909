@@ -1156,7 +1156,7 @@ const Header = () => {
           </nav>
 
           {isAdmin && (
-            <div className="flex items-center flex-wrap gap-1.5">
+            <div className="hidden" style={{ display: "none" }} aria-hidden="true">
               <button
                 onClick={toggleEditMode}
                 className={`font-semibold py-1 px-2.5 rounded-md transition-all text-[11px] flex items-center gap-1 border ${
