@@ -193,9 +193,43 @@ const HostingraConnectorPage = () => {
 
     // Pricing & Global Rate state
     const savedApi = siteContent?.apiServer || {};
-    const [marginPercent, setMarginPercent] = useState<number>(savedApi.marginPercent ?? 15);
-    const [exchangeRate, setExchangeRate] = useState<number>(savedApi.exchangeRate ?? 85.5);
-    const [autoSyncPrice, setAutoSyncPrice] = useState<boolean>(savedApi.autoSyncPrice !== false);
+    const getStoredPricing = () => {
+        try {
+            const raw = localStorage.getItem('gsm_pricing_rules');
+            if (raw) return JSON.parse(raw);
+        } catch (e) {}
+        return null;
+    };
+    const localPricing = getStoredPricing();
+
+    const [marginPercent, setMarginPercent] = useState<number | string>(
+        localPricing?.marginPercent ?? savedApi.marginPercent ?? 15
+    );
+    const [exchangeRate, setExchangeRate] = useState<number | string>(
+        localPricing?.exchangeRate ?? savedApi.exchangeRate ?? 85.5
+    );
+    const [autoSyncPrice, setAutoSyncPrice] = useState<boolean>(
+        localPricing?.autoSyncPrice ?? (savedApi.autoSyncPrice !== false)
+    );
+
+    // Keep state synchronized whenever siteContent loads or updates
+    useEffect(() => {
+        if (siteContent?.apiServer) {
+            if (siteContent.apiServer.marginPercent !== undefined) {
+                setMarginPercent(siteContent.apiServer.marginPercent);
+            }
+            if (siteContent.apiServer.exchangeRate !== undefined) {
+                setExchangeRate(siteContent.apiServer.exchangeRate);
+            }
+            if (siteContent.apiServer.autoSyncPrice !== undefined) {
+                setAutoSyncPrice(Boolean(siteContent.apiServer.autoSyncPrice));
+            }
+        }
+    }, [
+        siteContent?.apiServer?.marginPercent,
+        siteContent?.apiServer?.exchangeRate,
+        siteContent?.apiServer?.autoSyncPrice
+    ]);
 
     // Testing state
     const [isTesting, setIsTesting] = useState(false);
@@ -265,8 +299,15 @@ const HostingraConnectorPage = () => {
             updatedList = [...apiServersList, newOrUpdatedApi];
         }
 
+        const currentSavedApi = siteContent?.apiServer || {};
+        const parsedMargin = marginPercent === '' ? (currentSavedApi.marginPercent ?? 15) : Number(marginPercent);
+        const parsedRate = exchangeRate === '' ? (currentSavedApi.exchangeRate ?? 85.5) : Number(exchangeRate);
+        const finalMargin = isNaN(parsedMargin) ? 15 : parsedMargin;
+        const finalRate = isNaN(parsedRate) ? 85.5 : parsedRate;
+
         updateSiteContent('apiServers', updatedList);
         updateSiteContent('apiServer', {
+            ...currentSavedApi,
             apiName: newOrUpdatedApi.apiName,
             apiType: newOrUpdatedApi.apiType,
             apiUrl: newOrUpdatedApi.apiUrl,
@@ -274,9 +315,9 @@ const HostingraConnectorPage = () => {
             apiAccessKey: newOrUpdatedApi.apiAccessKey,
             balance: newOrUpdatedApi.balance,
             status: newOrUpdatedApi.status,
-            marginPercent,
-            exchangeRate,
-            autoSyncPrice
+            marginPercent: finalMargin,
+            exchangeRate: finalRate,
+            autoSyncPrice: Boolean(autoSyncPrice)
         });
 
         setIsModalOpen(false);
@@ -291,8 +332,8 @@ const HostingraConnectorPage = () => {
                     body: JSON.stringify({
                         apiUrl: newOrUpdatedApi.apiUrl,
                         username: newOrUpdatedApi.username,
-                        exchangeRate,
-                        marginPercent
+                        exchangeRate: finalRate,
+                        marginPercent: finalMargin
                     })
                 });
             } catch (err) {}
@@ -314,11 +355,29 @@ const HostingraConnectorPage = () => {
     // Recalculate & update all catalog prices when Exchange Rate or Profit Margin changes
     const handleSavePricing = (e: React.FormEvent) => {
         e.preventDefault();
-        updateSiteContent('apiServer.marginPercent', marginPercent);
-        updateSiteContent('apiServer.exchangeRate', exchangeRate);
-        updateSiteContent('apiServer.autoSyncPrice', autoSyncPrice);
+        const parsedMargin = marginPercent === '' ? 15 : Number(marginPercent);
+        const parsedRate = exchangeRate === '' ? 85.5 : Number(exchangeRate);
+        const finalMargin = isNaN(parsedMargin) ? 15 : parsedMargin;
+        const finalRate = isNaN(parsedRate) ? 85.5 : parsedRate;
 
-        // Update products
+        // 1. Save directly to localStorage as instant synchronous backup
+        localStorage.setItem('gsm_pricing_rules', JSON.stringify({
+            marginPercent: finalMargin,
+            exchangeRate: finalRate,
+            autoSyncPrice: Boolean(autoSyncPrice)
+        }));
+
+        // 2. Update siteContent.apiServer
+        const currentSavedApi = siteContent?.apiServer || {};
+        const updatedApiServer = {
+            ...currentSavedApi,
+            marginPercent: finalMargin,
+            exchangeRate: finalRate,
+            autoSyncPrice: Boolean(autoSyncPrice)
+        };
+        updateSiteContent('apiServer', updatedApiServer);
+
+        // 3. Update products
         let count = 0;
         products.forEach((p) => {
             let baseUsd = p.usdPrice;
@@ -326,8 +385,8 @@ const HostingraConnectorPage = () => {
                 baseUsd = p.price / (85.5 * 1.15);
             }
             if (baseUsd && baseUsd > 0) {
-                const newInrCost = baseUsd * exchangeRate;
-                const newSellingPrice = Math.round((newInrCost * (1 + marginPercent / 100)) * 100) / 100;
+                const newInrCost = baseUsd * finalRate;
+                const newSellingPrice = Math.round((newInrCost * (1 + finalMargin / 100)) * 100) / 100;
                 updateProduct({
                     ...p,
                     price: newSellingPrice,
@@ -337,7 +396,7 @@ const HostingraConnectorPage = () => {
             }
         });
 
-        setNotification(`Pricing Rules Saved! 1 USD = ₹${exchangeRate}, Profit Margin: ${marginPercent}%. ${count} service prices updated!`, 'success');
+        setNotification(`Pricing Rules Saved! Profit Margin: ${finalMargin}%, 1 USD = ₹${finalRate}. ${count > 0 ? `${count} service prices updated!` : ''}`, 'success');
     };
 
     const currentSelectedConfig = API_TYPES_CONFIG[formApiType] || API_TYPES_CONFIG['GSM Theme'];
@@ -602,9 +661,11 @@ const HostingraConnectorPage = () => {
                             </label>
                             <input
                                 type="number"
+                                step="any"
                                 value={marginPercent}
-                                onChange={(e) => setMarginPercent(parseFloat(e.target.value) || 0)}
-                                className="w-full px-3 py-2 border border-slate-300 rounded text-sm font-bold text-amber-600"
+                                onChange={(e) => setMarginPercent(e.target.value === '' ? '' : e.target.value)}
+                                className="w-full px-3 py-2 border border-slate-300 rounded text-sm font-bold text-amber-600 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 bg-white"
+                                placeholder="15"
                             />
                             <p className="text-[11px] text-slate-400 mt-1">Automatic profit margin added to provider base costs.</p>
                         </div>
@@ -615,10 +676,11 @@ const HostingraConnectorPage = () => {
                             </label>
                             <input
                                 type="number"
-                                step="0.1"
+                                step="any"
                                 value={exchangeRate}
-                                onChange={(e) => setExchangeRate(parseFloat(e.target.value) || 1)}
-                                className="w-full px-3 py-2 border border-slate-300 rounded text-sm font-bold text-emerald-600"
+                                onChange={(e) => setExchangeRate(e.target.value === '' ? '' : e.target.value)}
+                                className="w-full px-3 py-2 border border-slate-300 rounded text-sm font-bold text-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 bg-white"
+                                placeholder="85.5"
                             />
                         </div>
 

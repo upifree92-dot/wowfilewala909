@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAppContext } from '../../context/AppContext';
 import { Settings, CreditCard, Plus, Trash2, Edit2, Save, Globe, Smartphone, HelpCircle, KeyRound, Lock, ExternalLink } from 'lucide-react';
@@ -30,11 +30,30 @@ const AdminSettingsPage = () => {
     const [pricingSubtitle, setPricingSubtitle] = useState(siteContent?.pricing?.subtitle || '');
 
     // Identity Tab States
-    const [siteTitle, setSiteTitle] = useState(siteContent?.header.title || '');
+    const [siteTitle, setSiteTitle] = useState(siteContent?.header?.title || '');
     const [footerAbout, setFooterAbout] = useState(siteContent?.footer?.about?.text || '');
     const [footerCopyright, setFooterCopyright] = useState(siteContent?.footer?.copyright || '');
     const [emailOtpEnabled, setEmailOtpEnabled] = useState(siteContent?.auth?.emailOtpEnabled ?? true);
     const [hwidLockEnabled, setHwidLockEnabled] = useState(siteContent?.auth?.hwidLockEnabled ?? true);
+
+    // Keep form states in sync with siteContent
+    useEffect(() => {
+        if (siteContent?.pricing) {
+            if (siteContent.pricing.upiId !== undefined) setUpiId(siteContent.pricing.upiId);
+            if (siteContent.pricing.adminWhatsappNumber !== undefined) setWhatsappNumber(siteContent.pricing.adminWhatsappNumber);
+            if (siteContent.pricing.adminWhatsappButtonText !== undefined) setWhatsappBtnText(siteContent.pricing.adminWhatsappButtonText);
+            if (siteContent.pricing.paymentInstructions !== undefined) setPayInstructions(siteContent.pricing.paymentInstructions);
+            if (siteContent.pricing.mainTitle !== undefined) setPricingTitle(siteContent.pricing.mainTitle);
+            if (siteContent.pricing.subtitle !== undefined) setPricingSubtitle(siteContent.pricing.subtitle);
+        }
+        if (siteContent?.header?.title !== undefined) setSiteTitle(siteContent.header.title);
+        if (siteContent?.footer?.about?.text !== undefined) setFooterAbout(siteContent.footer.about.text);
+        if (siteContent?.footer?.copyright !== undefined) setFooterCopyright(siteContent.footer.copyright);
+        if (siteContent?.auth) {
+            if (siteContent.auth.emailOtpEnabled !== undefined) setEmailOtpEnabled(siteContent.auth.emailOtpEnabled);
+            if (siteContent.auth.hwidLockEnabled !== undefined) setHwidLockEnabled(siteContent.auth.hwidLockEnabled);
+        }
+    }, [siteContent]);
 
     // Package Modal/Form States
     const [isPackageModalOpen, setIsPackageModalOpen] = useState(false);
@@ -42,22 +61,28 @@ const AdminSettingsPage = () => {
 
     const handleSavePayments = (e: React.FormEvent) => {
         e.preventDefault();
-        updateSiteContent('pricing.upiId', upiId);
-        updateSiteContent('pricing.adminWhatsappNumber', whatsappNumber);
-        updateSiteContent('whatsapp.phoneNumber', whatsappNumber);
-        updateSiteContent('pricing.adminWhatsappButtonText', whatsappBtnText);
-        updateSiteContent('pricing.paymentInstructions', payInstructions);
-        updateSiteContent('pricing.mainTitle', pricingTitle);
-        updateSiteContent('pricing.subtitle', pricingSubtitle);
+        updateSiteContent({
+            'pricing.upiId': upiId,
+            'pricing.adminWhatsappNumber': whatsappNumber,
+            'whatsapp.phoneNumber': whatsappNumber,
+            'pricing.adminWhatsappButtonText': whatsappBtnText,
+            'pricing.paymentInstructions': payInstructions,
+            'pricing.mainTitle': pricingTitle,
+            'pricing.subtitle': pricingSubtitle
+        });
+        setNotification('Payment settings saved and synced successfully!', 'success');
     };
 
     const handleSaveIdentity = (e: React.FormEvent) => {
         e.preventDefault();
-        updateSiteContent('header.title', siteTitle);
-        updateSiteContent('footer.about.text', footerAbout);
-        updateSiteContent('footer.copyright', footerCopyright);
-        updateSiteContent('auth.emailOtpEnabled', emailOtpEnabled);
-        updateSiteContent('auth.hwidLockEnabled', hwidLockEnabled);
+        updateSiteContent({
+            'header.title': siteTitle,
+            'footer.about.text': footerAbout,
+            'footer.copyright': footerCopyright,
+            'auth.emailOtpEnabled': emailOtpEnabled,
+            'auth.hwidLockEnabled': hwidLockEnabled
+        });
+        setNotification('Site identity settings saved successfully!', 'success');
     };
 
     // Token Protection Tab States

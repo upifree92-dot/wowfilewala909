@@ -41,7 +41,7 @@ interface AppContextType {
   isEditMode: boolean;
   toggleEditMode: () => void;
   siteContent: any;
-  updateSiteContent: (path: string, value: any) => void;
+  updateSiteContent: (pathOrUpdates: string | Record<string, any>, value?: any) => void;
 
   // Global Notification System
   notification: { message: string; type: 'success' | 'error' } | null;
@@ -444,6 +444,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
     return storedContent;
   });
+  const siteContentRef = React.useRef(siteContent);
+  useEffect(() => {
+    siteContentRef.current = siteContent;
+  }, [siteContent]);
   const [notification, setInternalNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [editingContent, setEditingContent] = useState<{ path: string; value: string } | null>(null);
   const [orderSuccessModalOpen, setOrderSuccessModalOpen] = useState(false);
@@ -1744,19 +1748,28 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     if (isAdmin) setIsEditMode(prev => !prev);
   };
   
-  const updateSiteContent = (path: string, value: any) => {
-    console.log(`Updating siteContent at ${path} to:`, value);
-    if (!isEditMode) {
+  const updateSiteContent = (pathOrUpdates: string | Record<string, any>, value?: any) => {
+    if (!isEditMode && !isAdmin) {
       setNotification('Please enable "Edit Site" mode first!', 'error');
       return;
     }
-    const newContent = JSON.parse(JSON.stringify(siteContent)); // Deep copy
-    setNestedValue(newContent, path, value);
+    const currentBase = siteContentRef.current || siteContent || getLocalStorage('siteContent', INITIAL_SITE_CONTENT);
+    const newContent = JSON.parse(JSON.stringify(currentBase || {}));
+    if (typeof pathOrUpdates === 'string') {
+      setNestedValue(newContent, pathOrUpdates, value);
+    } else if (typeof pathOrUpdates === 'object' && pathOrUpdates !== null) {
+      Object.entries(pathOrUpdates).forEach(([k, v]) => {
+        setNestedValue(newContent, k, v);
+      });
+    }
+    siteContentRef.current = newContent;
     setSiteContent(newContent);
     setLocalStorage('siteContent', newContent);
     pushServerSync({ siteContent: newContent }, true);
-    saveSiteSetting('site_content', newContent);
-    setNotification('Content updated successfully!', 'success');
+    saveSiteSetting('site_content', newContent).catch(err => {
+      console.warn('saveSiteSetting failed (non-blocking):', err);
+    });
+    setNotification('Settings saved & synced successfully!', 'success');
   };
   
   const startEditing = (path: string, value: string) => {
