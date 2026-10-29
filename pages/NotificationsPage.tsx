@@ -367,7 +367,35 @@ const NotificationsPage = () => {
                  ) : (
                     <div className="space-y-3">
                         {filteredNotifications.map(n => {
-                            const messageParts = n.message.split('\n\nSubmitted Details:\n');
+                            const sanitizeUserMessage = (msg: string) => {
+                                if (!msg) return '';
+                                return msg
+                                    .replace(/via Dealer API \([^)]*\)/gi, 'successfully')
+                                    .replace(/sent to Dealer API \([^)]*\) Team\.?\s*Jaise hi Dealer Team[^₹]*/gi, 'placed successfully. ')
+                                    .replace(/Dealer API Team dwara/gi, '')
+                                    .replace(/Dealer API Team ke paas/gi, '')
+                                    .replace(/Dealer API Team ke/gi, '');
+                            };
+                            const sanitizeAdminReply = (reply?: string) => {
+                                if (!reply) return '';
+                                const t = String(reply).trim();
+                                if (
+                                    /^Order (forwarded|sent) to\s+/i.test(t) ||
+                                    /^Waiting for .* Team/i.test(t) ||
+                                    /Jaise hi Dealer Team Processing/i.test(t)
+                                ) {
+                                    return '';
+                                }
+                                return t
+                                    .replace(/^\[[^\]]*(?:https?:\/\/|gsmfastunlock|dhru|gsm theme|webx)[^\]]*\]\s*/i, '')
+                                    .replace(/\s*\|\s*Ref ID:\s*#?DLR-[0-9A-Za-z-]+/gi, '')
+                                    .replace(/\(Ref ID:\s*#?DLR-[0-9A-Za-z-]+\)/gi, '')
+                                    .trim();
+                            };
+
+                            const cleanedMessage = sanitizeUserMessage(n.message || '');
+                            const cleanReply = sanitizeAdminReply(n.adminReply);
+                            const messageParts = cleanedMessage.split('\n\nSubmitted Details:\n');
                             const hasDetails = messageParts.length > 1;
 
                             const isApproved = n.status === 'approved';
@@ -400,6 +428,7 @@ const NotificationsPage = () => {
                                                             const itemParts = item.split(': ');
                                                             const key = itemParts[0];
                                                             const value = itemParts.slice(1).join(': ');
+                                                            if (key.toLowerCase().includes('provider') || key.toLowerCase().includes('dealer')) return null;
                                                             return (
                                                                 <li key={key} className="grid grid-cols-2 text-xs gap-x-2">
                                                                     <span className="text-slate-500 dark:text-slate-400 font-medium truncate" title={key}>{key}</span>
@@ -411,7 +440,7 @@ const NotificationsPage = () => {
                                                 </div>
                                             </>
                                         ) : (
-                                            <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-1.5 whitespace-pre-wrap">{n.message}</p>
+                                            <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-1.5 whitespace-pre-wrap">{cleanedMessage}</p>
                                         )}
                                         
                                         {n.rejectionReason && (
@@ -421,10 +450,10 @@ const NotificationsPage = () => {
                                             </div>
                                         )}
 
-                                        {n.adminReply && (
+                                        {cleanReply && (
                                             <div className="mt-2 p-2 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-900/30">
                                                 <p className="text-xs font-bold text-blue-800 dark:text-blue-400">Admin Comment:</p>
-                                                <p className="text-xs text-blue-700 dark:text-blue-300/90 whitespace-pre-wrap mt-0.5">{n.adminReply}</p>
+                                                <p className="text-xs text-blue-700 dark:text-blue-300/90 whitespace-pre-wrap mt-0.5">{cleanReply}</p>
                                             </div>
                                         )}
 

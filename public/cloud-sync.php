@@ -745,13 +745,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if (empty($dealerReply)) {
             if ($dealerStatus === 'approved') {
-                $dealerReply = "[{$apiName}] Order Completed ✅ | Ref ID: #{$dealerRefId} | Input: {$cleanInput}";
+                $dealerReply = "Order Completed ✅ | Input: {$cleanInput}";
             } elseif ($dealerStatus === 'rejected') {
-                $dealerReply = "[{$apiName}] Order Rejected by Dealer Team | Ref ID: #{$dealerRefId}";
-            } elseif ($dealerStatus === 'processing') {
-                $dealerReply = "Order sent to {$apiName} Team (Ref ID: #{$dealerRefId}). Processing in progress - you will be notified automatically as soon as Dealer updates status.";
+                $dealerReply = "Order Rejected";
             } else {
-                $dealerReply = "Waiting for {$apiName} Team action (Ref ID: #{$dealerRefId}).";
+                $dealerReply = "";
             }
         }
 
@@ -760,7 +758,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'status' => $dealerStatus,
             'dealerRefId' => $dealerRefId,
             'forwardedToUrl' => $forwardedToUrl,
-            'apiProvider' => "{$apiName} ({$apiType} Auto API 24x7)",
             'reply' => $dealerReply,
             'repliedAt' => ($dealerStatus === 'approved' || $dealerStatus === 'rejected') ? gmdate('Y-m-d\TH:i:s\Z') : null
         ]);

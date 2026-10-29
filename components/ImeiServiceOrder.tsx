@@ -176,7 +176,6 @@ const ImeiServiceOrder: React.FC = () => {
         quantity,
         price: activeModalService.price,
         title: `IMEI Service - ${activeModalService.name}`,
-        apiProvider: 'GSM FAST UNLOCK (Auto API 24x7)'
       });
 
       handleCloseModal();

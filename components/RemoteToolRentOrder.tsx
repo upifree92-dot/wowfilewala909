@@ -308,7 +308,6 @@ const RemoteToolRentOrder: React.FC = () => {
         quantity,
         price: activeModalTool.price,
         title: `Remote/ Tool-Rent - ${activeModalTool.name}`,
-        apiProvider: 'GSM FAST UNLOCK (Auto API 24x7)'
       });
 
       handleCloseModal();

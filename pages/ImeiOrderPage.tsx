@@ -150,7 +150,6 @@ const ImeiOrderPage = () => {
             quantity,
             price: pricePerUnit,
             title: `${serviceMeta.badge} - ${selectedService.name}`,
-            apiProvider: apiServer.apiUrl || 'https://www.gsmfastunlock.com'
         });
 
         // Reset inputs

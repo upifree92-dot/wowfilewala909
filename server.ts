@@ -496,13 +496,11 @@ function getParsedUserGsmServices(customRate = 85.5, customMargin = 15) {
     // 2. Build clean status message if Dealer API didn't return custom text yet
     if (!dealerReply) {
       if (dealerStatus === 'approved') {
-        dealerReply = `[${apiName}] Order Completed ✅ | Ref ID: #${dealerRefId} | Input: ${cleanInput}`;
+        dealerReply = `Order Completed ✅ | Input: ${cleanInput}`;
       } else if (dealerStatus === 'rejected') {
-        dealerReply = `[${apiName}] Order Rejected by Dealer Team | Ref ID: #${dealerRefId}`;
-      } else if (dealerStatus === 'processing') {
-        dealerReply = `Order sent to ${apiName} Team (Ref ID: #${dealerRefId}). Processing in progress - you will be notified automatically as soon as Dealer updates status.`;
+        dealerReply = `Order Rejected`;
       } else {
-        dealerReply = `Waiting for ${apiName} Team action (Ref ID: #${dealerRefId}).`;
+        dealerReply = '';
       }
     }
 
@@ -511,7 +509,6 @@ function getParsedUserGsmServices(customRate = 85.5, customMargin = 15) {
       status: dealerStatus,
       dealerRefId,
       forwardedToUrl,
-      apiProvider: `${apiName} (${apiType} Auto API 24x7)`,
       reply: dealerReply,
       repliedAt: (dealerStatus === 'approved' || dealerStatus === 'rejected') ? new Date().toISOString() : undefined
     });

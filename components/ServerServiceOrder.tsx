@@ -151,7 +151,6 @@ const ServerServiceOrder: React.FC = () => {
         quantity,
         price: activeModalService.price,
         title: `Server Service - ${activeModalService.name}`,
-        apiProvider: 'GSM FAST UNLOCK (Auto API 24x7)'
       });
 
       handleCloseModal();

@@ -126,7 +126,27 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
   }
 
   // 6. Reply content resolution (Credentials, unlock code, server reply)
-  let replyContent = (order as any).adminReply || (order as any).replyContent || (order as any).rejectionReason || '';
+  let rawReplyContent = (order as any).adminReply || (order as any).replyContent || (order as any).rejectionReason || '';
+
+  // Hide internal dealer API forwarding messages and provider URLs from user view
+  const sanitizeOrderReply = (text: string): string => {
+    if (!text) return '';
+    const trimmed = String(text).trim();
+    if (
+      /^Order (forwarded|sent) to\s+/i.test(trimmed) ||
+      /^Waiting for .* Team/i.test(trimmed) ||
+      /Jaise hi Dealer Team Processing/i.test(trimmed)
+    ) {
+      return '';
+    }
+    return trimmed
+      .replace(/^\[[^\]]*(?:https?:\/\/|gsmfastunlock|dhru|gsm theme|webx)[^\]]*\]\s*/i, '')
+      .replace(/\s*\|\s*Ref ID:\s*#?DLR-[0-9A-Za-z-]+/gi, '')
+      .replace(/\(Ref ID:\s*#?DLR-[0-9A-Za-z-]+\)/gi, '')
+      .trim();
+  };
+
+  let replyContent = sanitizeOrderReply(rawReplyContent);
   
   if (!replyContent) {
     // Check if details contain username and password
@@ -134,18 +154,12 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
     if (details) {
       if (details.username && details.password) {
         replyContent = `User: username: ${details.username} Password: ${details.password}`;
-      } else if (details.input) {
-        replyContent = isSuccess 
-          ? `Result: Key/SN [${details.input}] Activated Successfully`
-          : `Input: ${details.input}`;
-      } else if (details.imei) {
-        replyContent = isSuccess
-          ? `IMEI: ${details.imei} - UNLOCKED / VERIFIED OK`
-          : `IMEI: ${details.imei}`;
-      } else if (details.sn) {
-        replyContent = isSuccess
-          ? `SN: ${details.sn} - ACTIVATED OK`
-          : `SN: ${details.sn}`;
+      } else if (isSuccess && details.input) {
+        replyContent = `Result: Key/SN [${details.input}] Activated Successfully`;
+      } else if (isSuccess && details.imei) {
+        replyContent = `IMEI: ${details.imei} - UNLOCKED / VERIFIED OK`;
+      } else if (isSuccess && details.sn) {
+        replyContent = `SN: ${details.sn} - ACTIVATED OK`;
       }
     }
   }
@@ -153,9 +167,9 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
   // Fallback defaults to match the reference design if empty
   if (!replyContent) {
     if (isSuccess) {
-      replyContent = 'User: username: mrbanu Password: bbbb9090';
+      replyContent = 'Order completed successfully.';
     } else if (isInProcess) {
-      replyContent = 'Order is currently being processed by automated API server.';
+      replyContent = 'Waiting for administrator action or API reply.';
     } else if (isRejected) {
       replyContent = 'Rejected: Invalid credentials or serial number provided.';
     } else {
@@ -327,9 +341,39 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
             const custMobile = (order as any).customerMobile || details.customerMobile || details.mobile || details.mobileNumber;
             const inputVal = details.input || details.sn || details.imei || details.serialNumber || details.username;
             
-            const ignoredKeys = new Set(['categoryName', 'quantity', 'totalPrice', 'price', 'mobileNumber', 'customerName', 'customerEmail', 'customerMobile', 'name', 'email', 'mobile', 'input', 'sn', 'imei', 'serialNumber', 'username']);
+            const ignoredKeys = new Set([
+              'categoryName',
+              'quantity',
+              'totalPrice',
+              'price',
+              'mobileNumber',
+              'customerName',
+              'customerEmail',
+              'customerMobile',
+              'name',
+              'email',
+              'mobile',
+              'input',
+              'sn',
+              'imei',
+              'serialNumber',
+              'username',
+              'apiProvider',
+              'dealerRefId',
+              'dealerApi',
+              'provider',
+              'apiUrl',
+              'apiName',
+              'apiType',
+              'rawDetails'
+            ]);
             const extraFields = typeof details === 'object' && details !== null 
-              ? Object.entries(details).filter(([k, v]) => !ignoredKeys.has(k) && v)
+              ? Object.entries(details).filter(([k, v]) => {
+                  if (!v || ignoredKeys.has(k)) return false;
+                  const lowerK = k.toLowerCase();
+                  if (lowerK.includes('provider') || lowerK.includes('dealer') || lowerK.includes('api')) return false;
+                  return true;
+                })
               : [];
 
             const hasAnyCustomerInfo = custName || custEmail || custMobile || inputVal || extraFields.length > 0;

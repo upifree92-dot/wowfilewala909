@@ -3590,7 +3590,18 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
         const prevStatus = targetAdminNotif?.status;
         const prevReply = targetAdminNotif?.adminReply || '';
-        const cleanReply = (dealerReply || '').trim();
+        const rawDealerReply = (dealerReply || '').trim();
+        const isPlaceholderForwardMsg =
+            /^Order (forwarded|sent) to\s+/i.test(rawDealerReply) ||
+            /^Waiting for .* Team/i.test(rawDealerReply) ||
+            /Jaise hi Dealer Team Processing/i.test(rawDealerReply);
+        const cleanReply = isPlaceholderForwardMsg
+            ? ''
+            : rawDealerReply
+                  .replace(/^\[[^\]]*(?:https?:\/\/|gsmfastunlock|dhru|gsm theme|webx)[^\]]*\]\s*/i, '')
+                  .replace(/\s*\|\s*Ref ID:\s*#?DLR-[0-9A-Za-z-]+/gi, '')
+                  .replace(/\(Ref ID:\s*#?DLR-[0-9A-Za-z-]+\)/gi, '')
+                  .trim();
 
         // Skip if nothing changed at all
         if (prevStatus === newStatus && (!cleanReply || prevReply === cleanReply)) {
@@ -3610,7 +3621,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
                     ...n,
                     status: newStatus,
                     adminReply: cleanReply || n.adminReply,
-                    rejectionReason: newStatus === 'rejected' ? (cleanReply || n.rejectionReason || 'Rejected by Dealer API Team') : n.rejectionReason,
+                    rejectionReason: newStatus === 'rejected' ? (cleanReply || n.rejectionReason || 'Order Rejected') : n.rejectionReason,
                     repliedAt: (newStatus === 'approved' || newStatus === 'rejected') ? nowIso : n.repliedAt,
                     orderDetails: {
                         ...(n.orderDetails || {}),
@@ -3623,7 +3634,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         setAdminNotifications(updatedAdminList);
         setLocalStorage('adminNotifications', updatedAdminList);
 
-        // 2. Update customer's notifications & auto-refund wallet if Dealer Team rejected the order
+        // 2. Update customer's notifications & auto-refund wallet if order was rejected
         const nextAllUsers = { ...allUsers };
         let customerNotified = false;
 
@@ -3649,7 +3660,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
                     timestamp: nowIso,
                     type: 'refund',
                     amount: priceToRefund,
-                    description: `Auto Refund (Dealer Rejected Order #${cleanOrderId}): ${serviceTitle}`
+                    description: `Auto Refund (Rejected Order #${cleanOrderId}): ${serviceTitle}`
                 };
                 nextTxHistory = [refundTx, ...nextTxHistory];
                 syncTransaction(u.id, u.email, refundTx);
@@ -3666,12 +3677,12 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
             const statusMessage =
                 newStatus === 'approved'
-                    ? `Aapka Order #${cleanOrderId} (${serviceTitle}) Dealer API Team dwara SUCCESS kar diya gaya hai!${cleanReply ? `\n\nDealer Reply / Code:\n${cleanReply}` : ''}`
+                    ? `Aapka Order #${cleanOrderId} (${serviceTitle}) SUCCESS ho gaya hai!${cleanReply ? `\n\nReply / Code:\n${cleanReply}` : ''}`
                     : newStatus === 'rejected'
-                    ? `Aapka Order #${cleanOrderId} (${serviceTitle}) Dealer API Team dwara REJECT kar diya gaya hai.${cleanReply ? `\nReason: ${cleanReply}` : ''}${priceToRefund > 0 ? `\n₹${priceToRefund.toFixed(2)} aapke wallet mein automatic refund kar diya gaya hai.` : ''}`
+                    ? `Aapka Order #${cleanOrderId} (${serviceTitle}) REJECT ho gaya hai.${cleanReply ? `\nReason: ${cleanReply}` : ''}${priceToRefund > 0 ? `\n₹${priceToRefund.toFixed(2)} aapke wallet mein automatic refund kar diya gaya hai.` : ''}`
                     : newStatus === 'processing'
-                    ? `Aapka Order #${cleanOrderId} (${serviceTitle}) Dealer API Team ke paas PROCESSING mein hai.${cleanReply ? `\nStatus: ${cleanReply}` : ''}`
-                    : `Aapka Order #${cleanOrderId} (${serviceTitle}) Dealer API Team ke Waiting Action mein hai.`;
+                    ? `Aapka Order #${cleanOrderId} (${serviceTitle}) PROCESSING mein hai.${cleanReply ? `\nStatus: ${cleanReply}` : ''}`
+                    : `Aapka Order #${cleanOrderId} (${serviceTitle}) Waiting Action mein hai.`;
 
             const nextNotifs = (u.notifications || []).map((un): UserNotification => {
                 if (String(un.orderId || '').replace(/^#/, '') === cleanOrderId) {
@@ -3681,7 +3692,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
                         title: statusTitle,
                         message: statusMessage,
                         adminReply: cleanReply || un.adminReply,
-                        rejectionReason: newStatus === 'rejected' ? (cleanReply || un.rejectionReason || 'Rejected by Dealer API Team') : un.rejectionReason,
+                        rejectionReason: newStatus === 'rejected' ? (cleanReply || un.rejectionReason || 'Order Rejected') : un.rejectionReason,
                         read: false,
                         timestamp: nowIso,
                         orderDetails: {
@@ -3722,15 +3733,15 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         if (customerNotified && prevStatus !== newStatus) {
             if (newStatus === 'approved') {
                 playOrderSuccessSound();
-                setNotification(`Order #${cleanOrderId} Dealer Team dwara SUCCESS ho gaya! ✅ ${cleanReply ? `Reply: ${cleanReply}` : ''}`, 'success');
+                setNotification(`Order #${cleanOrderId} SUCCESS ho gaya! ✅ ${cleanReply ? `Reply: ${cleanReply}` : ''}`, 'success');
             } else if (newStatus === 'rejected') {
                 playOrderRejectedSound();
                 setNotification(
-                    `Order #${cleanOrderId} Dealer Team dwara REJECT kiya gaya.${priceToRefund > 0 ? ` ₹${priceToRefund.toFixed(2)} Wallet mein Refund ho gaya.` : ''}`,
+                    `Order #${cleanOrderId} REJECT ho gaya.${priceToRefund > 0 ? ` ₹${priceToRefund.toFixed(2)} Wallet mein Refund ho gaya.` : ''}`,
                     'error'
                 );
             } else if (newStatus === 'processing') {
-                setNotification(`Order #${cleanOrderId} ab Dealer Team ke paas PROCESSING mein hai ⏳`, 'success');
+                setNotification(`Order #${cleanOrderId} PROCESSING mein hai ⏳`, 'success');
             }
 
             if ('Notification' in window && Notification.permission === 'granted') {
@@ -3742,7 +3753,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
                             ? `Order #${cleanOrderId} Rejected ❌`
                             : `Order #${cleanOrderId} Processing ⏳`,
                         {
-                            body: cleanReply || `Order #${cleanOrderId} status updated to ${newStatus.toUpperCase()} by Dealer Team.`
+                            body: cleanReply || `Order #${cleanOrderId} status updated to ${newStatus.toUpperCase()}.`
                         }
                     );
                 } catch {}
@@ -3818,7 +3829,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             return;
         }
 
-        const { quantity, price, title, ...formDetails } = orderDetails;
+        const { quantity, price, title, apiProvider: _ignoredProvider, ...formDetails } = orderDetails;
         const unitPrice = Number(price) || 0;
         const qty = Number(quantity) || 1;
         const totalPrice = qty * unitPrice;
@@ -3840,9 +3851,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             ? 'approved'
             : (dealerApi.autoPlaceOrder ? 'processing' : 'pending');
         const initialAutoReply = isInstantMode
-            ? `[${dealerApi.apiName} - ${dealerApi.apiType}] Order Completed ✅ | Ref ID: #${dealerRefId} | Input: ${cleanInput}`
-            : `Order forwarded to ${dealerApi.apiName} Team (Ref ID: #${dealerRefId}). Jaise hi Dealer Team Processing / Success / Reject karegi, aapko automatic notification mil jayega.`;
-        const resolvedProvider = dealerApi.apiName ? dealerApi.providerLabel : (formDetails.apiProvider || 'GSM FAST UNLOCK (Auto API 24x7)');
+            ? `Order Completed ✅ | Input: ${cleanInput}`
+            : '';
 
         const newTransaction: Transaction = {
             id: `txn-${Date.now()}`,
@@ -3858,7 +3868,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             transactionHistory: [newTransaction, ...(user.transactionHistory || [])]
         };
         
-        const adminMessage = `New Auto API Order #${orderId} from ${user.email} for "${title}": Qty=${qty}, Total=₹${totalPrice} [Sent to ${dealerApi.apiName}]`;
+        const adminMessage = `New Order #${orderId} from ${user.email} for "${title}": Qty=${qty}, Total=₹${totalPrice}`;
         const newAdminNotification: AdminNotification = {
             id: `notif-${Date.now()}`,
             message: adminMessage,
@@ -3866,12 +3876,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             read: false,
             type: 'order',
             status: initialStatus,
-            adminReply: initialAutoReply,
+            adminReply: initialAutoReply || undefined,
             repliedAt: initialStatus === 'approved' ? nowIso : undefined,
             userId: user.id,
             orderDetails: {
                 ...formDetails,
-                apiProvider: resolvedProvider,
                 dealerRefId,
                 quantity: qty,
                 price: unitPrice,
@@ -3885,8 +3894,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         setLocalStorage('adminNotifications', updatedAdminList);
         
         let detailsString = initialStatus === 'approved'
-            ? `Your order for "${title}" has been completed via Dealer API (${dealerApi.apiName}). ₹${totalPrice.toFixed(2)} has been deducted from your wallet.\n\nSubmitted Details:\n- Quantity: ${qty}`
-            : `Your order for "${title}" has been sent to Dealer API (${dealerApi.apiName}) Team. Jaise hi Dealer Team status update (Processing / Success / Reject) karegi, aapko automatic notification pahunch jayega. ₹${totalPrice.toFixed(2)} has been deducted from your wallet.\n\nSubmitted Details:\n- Quantity: ${qty}`;
+            ? `Your order for "${title}" has been completed successfully. ₹${totalPrice.toFixed(2)} has been deducted from your wallet.\n\nSubmitted Details:\n- Quantity: ${qty}`
+            : `Your order for "${title}" has been placed successfully. ₹${totalPrice.toFixed(2)} has been deducted from your wallet.\n\nSubmitted Details:\n- Quantity: ${qty}`;
 
         let formFieldsConfig: InputField[] = [];
         try {
@@ -3908,12 +3917,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             timestamp: nowIso,
             read: false,
             status: initialStatus,
-            adminReply: initialAutoReply,
+            adminReply: initialAutoReply || undefined,
             type: 'order',
             orderId,
             orderDetails: {
                 ...formDetails,
-                apiProvider: resolvedProvider,
                 dealerRefId,
                 quantity: qty,
                 totalPrice,
@@ -3993,7 +4001,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             quantity: qty,
             total_price: totalPrice,
             status: initialStatus,
-            order_details: JSON.stringify({ ...formDetails, apiProvider: resolvedProvider, dealerRefId }),
+            order_details: JSON.stringify({ ...formDetails, dealerRefId }),
             created_at: nowIso
         }).catch(err => {
             console.warn('Failed to sync IMEI order to Supabase (non-blocking):', err);
@@ -4007,7 +4015,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         playAdminIncomingOrderSound();
         showOrderSuccessModal(orderId);
         setNotification(
-            `Order #${orderId} Dealer API (${dealerApi.apiName}) ke paas bhej diya gaya hai! Dealer Team jo bhi update (Processing / Success / Reject) karegi aapko automatic notification milega.`,
+            `Order #${orderId} placed successfully!`,
             'success'
         );
     };
@@ -4033,16 +4041,15 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         const isInstantMode = dealerApi.dealerOrderMode === 'instant_success';
         const nowIso = new Date().toISOString();
         const orderId = generateOrderId();
-        const { quantity, ...formDetails } = orderDetails;
+        const { quantity, apiProvider: _ignoredProvider, ...formDetails } = orderDetails;
         const firstInputVal = Object.values(formDetails).find(v => typeof v === 'string' && v.trim() !== '') || 'Verified';
         const dealerRefId = `DLR-${orderId.slice(-6)}`;
         const initialStatus: 'approved' | 'processing' | 'pending' = isInstantMode
             ? 'approved'
             : (dealerApi.autoPlaceOrder ? 'processing' : 'pending');
         const initialAutoReply = isInstantMode
-            ? `[${dealerApi.apiName} - ${dealerApi.apiType}] Order Completed ✅ | Ref ID: #${dealerRefId} | Input: ${firstInputVal}`
-            : `Order forwarded to ${dealerApi.apiName} Team (Ref ID: #${dealerRefId}). Jaise hi Dealer Team Processing / Success / Reject karegi, aapko automatic notification mil jayega.`;
-        const resolvedProvider = dealerApi.providerLabel;
+            ? `Order Completed ✅ | Input: ${firstInputVal}`
+            : '';
         
         const newTransaction: Transaction = {
             id: `txn-${Date.now()}`,
@@ -4058,7 +4065,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             transactionHistory: [newTransaction, ...(user.transactionHistory || [])]
         };
 
-        const adminMessage = `New Auto API Order #${orderId} from ${user.email} in "${category.name}": Qty=${qty}, Total=₹${totalPrice} [Sent to ${dealerApi.apiName}]`;
+        const adminMessage = `New Order #${orderId} from ${user.email} in "${category.name}": Qty=${qty}, Total=₹${totalPrice}`;
         const newAdminNotification: AdminNotification = {
             id: `notif-${Date.now()}`,
             message: adminMessage,
@@ -4066,10 +4073,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             read: false,
             type: 'order',
             status: initialStatus,
-            adminReply: initialAutoReply,
+            adminReply: initialAutoReply || undefined,
             repliedAt: initialStatus === 'approved' ? nowIso : undefined,
             userId: user.id,
-            orderDetails: { ...orderDetails, apiProvider: resolvedProvider, dealerRefId, categoryName: category.name, totalPrice },
+            orderDetails: { ...formDetails, quantity: qty, dealerRefId, categoryName: category.name, totalPrice },
             orderId,
         };
         const updatedAdminList = [newAdminNotification, ...adminNotifications];
@@ -4083,8 +4090,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         }
         
         let detailsString = initialStatus === 'approved'
-            ? `Your order for ${qty} units has been completed via Dealer API (${dealerApi.apiName}). ₹${totalPrice.toFixed(2)} has been deducted from your wallet.\n\nSubmitted Details:\n- Quantity: ${qty}`
-            : `Your order for ${qty} units has been sent to Dealer API (${dealerApi.apiName}) Team. Jaise hi Dealer Team Processing / Success / Reject karegi, aapko automatic notification mil jayega. ₹${totalPrice.toFixed(2)} has been deducted from your wallet.\n\nSubmitted Details:\n- Quantity: ${qty}`;
+            ? `Your order for ${qty} units has been completed successfully. ₹${totalPrice.toFixed(2)} has been deducted from your wallet.\n\nSubmitted Details:\n- Quantity: ${qty}`
+            : `Your order for ${qty} units has been placed successfully. ₹${totalPrice.toFixed(2)} has been deducted from your wallet.\n\nSubmitted Details:\n- Quantity: ${qty}`;
         const customFields = config.customFields || [];
         for (const field of customFields) {
             if (formDetails[field.name]) {
@@ -4099,12 +4106,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             timestamp: nowIso,
             read: false,
             status: initialStatus,
-            adminReply: initialAutoReply,
+            adminReply: initialAutoReply || undefined,
             type: 'order',
             orderId,
             orderDetails: {
                 ...formDetails,
-                apiProvider: resolvedProvider,
                 dealerRefId,
                 quantity: qty,
                 totalPrice,
@@ -4175,7 +4181,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             quantity: qty,
             total_price: totalPrice,
             status: initialStatus,
-            order_details: JSON.stringify({ ...formDetails, apiProvider: resolvedProvider, dealerRefId }),
+            order_details: JSON.stringify({ ...formDetails, dealerRefId }),
             created_at: nowIso
         }).catch(err => {
             console.warn('Failed to sync activation order to Supabase (non-blocking):', err);
@@ -4189,7 +4195,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         playAdminIncomingOrderSound();
         showOrderSuccessModal(orderId);
         setNotification(
-            `Order #${orderId} Dealer API (${dealerApi.apiName}) ke paas bhej diya gaya hai! Dealer Team jo bhi update (Processing / Success / Reject) karegi aapko automatic notification milega.`,
+            `Order #${orderId} placed successfully!`,
             'success'
         );
     };

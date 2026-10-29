@@ -987,11 +987,22 @@ const ProfilePage = () => {
                                 // Field extraction (AnyDesk ID, Username, Email, IMEI, etc.)
                                 let fieldVal = '';
                                 if (n.orderDetails && typeof n.orderDetails === 'object') {
-                                  const ignoreKeys = ['quantity', 'totalPrice', 'price', 'categoryName', 'orderType', 'title'];
-                                  for (const [k, v] of Object.entries(n.orderDetails)) {
-                                    if (!ignoreKeys.includes(k) && v && typeof v === 'string') {
-                                      fieldVal = v;
-                                      break;
+                                  fieldVal = String(
+                                    n.orderDetails.inputData ||
+                                    n.orderDetails.input ||
+                                    n.orderDetails.imei ||
+                                    n.orderDetails.sn ||
+                                    n.orderDetails.username ||
+                                    ''
+                                  ).trim();
+                                  if (!fieldVal) {
+                                    const ignoreKeys = ['quantity', 'totalPrice', 'price', 'categoryName', 'orderType', 'title', 'apiProvider', 'dealerRefId', 'serviceId', 'serviceName', 'rawDetails'];
+                                    for (const [k, v] of Object.entries(n.orderDetails)) {
+                                      const lk = k.toLowerCase();
+                                      if (!ignoreKeys.includes(k) && !lk.includes('provider') && !lk.includes('dealer') && !lk.includes('api') && v && typeof v === 'string') {
+                                        fieldVal = v;
+                                        break;
+                                      }
                                     }
                                   }
                                 }
@@ -1009,6 +1020,24 @@ const ProfilePage = () => {
                                   }
                                 }
                                 if (!fieldVal) fieldVal = '-';
+
+                                const sanitizeReplyDisplay = (rawReply?: string) => {
+                                  if (!rawReply) return '';
+                                  const t = String(rawReply).trim();
+                                  if (
+                                    /^Order (forwarded|sent) to\s+/i.test(t) ||
+                                    /^Waiting for .* Team/i.test(t) ||
+                                    /Jaise hi Dealer Team Processing/i.test(t)
+                                  ) {
+                                    return '';
+                                  }
+                                  return t
+                                    .replace(/^\[[^\]]*(?:https?:\/\/|gsmfastunlock|dhru|gsm theme|webx)[^\]]*\]\s*/i, '')
+                                    .replace(/\s*\|\s*Ref ID:\s*#?DLR-[0-9A-Za-z-]+/gi, '')
+                                    .replace(/\(Ref ID:\s*#?DLR-[0-9A-Za-z-]+\)/gi, '')
+                                    .trim();
+                                };
+                                const cleanAdminReply = sanitizeReplyDisplay(n.adminReply);
 
                                 return (
                                   <tr 
@@ -1053,11 +1082,11 @@ const ProfilePage = () => {
                                         {fieldVal}
                                       </div>
                                       {/* If Admin replied or approved with Code / Note */}
-                                      {n.adminReply && (
+                                      {cleanAdminReply && (
                                         <div className="mt-1 flex items-center gap-1 text-[11px] font-mono text-emerald-800 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-500/20 px-1.5 py-0.5 rounded max-w-fit shadow-2xs">
                                           <span className="font-bold">Code:</span>
-                                          <span className="truncate max-w-[120px]">{n.adminReply}</span>
-                                          <CopyButton textToCopy={n.adminReply} className="w-3.5 h-3.5 p-0.5 shrink-0 hover:text-emerald-900" />
+                                          <span className="truncate max-w-[120px]">{cleanAdminReply}</span>
+                                          <CopyButton textToCopy={cleanAdminReply} className="w-3.5 h-3.5 p-0.5 shrink-0 hover:text-emerald-900" />
                                         </div>
                                       )}
                                       {n.rejectionReason && (
