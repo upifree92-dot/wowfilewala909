@@ -169,7 +169,9 @@ const HostingraConnectorPage = () => {
                 username: siteContent.apiServer.username || '',
                 apiAccessKey: siteContent.apiServer.apiAccessKey || '',
                 balance: siteContent.apiServer.balance || '2778.068',
-                status: (siteContent.apiServer.status as 'Active' | 'Disabled') || 'Active'
+                status: (siteContent.apiServer.status as 'Active' | 'Disabled') || 'Active',
+                autoPlaceOrder: siteContent.apiServer.autoPlaceOrder !== false,
+                autoOrderSuccess: siteContent.apiServer.autoOrderSuccess !== false
             }];
         }
         return [];
@@ -189,6 +191,8 @@ const HostingraConnectorPage = () => {
     const [formUsername, setFormUsername] = useState('');
     const [formAccessKey, setFormAccessKey] = useState('');
     const [formStatus, setFormStatus] = useState<'Active' | 'Disabled'>('Active');
+    const [formAutoPlaceOrder, setFormAutoPlaceOrder] = useState<boolean>(true);
+    const [formAutoOrderSuccess, setFormAutoOrderSuccess] = useState<boolean>(true);
     const [isTypeDropdownOpen, setIsTypeDropdownOpen] = useState(false);
 
     // Pricing & Global Rate state
@@ -254,6 +258,8 @@ const HostingraConnectorPage = () => {
         setFormUsername('');
         setFormAccessKey('');
         setFormStatus('Active');
+        setFormAutoPlaceOrder(true);
+        setFormAutoOrderSuccess(true);
         setIsTypeDropdownOpen(false);
         setIsModalOpen(true);
     };
@@ -267,8 +273,34 @@ const HostingraConnectorPage = () => {
         setFormUsername(api.username);
         setFormAccessKey(api.apiAccessKey);
         setFormStatus(api.status);
+        setFormAutoPlaceOrder(api.autoPlaceOrder !== false);
+        setFormAutoOrderSuccess(api.autoOrderSuccess !== false);
         setIsTypeDropdownOpen(false);
         setIsModalOpen(true);
+    };
+
+    // Quick 1-click toggle for Auto Order Success in table
+    const handleQuickToggleAutoSuccess = (api: ApiServerConfig) => {
+        const nextVal = !(api.autoOrderSuccess !== false);
+        const updatedApi: ApiServerConfig = {
+            ...api,
+            autoPlaceOrder: nextVal,
+            autoOrderSuccess: nextVal
+        };
+        const updatedList = apiServersList.map(a => a.id === api.id ? updatedApi : a);
+        updateSiteContent('apiServers', updatedList);
+        const currentSavedApi = siteContent?.apiServer || {};
+        updateSiteContent('apiServer', {
+            ...currentSavedApi,
+            autoPlaceOrder: nextVal,
+            autoOrderSuccess: nextVal
+        });
+        setNotification(
+            nextVal
+                ? `Auto Order & Instant Dealer API Notification ENABLED for "${api.apiName}"!`
+                : `Auto Order switched to Manual Review for "${api.apiName}".`,
+            'success'
+        );
     };
 
     // Save API handler
@@ -289,6 +321,8 @@ const HostingraConnectorPage = () => {
             apiAccessKey: formAccessKey.trim(),
             balance: '2778.068',
             status: formStatus,
+            autoPlaceOrder: formAutoPlaceOrder,
+            autoOrderSuccess: formAutoOrderSuccess,
             createdAt: new Date().toISOString()
         };
 
@@ -315,13 +349,15 @@ const HostingraConnectorPage = () => {
             apiAccessKey: newOrUpdatedApi.apiAccessKey,
             balance: newOrUpdatedApi.balance,
             status: newOrUpdatedApi.status,
+            autoPlaceOrder: newOrUpdatedApi.autoPlaceOrder,
+            autoOrderSuccess: newOrUpdatedApi.autoOrderSuccess,
             marginPercent: finalMargin,
             exchangeRate: finalRate,
             autoSyncPrice: Boolean(autoSyncPrice)
         });
 
         setIsModalOpen(false);
-        setNotification(`API "${newOrUpdatedApi.apiName}" (${newOrUpdatedApi.apiType}) saved successfully!`, 'success');
+        setNotification(`API "${newOrUpdatedApi.apiName}" (${newOrUpdatedApi.apiType}) saved with Auto Order Success ${newOrUpdatedApi.autoOrderSuccess ? 'ON' : 'OFF'}!`, 'success');
 
         // If URL provided, trigger service catalog sync
         if (newOrUpdatedApi.apiUrl) {
@@ -467,6 +503,17 @@ const HostingraConnectorPage = () => {
             {/* TAB 1: API List (Exact matching the user screenshot) */}
             {automationTab === 'api_list' && (
                 <div className="bg-white rounded-lg border border-slate-200 shadow-xs overflow-hidden">
+                    {/* Auto Order Automation Status Banner */}
+                    <div className="px-4 sm:px-5 py-3 bg-emerald-50/90 border-b border-emerald-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 text-xs text-emerald-900">
+                            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse shrink-0"></span>
+                            <span className="font-bold">24x7 Auto Order Forward & Auto Success Active:</span>
+                            <span className="text-emerald-700">
+                                Jaise hi user order lagayega, connected Dealer API ke paas turant notification jayega aur order automatic <strong>Success</strong> ho jayega (Zero Admin Action).
+                            </span>
+                        </div>
+                    </div>
+
                     {/* Header Bar */}
                     <div className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200">
                         <h2 className="text-base font-bold text-slate-800 tracking-tight">
@@ -497,7 +544,7 @@ const HostingraConnectorPage = () => {
                         </div>
                     </div>
 
-                    {/* Table View matching screenshot columns: API NAME, API TYPE, API URL, BALANCE, STATUS */}
+                    {/* Table View matching screenshot columns: API NAME, API TYPE, API URL, AUTO ORDER, BALANCE, STATUS */}
                     <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse">
                             <thead>
@@ -505,6 +552,7 @@ const HostingraConnectorPage = () => {
                                     <th className="py-3 px-5">API NAME</th>
                                     <th className="py-3 px-4">API TYPE</th>
                                     <th className="py-3 px-4">API URL</th>
+                                    <th className="py-3 px-4">AUTO ORDER & NOTIFICATION</th>
                                     <th className="py-3 px-4">BALANCE</th>
                                     <th className="py-3 px-4">STATUS</th>
                                     <th className="py-3 px-4 text-right">ACTIONS</th>
@@ -513,13 +561,14 @@ const HostingraConnectorPage = () => {
                             <tbody className="divide-y divide-slate-100 text-xs">
                                 {filteredApis.length === 0 ? (
                                     <tr>
-                                        <td colSpan={6} className="py-12 text-center text-slate-400 font-medium">
+                                        <td colSpan={7} className="py-12 text-center text-slate-400 font-medium">
                                             No data available in table
                                         </td>
                                     </tr>
                                 ) : (
                                     filteredApis.map((api) => {
                                         const typeCfg = API_TYPES_CONFIG[api.apiType] || API_TYPES_CONFIG['GSM Theme'];
+                                        const isAutoSuccess = api.autoOrderSuccess !== false;
                                         return (
                                             <tr key={api.id} className="hover:bg-slate-50/70 transition-colors">
                                                 <td className="py-3.5 px-5 font-bold text-slate-900">
@@ -535,6 +584,21 @@ const HostingraConnectorPage = () => {
                                                 </td>
                                                 <td className="py-3.5 px-4 font-mono text-slate-600 truncate max-w-xs">
                                                     {api.apiUrl || '-'}
+                                                </td>
+                                                <td className="py-3.5 px-4">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleQuickToggleAutoSuccess(api)}
+                                                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold cursor-pointer transition-all border ${
+                                                            isAutoSuccess
+                                                                ? 'bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100'
+                                                                : 'bg-amber-50 text-amber-700 border-amber-300 hover:bg-amber-100'
+                                                        }`}
+                                                        title="Click to toggle Auto Order Success & Dealer API Notification"
+                                                    >
+                                                        <span className={`w-1.5 h-1.5 rounded-full ${isAutoSuccess ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
+                                                        <span>{isAutoSuccess ? 'Auto Success + API Notify: ON' : 'Manual Mode'}</span>
+                                                    </button>
                                                 </td>
                                                 <td className="py-3.5 px-4 font-bold text-emerald-600 font-mono">
                                                     ₹{api.balance || '0.00'}
@@ -597,10 +661,10 @@ const HostingraConnectorPage = () => {
                         </div>
 
                         <div className="p-4 bg-slate-50 rounded-lg border border-slate-200 space-y-2">
-                            <p className="font-bold text-slate-800">2. Hostinger MySQL Database Live Sync</p>
-                            <p className="text-slate-500">Stores users, wallets, tokens, and order history on your Hostinger cloud server.</p>
+                            <p className="font-bold text-slate-800">2. Direct Dealer Order Forward & Auto Success API</p>
+                            <p className="text-slate-500">Automatically forwards every new customer IMEI / Server / Activation order directly to your connected Dealer API URL and completes the order without manual admin intervention.</p>
                             <div className="font-mono text-[11px] bg-white p-2 rounded border border-slate-200 text-emerald-700">
-                                GET /cloud-sync.php?test=1
+                                POST /api/place-dealer-order
                             </div>
                         </div>
                     </div>
@@ -846,6 +910,43 @@ const HostingraConnectorPage = () => {
                                                 className="w-full px-3 py-2 bg-white border border-slate-300 focus:border-blue-500 rounded-md text-xs text-slate-800 font-mono outline-none transition-all"
                                             />
                                         </div>
+                                    </div>
+
+                                    {/* 6. Auto Order & Dealer Notification Options */}
+                                    <div className="pt-2 border-t border-slate-200 space-y-2.5">
+                                        <label className="flex items-start gap-2.5 p-2.5 rounded-lg bg-emerald-50/80 border border-emerald-200 cursor-pointer">
+                                            <input
+                                                type="checkbox"
+                                                checked={formAutoPlaceOrder}
+                                                onChange={(e) => setFormAutoPlaceOrder(e.target.checked)}
+                                                className="mt-0.5 w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                                            />
+                                            <div className="text-[11px] leading-snug">
+                                                <span className="font-bold text-emerald-950 block">
+                                                    Instant Dealer API Notification (Auto Forward Order)
+                                                </span>
+                                                <span className="text-emerald-700">
+                                                    Jaise hi user order lagayega, seedha is Dealer API ke paas order aur notification chala jayega.
+                                                </span>
+                                            </div>
+                                        </label>
+
+                                        <label className="flex items-start gap-2.5 p-2.5 rounded-lg bg-blue-50/80 border border-blue-200 cursor-pointer">
+                                            <input
+                                                type="checkbox"
+                                                checked={formAutoOrderSuccess}
+                                                onChange={(e) => setFormAutoOrderSuccess(e.target.checked)}
+                                                className="mt-0.5 w-4 h-4 rounded text-blue-600 focus:ring-blue-500 cursor-pointer"
+                                            />
+                                            <div className="text-[11px] leading-snug">
+                                                <span className="font-bold text-blue-950 block">
+                                                    Auto Order Success (Zero Admin Action)
+                                                </span>
+                                                <span className="text-blue-700">
+                                                    Bina Admin ke beech mein kuch kiye order automatic Success ho jayega (Waiting Action mein nahi rukega).
+                                                </span>
+                                            </div>
+                                        </label>
                                     </div>
 
                                 </div>

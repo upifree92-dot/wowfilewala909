@@ -229,4 +229,6 @@ export interface ApiServerConfig {
   marginPercent?: number;
   exchangeRate?: number;
   autoSyncPrice?: boolean;
+  autoPlaceOrder?: boolean;
+  autoOrderSuccess?: boolean;
 }

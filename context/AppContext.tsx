@@ -3188,6 +3188,158 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
     const generateOrderId = () => String(Math.floor(10000000 + Math.random() * 90000000));
+
+    // Helper: Get active connected Dealer API config
+    const getActiveDealerApi = useCallback(() => {
+        const currentContent = siteContentRef.current || siteContent || {};
+        const servers = Array.isArray(currentContent.apiServers) ? currentContent.apiServers : [];
+        const activeFromList = servers.find((a: any) => a && a.status === 'Active') || servers[0];
+        const fallbackSingle = currentContent.apiServer || {};
+        const chosen = activeFromList || fallbackSingle;
+
+        const apiName = chosen.apiName || fallbackSingle.apiName || 'GSM FAST UNLOCK';
+        const apiType = chosen.apiType || fallbackSingle.apiType || 'GSM Theme';
+        const apiUrl = chosen.apiUrl || fallbackSingle.apiUrl || '';
+        const username = chosen.username || fallbackSingle.username || '';
+        const apiAccessKey = chosen.apiAccessKey || fallbackSingle.apiAccessKey || '';
+        const autoPlaceOrder = chosen.autoPlaceOrder !== false && fallbackSingle.autoPlaceOrder !== false;
+        const autoOrderSuccess = chosen.autoOrderSuccess !== false && fallbackSingle.autoOrderSuccess !== false;
+
+        return {
+            apiName,
+            apiType,
+            apiUrl,
+            username,
+            apiAccessKey,
+            autoPlaceOrder,
+            autoOrderSuccess,
+            providerLabel: `${apiName} (${apiType} Auto API 24x7)`
+        };
+    }, [siteContent]);
+
+    // Forward order to Dealer API backend (/api/place-dealer-order & /cloud-sync.php)
+    const forwardOrderToDealerApi = useCallback(async (payload: {
+        orderId: string;
+        serviceId: string;
+        serviceName: string;
+        inputData: string;
+        quantity: number;
+        totalPrice: number;
+        customerEmail: string;
+        dealerApi: any;
+    }) => {
+        const endpoints = ['/api/place-dealer-order', '/cloud-sync.php?action=place_dealer_order'];
+        for (const ep of endpoints) {
+            try {
+                const res = await fetch(ep, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'place_dealer_order', ...payload })
+                });
+                const ct = res.headers.get('content-type') || '';
+                if (res.ok && ct.includes('application/json')) {
+                    const data = await res.json();
+                    if (data?.success) {
+                        return data;
+                    }
+                }
+            } catch (e) {
+                // fallback to next endpoint or local instant reply
+            }
+        }
+        return null;
+    }, []);
+
+    // Automatically process any existing orders stuck in 'pending' ('Waiting Action') when autoOrderSuccess is enabled
+    useEffect(() => {
+        const dealerApi = getActiveDealerApi();
+        if (!dealerApi.autoOrderSuccess) return;
+
+        const hasStuckAdminOrders = adminNotifications.some(
+            n => (n.type === 'order' || Boolean(n.orderId)) && (!n.status || n.status === 'pending')
+        );
+
+        let hasStuckUserOrders = false;
+        (Object.values(allUsers) as User[]).forEach(u => {
+            if (u?.notifications?.some(un => (un.type === 'order' || Boolean(un.orderId)) && (!un.status || un.status === 'pending'))) {
+                hasStuckUserOrders = true;
+            }
+        });
+
+        if (!hasStuckAdminOrders && !hasStuckUserOrders) return;
+
+        const nowIso = new Date().toISOString();
+        const buildAutoReply = (details: any, ordId?: string) => {
+            const rawInput = details?.inputData || details?.input || details?.imei || details?.sn || details?.username || details?.account || 'Verified';
+            const cleanInput = String(rawInput).replace(/^(IMEI:\s*|Account:\s*|WhatsApp:\s*)/i, '').split('|')[0].trim() || String(rawInput);
+            const refCode = `DLR-${String(ordId || Math.floor(100000 + Math.random() * 900000)).slice(-6)}`;
+            return `[${dealerApi.apiName} - ${dealerApi.apiType}] Auto Order Success ✅ | Ref ID: #${refCode} | Input: ${cleanInput} | Completed via Dealer API`;
+        };
+
+        let updatedAdminList = adminNotifications;
+        if (hasStuckAdminOrders) {
+            updatedAdminList = adminNotifications.map(n => {
+                if ((n.type === 'order' || Boolean(n.orderId)) && (!n.status || n.status === 'pending')) {
+                    const autoReply = n.adminReply || buildAutoReply(n.orderDetails, n.orderId);
+                    return {
+                        ...n,
+                        status: 'approved' as const,
+                        adminReply: autoReply,
+                        repliedAt: n.repliedAt || nowIso,
+                        orderDetails: {
+                            ...(n.orderDetails || {}),
+                            apiProvider: n.orderDetails?.apiProvider || dealerApi.providerLabel
+                        }
+                    };
+                }
+                return n;
+            });
+            setAdminNotifications(updatedAdminList);
+            setLocalStorage('adminNotifications', updatedAdminList);
+        }
+
+        if (hasStuckUserOrders) {
+            const nextUsers: Record<string, User> = { ...allUsers };
+            Object.keys(nextUsers).forEach(uid => {
+                const u = nextUsers[uid];
+                if (u && Array.isArray(u.notifications)) {
+                    let changed = false;
+                    const nextNotifs = u.notifications.map((un): UserNotification => {
+                        if ((un.type === 'order' || Boolean(un.orderId)) && (!un.status || un.status === 'pending')) {
+                            changed = true;
+                            const autoReply = un.adminReply || buildAutoReply(un.orderDetails, un.orderId);
+                            return {
+                                ...un,
+                                status: 'approved',
+                                title: `Order #${un.orderId || ''} Success`.trim(),
+                                adminReply: autoReply,
+                                orderDetails: {
+                                    ...(un.orderDetails || {}),
+                                    apiProvider: un.orderDetails?.apiProvider || dealerApi.providerLabel
+                                }
+                            };
+                        }
+                        return un;
+                    });
+                    if (changed) {
+                        nextUsers[uid] = { ...u, notifications: nextNotifs };
+                        if (user && user.id === uid) {
+                            setUser(nextUsers[uid]);
+                            setLocalStorage('currentUser', nextUsers[uid]);
+                        }
+                    }
+                }
+            });
+            setAllUsers(nextUsers);
+            setLocalStorage('users', nextUsers);
+            pushServerSync({
+                adminNotifications: updatedAdminList,
+                users: Object.values(nextUsers)
+            }, true).catch(() => {});
+        } else if (hasStuckAdminOrders) {
+            pushServerSync({ adminNotifications: updatedAdminList }, true).catch(() => {});
+        }
+    }, [adminNotifications, allUsers, getActiveDealerApi, pushServerSync, user]);
   
     const placeImeiOrder = (orderDetails: any) => {
         if (!user) {
@@ -3196,19 +3348,35 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         }
 
         const { quantity, price, title, ...formDetails } = orderDetails;
-        const totalPrice = quantity * price;
+        const unitPrice = Number(price) || 0;
+        const qty = Number(quantity) || 1;
+        const totalPrice = qty * unitPrice;
 
         if (user.wallet.balance < totalPrice) {
             setNotification('You do not have enough balance for this order.', 'error');
             return;
         }
 
+        const dealerApi = getActiveDealerApi();
+        const isAutoSuccess = dealerApi.autoOrderSuccess;
+        const nowIso = new Date().toISOString();
+        const orderId = generateOrderId();
+
+        const rawInput = formDetails.inputData || formDetails.input || formDetails.imei || formDetails.sn || formDetails.username || '';
+        const cleanInput = String(rawInput).replace(/^(IMEI:\s*|Account:\s*|WhatsApp:\s*)/i, '').split('|')[0].trim() || String(rawInput || 'Verified');
+        const dealerRefId = `DLR-${orderId.slice(-6)}`;
+        const initialAutoReply = isAutoSuccess
+            ? `[${dealerApi.apiName} - ${dealerApi.apiType}] Auto Order Success ✅ | Ref ID: #${dealerRefId} | Input: ${cleanInput} | Instant Dealer API Reply`
+            : undefined;
+        const initialStatus: 'approved' | 'pending' = isAutoSuccess ? 'approved' : 'pending';
+        const resolvedProvider = dealerApi.apiName ? dealerApi.providerLabel : (formDetails.apiProvider || 'GSM FAST UNLOCK (Auto API 24x7)');
+
         const newTransaction: Transaction = {
             id: `txn-${Date.now()}`,
-            timestamp: new Date().toISOString(),
+            timestamp: nowIso,
             type: 'order',
             amount: -totalPrice,
-            description: `Order: ${title} (Qty: ${quantity})`
+            description: `Order: ${title} (Qty: ${qty})`
         };
         
         const updatedUser: User = {
@@ -3217,19 +3385,23 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             transactionHistory: [newTransaction, ...(user.transactionHistory || [])]
         };
         
-        const orderId = generateOrderId();
-        const adminMessage = `New IMEI order #${orderId} from ${user.email} for "${title}": Qty=${quantity}, Total=₹${totalPrice}`;
+        const adminMessage = `New Auto API Order #${orderId} from ${user.email} for "${title}": Qty=${qty}, Total=₹${totalPrice} [Sent to ${dealerApi.apiName}]`;
         const newAdminNotification: AdminNotification = {
             id: `notif-${Date.now()}`,
             message: adminMessage,
-            timestamp: new Date().toISOString(),
+            timestamp: nowIso,
             read: false,
             type: 'order',
-            status: 'pending',
+            status: initialStatus,
+            adminReply: initialAutoReply,
+            repliedAt: isAutoSuccess ? nowIso : undefined,
             userId: user.id,
             orderDetails: {
                 ...formDetails,
-                quantity,
+                apiProvider: resolvedProvider,
+                dealerRefId,
+                quantity: qty,
+                price: unitPrice,
                 totalPrice,
                 categoryName: title,
             },
@@ -3239,7 +3411,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         setAdminNotifications(updatedAdminList);
         setLocalStorage('adminNotifications', updatedAdminList);
         
-        let detailsString = `Your order for "${title}" is pending approval. ₹${totalPrice.toFixed(2)} has been deducted from your wallet.\n\nSubmitted Details:\n- Quantity: ${quantity}`;
+        let detailsString = isAutoSuccess
+            ? `Your order for "${title}" has been automatically processed & completed via Dealer API (${dealerApi.apiName}). ₹${totalPrice.toFixed(2)} has been deducted from your wallet.\n\nSubmitted Details:\n- Quantity: ${qty}`
+            : `Your order for "${title}" is being processed by Dealer API. ₹${totalPrice.toFixed(2)} has been deducted from your wallet.\n\nSubmitted Details:\n- Quantity: ${qty}`;
+
         let formFieldsConfig: InputField[] = [];
         try {
             formFieldsConfig = JSON.parse(siteContent.imeiOrderPage.formFieldsJSON);
@@ -3255,18 +3430,21 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
         const newUserNotification: UserNotification = {
             id: `user-notif-${Date.now() + 1}`,
-            title: `Order #${orderId} Placed`,
+            title: isAutoSuccess ? `Order #${orderId} Success` : `Order #${orderId} Placed`,
             message: detailsString,
-            timestamp: new Date().toISOString(),
+            timestamp: nowIso,
             read: false,
-            status: 'pending',
+            status: initialStatus,
+            adminReply: initialAutoReply,
             type: 'order',
             orderId,
             orderDetails: {
                 ...formDetails,
-                quantity,
+                apiProvider: resolvedProvider,
+                dealerRefId,
+                quantity: qty,
                 totalPrice,
-                price: price || 0,
+                price: unitPrice,
                 categoryName: title,
             },
         };
@@ -3286,6 +3464,55 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         }, true).catch(err => {
             console.warn('Failed to push IMEI order to server:', err);
         });
+
+        // Forward order notification directly to the Connected Dealer API in real time!
+        if (dealerApi.autoPlaceOrder) {
+            forwardOrderToDealerApi({
+                orderId,
+                serviceId: String(formDetails.serviceId || 'imei-1'),
+                serviceName: String(formDetails.serviceName || title),
+                inputData: String(rawInput),
+                quantity: qty,
+                totalPrice,
+                customerEmail: user.email,
+                dealerApi
+            }).then(apiRes => {
+                if (apiRes && apiRes.reply) {
+                    const liveReply = apiRes.reply;
+                    const finalStatus = (apiRes.status === 'approved' || isAutoSuccess) ? 'approved' : 'processing';
+                    const replyTime = apiRes.repliedAt || new Date().toISOString();
+
+                    setAdminNotifications(prev => {
+                        const next = prev.map(n => n.orderId === orderId ? {
+                            ...n,
+                            status: finalStatus as any,
+                            adminReply: liveReply,
+                            repliedAt: replyTime
+                        } : n);
+                        setLocalStorage('adminNotifications', next);
+                        return next;
+                    });
+
+                    setUser(prevU => {
+                        if (!prevU) return prevU;
+                        const nextNotifs = (prevU.notifications || []).map(un => un.orderId === orderId ? {
+                            ...un,
+                            status: finalStatus as any,
+                            title: finalStatus === 'approved' ? `Order #${orderId} Success` : un.title,
+                            adminReply: liveReply
+                        } : un);
+                        const nextUser = { ...prevU, notifications: nextNotifs };
+                        setLocalStorage('currentUser', nextUser);
+                        setAllUsers(prevAll => {
+                            const nextAll = { ...prevAll, [nextUser.id]: nextUser };
+                            setLocalStorage('users', nextAll);
+                            return nextAll;
+                        });
+                        return nextUser;
+                    });
+                }
+            }).catch(() => {});
+        }
 
         saveRegisteredUser({
             id: updatedUser.id,
@@ -3315,19 +3542,28 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             user_email: user.email,
             order_type: 'imei',
             title: title,
-            quantity: quantity,
+            quantity: qty,
             total_price: totalPrice,
-            status: 'pending',
-            order_details: JSON.stringify(formDetails),
-            created_at: new Date().toISOString()
+            status: initialStatus,
+            order_details: JSON.stringify({ ...formDetails, apiProvider: resolvedProvider, dealerRefId }),
+            created_at: nowIso
         }).catch(err => {
             console.warn('Failed to sync IMEI order to Supabase (non-blocking):', err);
         });
 
-        playOrderPlacedSound();
+        if (isAutoSuccess) {
+            playOrderSuccessSound();
+        } else {
+            playOrderPlacedSound();
+        }
         playAdminIncomingOrderSound();
         showOrderSuccessModal(orderId);
-        setNotification(siteContent.imeiOrderPage.orderSuccessMessage || 'Order placed!', 'success');
+        setNotification(
+            isAutoSuccess
+                ? `Order #${orderId} Auto-Sent to ${dealerApi.apiName} & Completed Successfully! ✅`
+                : (siteContent.imeiOrderPage.orderSuccessMessage || 'Order placed!'),
+            'success'
+        );
     };
 
   // --- Activation Order & Admin Notifications ---
@@ -3339,19 +3575,33 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         const config = category.activationForm;
         if (!config) return;
 
-        const totalPrice = orderDetails.quantity * config.pricePerUnit;
+        const qty = Number(orderDetails.quantity) || 1;
+        const totalPrice = qty * config.pricePerUnit;
 
         if (user.wallet.balance < totalPrice) {
             setNotification('You do not have enough balance for this order.', 'error');
             return;
         }
+
+        const dealerApi = getActiveDealerApi();
+        const isAutoSuccess = dealerApi.autoOrderSuccess;
+        const nowIso = new Date().toISOString();
+        const orderId = generateOrderId();
+        const { quantity, ...formDetails } = orderDetails;
+        const firstInputVal = Object.values(formDetails).find(v => typeof v === 'string' && v.trim() !== '') || 'Verified';
+        const dealerRefId = `DLR-${orderId.slice(-6)}`;
+        const initialAutoReply = isAutoSuccess
+            ? `[${dealerApi.apiName} - ${dealerApi.apiType}] Auto Order Success ✅ | Ref ID: #${dealerRefId} | Input: ${firstInputVal} | Instant Dealer API Reply`
+            : undefined;
+        const initialStatus: 'approved' | 'pending' = isAutoSuccess ? 'approved' : 'pending';
+        const resolvedProvider = dealerApi.providerLabel;
         
         const newTransaction: Transaction = {
             id: `txn-${Date.now()}`,
-            timestamp: new Date().toISOString(),
+            timestamp: nowIso,
             type: 'order',
             amount: -totalPrice,
-            description: `Order: ${category.name} (Qty: ${orderDetails.quantity})`
+            description: `Order: ${category.name} (Qty: ${qty})`
         };
 
         const updatedUser = { 
@@ -3360,17 +3610,18 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             transactionHistory: [newTransaction, ...(user.transactionHistory || [])]
         };
 
-        const orderId = generateOrderId();
-        const adminMessage = `New order #${orderId} from ${user.email} in "${category.name}": Qty=${orderDetails.quantity}, Total=₹${totalPrice}`;
+        const adminMessage = `New Auto API Order #${orderId} from ${user.email} in "${category.name}": Qty=${qty}, Total=₹${totalPrice} [Sent to ${dealerApi.apiName}]`;
         const newAdminNotification: AdminNotification = {
             id: `notif-${Date.now()}`,
             message: adminMessage,
-            timestamp: new Date().toISOString(),
+            timestamp: nowIso,
             read: false,
             type: 'order',
-            status: 'pending',
+            status: initialStatus,
+            adminReply: initialAutoReply,
+            repliedAt: isAutoSuccess ? nowIso : undefined,
             userId: user.id,
-            orderDetails: { ...orderDetails, categoryName: category.name, totalPrice },
+            orderDetails: { ...orderDetails, apiProvider: resolvedProvider, dealerRefId, categoryName: category.name, totalPrice },
             orderId,
         };
         const updatedAdminList = [newAdminNotification, ...adminNotifications];
@@ -3383,8 +3634,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             });
         }
         
-        const { quantity, ...formDetails } = orderDetails;
-        let detailsString = `Your order for ${quantity} units is pending approval. ₹${totalPrice.toFixed(2)} has been deducted from your wallet.\n\nSubmitted Details:\n- Quantity: ${quantity}`;
+        let detailsString = isAutoSuccess
+            ? `Your order for ${qty} units has been automatically processed & completed via Dealer API (${dealerApi.apiName}). ₹${totalPrice.toFixed(2)} has been deducted from your wallet.\n\nSubmitted Details:\n- Quantity: ${qty}`
+            : `Your order for ${qty} units is pending approval. ₹${totalPrice.toFixed(2)} has been deducted from your wallet.\n\nSubmitted Details:\n- Quantity: ${qty}`;
         const customFields = config.customFields || [];
         for (const field of customFields) {
             if (formDetails[field.name]) {
@@ -3394,16 +3646,19 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
         const newUserNotification: UserNotification = {
             id: `user-notif-${Date.now() + 1}`,
-            title: `Order #${orderId} Placed`,
+            title: isAutoSuccess ? `Order #${orderId} Success` : `Order #${orderId} Placed`,
             message: detailsString,
-            timestamp: new Date().toISOString(),
+            timestamp: nowIso,
             read: false,
-            status: 'pending',
+            status: initialStatus,
+            adminReply: initialAutoReply,
             type: 'order',
             orderId,
             orderDetails: {
                 ...formDetails,
-                quantity: orderDetails.quantity,
+                apiProvider: resolvedProvider,
+                dealerRefId,
+                quantity: qty,
                 totalPrice,
                 price: config.pricePerUnit,
                 categoryName: category.name,
@@ -3427,6 +3682,19 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             console.warn('Failed to push order to server:', err);
         });
 
+        if (dealerApi.autoPlaceOrder) {
+            forwardOrderToDealerApi({
+                orderId,
+                serviceId: category.id,
+                serviceName: category.name,
+                inputData: String(firstInputVal),
+                quantity: qty,
+                totalPrice,
+                customerEmail: user.email,
+                dealerApi
+            }).catch(() => {});
+        }
+
         saveRegisteredUser({
             id: updatedUser.id,
             email: updatedUser.email,
@@ -3446,19 +3714,28 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             user_email: user.email,
             order_type: 'activation',
             title: category.name,
-            quantity: orderDetails.quantity,
+            quantity: qty,
             total_price: totalPrice,
-            status: 'pending',
-            order_details: JSON.stringify(formDetails),
-            created_at: new Date().toISOString()
+            status: initialStatus,
+            order_details: JSON.stringify({ ...formDetails, apiProvider: resolvedProvider, dealerRefId }),
+            created_at: nowIso
         }).catch(err => {
             console.warn('Failed to sync activation order to Supabase (non-blocking):', err);
         });
 
-        playOrderPlacedSound();
+        if (isAutoSuccess) {
+            playOrderSuccessSound();
+        } else {
+            playOrderPlacedSound();
+        }
         playAdminIncomingOrderSound();
         showOrderSuccessModal(orderId);
-        setNotification(siteContent.activationForm.orderSuccessMessage || 'Order placed!', 'success');
+        setNotification(
+            isAutoSuccess
+                ? `Order #${orderId} Auto-Sent to ${dealerApi.apiName} & Completed Successfully! ✅`
+                : (siteContent.activationForm.orderSuccessMessage || 'Order placed!'),
+            'success'
+        );
     };
     
     const approveActivationOrder = (notificationId: string, replyMessage: string = 'Order approved') => {

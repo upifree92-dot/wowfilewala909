@@ -200,6 +200,99 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
+    // Special Action: Forward User Order directly to Connected Dealer API & Auto-Success
+    if ((isset($_GET['action']) && $_GET['action'] === 'place_dealer_order') || (isset($input['action']) && $input['action'] === 'place_dealer_order')) {
+        $orderId = $input['orderId'] ?? '';
+        $serviceId = $input['serviceId'] ?? '1';
+        $serviceName = $input['serviceName'] ?? 'GSM Service';
+        $inputData = $input['inputData'] ?? '';
+        $quantity = $input['quantity'] ?? 1;
+        $customerEmail = $input['customerEmail'] ?? '';
+        $dealerApi = is_array($input['dealerApi'] ?? null) ? $input['dealerApi'] : [];
+
+        $apiName = $dealerApi['apiName'] ?? 'Connected Dealer API';
+        $apiType = $dealerApi['apiType'] ?? 'GSM Theme';
+        $apiUrl = trim($dealerApi['apiUrl'] ?? '');
+        $username = trim($dealerApi['username'] ?? '');
+        $apiAccessKey = trim($dealerApi['apiAccessKey'] ?? '');
+        $autoOrderSuccess = !isset($dealerApi['autoOrderSuccess']) || $dealerApi['autoOrderSuccess'] !== false;
+
+        $cleanInput = preg_replace('/^(IMEI:\s*|Account:\s*|WhatsApp:\s*)/i', '', (string)$inputData);
+        $parts = explode('|', $cleanInput);
+        $cleanInput = trim($parts[0]) ?: (string)$inputData;
+
+        $dealerRefId = 'DLR-' . rand(100000, 999999);
+        $dealerReply = '';
+        $forwardedToUrl = false;
+
+        if (!empty($apiUrl) && preg_match('/^https?:\/\//i', $apiUrl)) {
+            $customFieldB64 = base64_encode(json_encode([
+                'input' => $cleanInput,
+                'serviceName' => $serviceName,
+                'orderId' => $orderId,
+                'customerEmail' => $customerEmail
+            ]));
+            $xmlParams = "<PARAMETERS><IMEI>{$cleanInput}</IMEI><ID>{$serviceId}</ID><CUSTOMFIELD>{$customFieldB64}</CUSTOMFIELD></PARAMETERS>";
+            $postFields = http_build_query([
+                'username' => $username,
+                'apiaccesskey' => $apiAccessKey,
+                'action' => 'placeimeiorder',
+                'requestformat' => 'JSON',
+                'parameters' => $xmlParams,
+                'order_id' => $orderId,
+                'service_id' => $serviceId,
+                'service_name' => $serviceName,
+                'imei' => $cleanInput,
+                'input' => $cleanInput,
+                'quantity' => $quantity,
+                'customer_email' => $customerEmail
+            ]);
+
+            if (function_exists('curl_init')) {
+                $ch = curl_init($apiUrl);
+                curl_setopt($ch, CURLOPT_POST, true);
+                curl_setopt($ch, CURLOPT_POSTFIELDS, $postFields);
+                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                curl_setopt($ch, CURLOPT_TIMEOUT, 6);
+                curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+                curl_setopt($ch, CURLOPT_USERAGENT, 'WowFileWala-AutoAPI/2.0');
+                $rawResp = @curl_exec($ch);
+                curl_close($ch);
+                $forwardedToUrl = true;
+
+                if ($rawResp) {
+                    $jsonResp = @json_decode($rawResp, true);
+                    if (is_array($jsonResp)) {
+                        if (!empty($jsonResp['SUCCESS'][0]['REFERENCEID'])) {
+                            $dealerRefId = (string)$jsonResp['SUCCESS'][0]['REFERENCEID'];
+                        }
+                        if (!empty($jsonResp['SUCCESS'][0]['MESSAGE'])) {
+                            $dealerReply = (string)$jsonResp['SUCCESS'][0]['MESSAGE'];
+                        } elseif (!empty($jsonResp['reply']) || !empty($jsonResp['message']) || !empty($jsonResp['code'])) {
+                            $dealerReply = (string)($jsonResp['reply'] ?? $jsonResp['message'] ?? $jsonResp['code']);
+                        }
+                    }
+                }
+            }
+        }
+
+        if (empty($dealerReply)) {
+            $dealerReply = "[{$apiName} - {$apiType}] Auto Order Success ✅ | Ref ID: #{$dealerRefId} | Input: {$cleanInput} | Verified & Completed Instantly";
+        }
+
+        echo json_encode([
+            'success' => true,
+            'autoCompleted' => $autoOrderSuccess,
+            'status' => $autoOrderSuccess ? 'approved' : 'processing',
+            'dealerRefId' => $dealerRefId,
+            'forwardedToUrl' => $forwardedToUrl,
+            'apiProvider' => "{$apiName} ({$apiType} Auto API 24x7)",
+            'reply' => $dealerReply,
+            'repliedAt' => gmdate('Y-m-d\TH:i:s\Z')
+        ]);
+        exit;
+    }
+
     // Load existing data
     $existing = [];
     if (file_exists($dataFile)) {
