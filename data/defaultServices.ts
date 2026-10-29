@@ -5260,23 +5260,6 @@ export const DEFAULT_SERVICES_CATALOG: Product[] = [
     "date": "2026-10-27"
   },
   {
-    "id": "gsm-server-306",
-    "name": "MRST Pro Digital Activation Code [1 Year]",
-    "categoryId": "server-services",
-    "serviceType": "server",
-    "price": 2880.92,
-    "downloadLink": "#",
-    "description": "MRST Pro Digital Activation Code [1 Year] - Live GSM Service",
-    "size": "Auto API",
-    "views": 0,
-    "downloads": 0,
-    "rating": 5,
-    "tags": [
-      "paid"
-    ],
-    "date": "2026-10-27"
-  },
-  {
     "id": "gsm-remote-307",
     "name": "MRST Pro Rent [2 Hours]-[instant-Auto API 24x7] \u2705",
     "categoryId": "remote-tool-rent",

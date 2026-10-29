@@ -283,7 +283,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const loaded = getLocalStorage<Product[]>('products', []);
     // Remove any previous dummy files (file-srv-, etc.) so only user-provided items exist
     const validLoaded = Array.isArray(loaded)
-      ? loaded.filter((p: Product) => p && p.id && !p.id.startsWith('file-srv-') && !['prod-zhizhen-demo', 'prod-realme-n55', 'prod-cph2691', 'prod-infinix-hot-50'].includes(p.id))
+      ? loaded.filter((p: Product) => p && p.id && !p.id.startsWith('file-srv-') && !['prod-zhizhen-demo', 'prod-realme-n55', 'prod-cph2691', 'prod-infinix-hot-50', 'gsm-server-306', 'srv-1'].includes(p.id) && !p.name?.toLowerCase().includes('mrst pro digital activation code'))
       : [];
 
     if (validLoaded.length === 0 || !validLoaded.some(p => p.id && p.id.startsWith('gsm-'))) {
@@ -565,7 +565,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
     if (Array.isArray(snapshot.products) && snapshot.products.length > 0) {
       const cleanProducts = snapshot.products.filter((p: any) => 
-        p && p.id && !['prod-zhizhen-demo', 'prod-realme-n55', 'prod-cph2691', 'prod-infinix-hot-50'].includes(p.id)
+        p && p.id && !['prod-zhizhen-demo', 'prod-realme-n55', 'prod-cph2691', 'prod-infinix-hot-50', 'gsm-server-306', 'srv-1'].includes(p.id) && !p.name?.toLowerCase().includes('mrst pro digital activation code')
       );
       if (cleanProducts.length > 0) {
         setProducts(cleanProducts);
@@ -1061,7 +1061,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           }
         }
         if (!pulledFromServer && cloudProducts.success && cloudProducts.data && cloudProducts.data.value) {
-          setProducts(cloudProducts.data.value);
+          const rawProds = Array.isArray(cloudProducts.data.value) ? cloudProducts.data.value : [];
+          const cleanProds = rawProds.filter((p: any) => p && p.id && !['prod-zhizhen-demo', 'prod-realme-n55', 'prod-cph2691', 'prod-infinix-hot-50', 'gsm-server-306', 'srv-1'].includes(p.id) && !p.name?.toLowerCase().includes('mrst pro digital activation code'));
+          setProducts(cleanProds);
         }
         if (!pulledFromServer && cloudCategories.success && cloudCategories.data && cloudCategories.data.value) {
           setCategories(cloudCategories.data.value);
