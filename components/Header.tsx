@@ -405,15 +405,16 @@ const Header = () => {
       <div className="bg-slate-50 dark:bg-[#202329] border-b border-gray-200 dark:border-gray-700 py-1.5 px-4 text-xs font-medium text-gray-500 dark:text-gray-400">
         <div className="container mx-auto flex justify-between items-center gap-3">
           <div className="flex-1 flex items-center overflow-hidden mr-4">
-            {/* Using a simple marquee for the 'running option' request */}
-            <marquee 
-              className="text-orange-500 font-semibold tracking-wide" 
-              scrollamount="4"
-              onMouseEnter={(e: any) => e.target.stop && e.target.stop()}
-              onMouseLeave={(e: any) => e.target.start && e.target.start()}
-            >
-              {recentFilesMarqueeText}
-            </marquee>
+            {React.createElement(
+              'marquee' as any,
+              {
+                className: "text-orange-500 font-semibold tracking-wide",
+                scrollamount: "4",
+                onMouseEnter: (e: any) => e.target.stop && e.target.stop(),
+                onMouseLeave: (e: any) => e.target.start && e.target.start()
+              },
+              recentFilesMarqueeText
+            )}
           </div>
 
           <div className="flex justify-end items-center gap-3 shrink-0">

@@ -1,6 +1,6 @@
 export interface ImeiServiceItem {
   id: string;
-  avatar: string;
+  avatar?: string;
   name: string;
   category: string;
   price: number;

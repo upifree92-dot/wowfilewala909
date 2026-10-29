@@ -1,76 +1,333 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useAppContext } from '../../context/AppContext';
+import { GsmApiType, ApiServerConfig } from '../../types';
 import { 
     X, 
     Check, 
     RefreshCw, 
-    ShieldCheck, 
     Trash2, 
-    DollarSign, 
-    Layers, 
     Settings, 
+    Plus, 
+    Search, 
     CheckCircle2, 
     AlertTriangle,
-    Plus
+    ExternalLink,
+    ChevronDown,
+    Sliders,
+    Layers,
+    Clock,
+    Server,
+    ShieldCheck
 } from 'lucide-react';
+
+const API_TYPES_CONFIG: Record<GsmApiType, {
+    name: GsmApiType;
+    color: string;
+    badgeBg: string;
+    badgeText: string;
+    logo: React.ReactNode;
+    urlExample: string;
+    features: string[];
+}> = {
+    'GSM Theme': {
+        name: 'GSM Theme',
+        color: '#10b981',
+        badgeBg: 'bg-emerald-600',
+        badgeText: 'text-white',
+        logo: (
+            <div className="w-5 h-5 rounded bg-[#10b981] text-white flex items-center justify-center font-bold text-[10px] shadow-xs shrink-0">
+                G
+            </div>
+        ),
+        urlExample: 'https://example.com/public',
+        features: [
+            'Bulk Send Per Batch',
+            'Bulk Get Per Batch',
+            'Auto Update Price',
+            'Auto Update Quantity',
+            'Auto Update Delivery Time',
+            'Must Setup Corn Job For Process'
+        ]
+    },
+    'GSM Tool': {
+        name: 'GSM Tool',
+        color: '#3b82f6',
+        badgeBg: 'bg-blue-600',
+        badgeText: 'text-white',
+        logo: (
+            <div className="w-5 h-5 rounded bg-[#3b82f6] text-white flex items-center justify-center font-bold text-[9px] shadow-xs shrink-0">
+                GT
+            </div>
+        ),
+        urlExample: 'https://example.com/api/v1',
+        features: [
+            'Bulk Send Per Batch',
+            'Bulk Get Per Batch',
+            'Auto Update Price',
+            'Auto Update Quantity',
+            'Auto Update Delivery Time',
+            'Must Setup Corn Job For Process'
+        ]
+    },
+    'Dhru Fusion': {
+        name: 'Dhru Fusion',
+        color: '#18181b',
+        badgeBg: 'bg-neutral-900',
+        badgeText: 'text-white',
+        logo: (
+            <div className="w-5 h-5 rounded bg-[#18181b] text-white flex items-center justify-center font-black text-xs shadow-xs shrink-0">
+                D
+            </div>
+        ),
+        urlExample: 'https://example.com/api/index.php',
+        features: [
+            'Bulk Send Per Batch',
+            'Bulk Get Per Batch',
+            'Auto Update Price',
+            'Auto Update Quantity',
+            'Auto Update Delivery Time',
+            'Must Setup Corn Job For Process'
+        ]
+    },
+    'WebX': {
+        name: 'WebX',
+        color: '#000000',
+        badgeBg: 'bg-black',
+        badgeText: 'text-cyan-400',
+        logo: (
+            <div className="w-5 h-5 rounded bg-black text-cyan-400 flex items-center justify-center font-black text-xs border border-cyan-500/40 shadow-xs shrink-0">
+                X
+            </div>
+        ),
+        urlExample: 'https://example.com/webx/api',
+        features: [
+            'Bulk Send Per Batch',
+            'Bulk Get Per Batch',
+            'Auto Update Price',
+            'Auto Update Quantity',
+            'Auto Update Delivery Time',
+            'Must Setup Corn Job For Process'
+        ]
+    },
+    'Naksh Soft': {
+        name: 'Naksh Soft',
+        color: '#0284c7',
+        badgeBg: 'bg-sky-600',
+        badgeText: 'text-white',
+        logo: (
+            <div className="w-5 h-5 rounded bg-sky-600 text-white flex items-center justify-center font-black text-xs shadow-xs shrink-0">
+                N
+            </div>
+        ),
+        urlExample: 'https://example.com/api/v2',
+        features: [
+            'Bulk Send Per Batch',
+            'Bulk Get Per Batch',
+            'Auto Update Price',
+            'Auto Update Quantity',
+            'Auto Update Delivery Time',
+            'Must Setup Corn Job For Process'
+        ]
+    }
+};
+
+const ALL_API_TYPES: GsmApiType[] = [
+    'GSM Theme',
+    'GSM Tool',
+    'Dhru Fusion',
+    'WebX',
+    'Naksh Soft'
+];
 
 const HostingraConnectorPage = () => {
     const { siteContent, updateSiteContent, setNotification, createProduct, updateProduct, products, categories } = useAppContext();
+    const [searchParams] = useSearchParams();
 
-    // Active tab in side menu: 'api_info' | 'pricing' | 'manage' | 'services' | 'delete'
-    const [activeTab, setActiveTab] = useState<'api_info' | 'pricing' | 'manage' | 'services' | 'delete'>('api_info');
+    // Tab mode: 'api_list' | 'builtin' | 'cron' | 'pricing'
+    const tabParam = searchParams.get('tab');
+    const [automationTab, setAutomationTab] = useState<'api_list' | 'builtin' | 'cron' | 'pricing'>('api_list');
 
-    // Clean API Server credentials state with NO hardcoded default values
+    useEffect(() => {
+        if (tabParam === 'builtin') setAutomationTab('builtin');
+        else if (tabParam === 'cron') setAutomationTab('cron');
+        else if (tabParam === 'pricing') setAutomationTab('pricing');
+        else setAutomationTab('api_list');
+    }, [tabParam]);
+
+    // APIs List state
+    const apiServersList: ApiServerConfig[] = useMemo(() => {
+        if (Array.isArray(siteContent?.apiServers) && siteContent.apiServers.length > 0) {
+            return siteContent.apiServers;
+        }
+        if (siteContent?.apiServer?.apiUrl) {
+            return [{
+                id: 'api-primary',
+                apiName: siteContent.apiServer.apiName || 'E-Unlocker API',
+                apiType: (siteContent.apiServer.apiType as GsmApiType) || 'GSM Theme',
+                apiUrl: siteContent.apiServer.apiUrl,
+                username: siteContent.apiServer.username || '',
+                apiAccessKey: siteContent.apiServer.apiAccessKey || '',
+                balance: siteContent.apiServer.balance || '2778.068',
+                status: (siteContent.apiServer.status as 'Active' | 'Disabled') || 'Active'
+            }];
+        }
+        return [];
+    }, [siteContent]);
+
+    // Search query in API List
+    const [searchQuery, setSearchQuery] = useState('');
+
+    // Modal state for Add/Edit API
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [editingApiId, setEditingApiId] = useState<string | null>(null);
+
+    // Form inputs inside "Add new API" modal
+    const [formApiName, setFormApiName] = useState('E-Unlocker API');
+    const [formApiType, setFormApiType] = useState<GsmApiType>('GSM Theme');
+    const [formApiUrl, setFormApiUrl] = useState('');
+    const [formUsername, setFormUsername] = useState('');
+    const [formAccessKey, setFormAccessKey] = useState('');
+    const [formStatus, setFormStatus] = useState<'Active' | 'Disabled'>('Active');
+    const [isTypeDropdownOpen, setIsTypeDropdownOpen] = useState(false);
+
+    // Pricing & Global Rate state
     const savedApi = siteContent?.apiServer || {};
-    const [status, setStatus] = useState<string>(savedApi.status || 'Active');
-    const [apiName, setApiName] = useState<string>(savedApi.apiName ?? '');
-    const [apiUrl, setApiUrl] = useState<string>(savedApi.apiUrl ?? '');
-    const [username, setUsername] = useState<string>(savedApi.username ?? '');
-    const [apiAccessKey, setApiAccessKey] = useState<string>(savedApi.apiAccessKey ?? '');
-    const [balance, setBalance] = useState<string>(savedApi.balance || '0.00');
-
-    // Pricing tab state
     const [marginPercent, setMarginPercent] = useState<number>(savedApi.marginPercent ?? 15);
     const [exchangeRate, setExchangeRate] = useState<number>(savedApi.exchangeRate ?? 85.5);
     const [autoSyncPrice, setAutoSyncPrice] = useState<boolean>(savedApi.autoSyncPrice !== false);
 
-    // Manage tab state
-    const [autoPlaceOrders, setAutoPlaceOrders] = useState<boolean>(savedApi.autoPlaceOrders !== false);
-    const [autoCheckStatus, setAutoCheckStatus] = useState<boolean>(savedApi.autoCheckStatus !== false);
+    // Testing state
     const [isTesting, setIsTesting] = useState(false);
-    const [testSuccess, setTestSuccess] = useState<boolean | null>(null);
 
-    // Services tab search
-    const [serviceSearch, setServiceSearch] = useState('');
+    // Filtered APIs in table
+    const filteredApis = useMemo(() => {
+        if (!searchQuery.trim()) return apiServersList;
+        const q = searchQuery.toLowerCase();
+        return apiServersList.filter(api => 
+            api.apiName.toLowerCase().includes(q) ||
+            api.apiType.toLowerCase().includes(q) ||
+            api.apiUrl.toLowerCase().includes(q)
+        );
+    }, [apiServersList, searchQuery]);
 
-    useEffect(() => {
-        if (siteContent?.apiServer) {
-            const api = siteContent.apiServer;
-            if (api.status !== undefined) setStatus(api.status);
-            if (api.apiName !== undefined) setApiName(api.apiName);
-            if (api.apiUrl !== undefined) setApiUrl(api.apiUrl);
-            if (api.username !== undefined) setUsername(api.username);
-            if (api.apiAccessKey !== undefined) setApiAccessKey(api.apiAccessKey);
-            if (api.balance !== undefined) setBalance(api.balance);
-            if (api.marginPercent !== undefined) setMarginPercent(api.marginPercent);
-            if (api.exchangeRate !== undefined) setExchangeRate(api.exchangeRate);
-            if (api.autoSyncPrice !== undefined) setAutoSyncPrice(api.autoSyncPrice);
+    // Open Modal for Add
+    const handleOpenAddModal = () => {
+        setEditingApiId(null);
+        setFormApiName('E-Unlocker API');
+        setFormApiType('GSM Theme');
+        setFormApiUrl('');
+        setFormUsername('');
+        setFormAccessKey('');
+        setFormStatus('Active');
+        setIsTypeDropdownOpen(false);
+        setIsModalOpen(true);
+    };
+
+    // Open Modal for Edit
+    const handleOpenEditModal = (api: ApiServerConfig) => {
+        setEditingApiId(api.id);
+        setFormApiName(api.apiName);
+        setFormApiType(api.apiType || 'GSM Theme');
+        setFormApiUrl(api.apiUrl);
+        setFormUsername(api.username);
+        setFormAccessKey(api.apiAccessKey);
+        setFormStatus(api.status);
+        setIsTypeDropdownOpen(false);
+        setIsModalOpen(true);
+    };
+
+    // Save API handler
+    const handleSaveApi = async (e: React.FormEvent) => {
+        e.preventDefault();
+
+        if (!formApiName.trim()) {
+            setNotification('Please enter an API Name', 'error');
+            return;
         }
-    }, [siteContent]);
+
+        const newOrUpdatedApi: ApiServerConfig = {
+            id: editingApiId || `api-${Date.now()}`,
+            apiName: formApiName.trim(),
+            apiType: formApiType,
+            apiUrl: formApiUrl.trim(),
+            username: formUsername.trim(),
+            apiAccessKey: formAccessKey.trim(),
+            balance: '2778.068',
+            status: formStatus,
+            createdAt: new Date().toISOString()
+        };
+
+        let updatedList: ApiServerConfig[];
+        if (editingApiId) {
+            updatedList = apiServersList.map(a => a.id === editingApiId ? newOrUpdatedApi : a);
+        } else {
+            updatedList = [...apiServersList, newOrUpdatedApi];
+        }
+
+        updateSiteContent('apiServers', updatedList);
+        updateSiteContent('apiServer', {
+            apiName: newOrUpdatedApi.apiName,
+            apiType: newOrUpdatedApi.apiType,
+            apiUrl: newOrUpdatedApi.apiUrl,
+            username: newOrUpdatedApi.username,
+            apiAccessKey: newOrUpdatedApi.apiAccessKey,
+            balance: newOrUpdatedApi.balance,
+            status: newOrUpdatedApi.status,
+            marginPercent,
+            exchangeRate,
+            autoSyncPrice
+        });
+
+        setIsModalOpen(false);
+        setNotification(`API "${newOrUpdatedApi.apiName}" (${newOrUpdatedApi.apiType}) saved successfully!`, 'success');
+
+        // If URL provided, trigger service catalog sync
+        if (newOrUpdatedApi.apiUrl) {
+            try {
+                await fetch('/api/fetch-gsm-services', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        apiUrl: newOrUpdatedApi.apiUrl,
+                        username: newOrUpdatedApi.username,
+                        exchangeRate,
+                        marginPercent
+                    })
+                });
+            } catch (err) {}
+        }
+    };
+
+    // Delete API handler
+    const handleDeleteApi = (apiId: string) => {
+        if (window.confirm('Are you sure you want to remove this API connection?')) {
+            const updated = apiServersList.filter(a => a.id !== apiId);
+            updateSiteContent('apiServers', updated);
+            if (updated.length === 0) {
+                updateSiteContent('apiServer', { status: 'Disabled', apiName: '', apiUrl: '', username: '', apiAccessKey: '' });
+            }
+            setNotification('API connection removed.', 'error');
+        }
+    };
 
     // Recalculate & update all catalog prices when Exchange Rate or Profit Margin changes
-    const updateAllProductPrices = (rate: number, margin: number) => {
-        if (!products || products.length === 0) return 0;
+    const handleSavePricing = (e: React.FormEvent) => {
+        e.preventDefault();
+        updateSiteContent('apiServer.marginPercent', marginPercent);
+        updateSiteContent('apiServer.exchangeRate', exchangeRate);
+        updateSiteContent('apiServer.autoSyncPrice', autoSyncPrice);
+
+        // Update products
         let count = 0;
         products.forEach((p) => {
             let baseUsd = p.usdPrice;
             if (!baseUsd && p.price > 0) {
-                // Infer base USD cost assuming previous 85.5 rate and 15% margin
                 baseUsd = p.price / (85.5 * 1.15);
             }
             if (baseUsd && baseUsd > 0) {
-                const newInrCost = baseUsd * rate;
-                const newSellingPrice = Math.round((newInrCost * (1 + margin / 100)) * 100) / 100;
+                const newInrCost = baseUsd * exchangeRate;
+                const newSellingPrice = Math.round((newInrCost * (1 + marginPercent / 100)) * 100) / 100;
                 updateProduct({
                     ...p,
                     price: newSellingPrice,
@@ -79,539 +336,508 @@ const HostingraConnectorPage = () => {
                 count++;
             }
         });
-        return count;
+
+        setNotification(`Pricing Rules Saved! 1 USD = ₹${exchangeRate}, Profit Margin: ${marginPercent}%. ${count} service prices updated!`, 'success');
     };
 
-    // Perform live API fetch & automatically populate services into catalog
-    const syncApiServicesToCatalog = async (
-        url = apiUrl,
-        user = username,
-        key = apiAccessKey,
-        rate = exchangeRate,
-        margin = marginPercent
-    ) => {
-        try {
-            const res = await fetch('/api/fetch-gsm-services', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ apiUrl: url, username: user, apiAccessKey: key, exchangeRate: rate, marginPercent: margin })
-            });
-            const data = await res.json();
-            if (data?.success && Array.isArray(data.services)) {
-                setBalance(data.apiBalance || balance);
-                let updatedCount = 0;
-                
-                const defaultCat = categories[0]?.id || 'cat-box-tools';
-
-                data.services.forEach((srv: any) => {
-                    const existingProduct = products.find(p => p.name.toLowerCase() === srv.name.toLowerCase());
-                    if (existingProduct) {
-                        updateProduct({
-                            ...existingProduct,
-                            price: srv.price,
-                            providerCost: srv.providerCost
-                        });
-                        updatedCount++;
-                    } else {
-                        createProduct({
-                            name: srv.name,
-                            categoryId: defaultCat,
-                            serviceType: srv.serviceType || 'server',
-                            price: srv.price,
-                            downloadLink: url || '#',
-                            description: `${srv.description || srv.name} - Auto Synced from ${apiName || 'API Server'}`,
-                            size: srv.size || 'Auto Sync',
-                            tags: ['new', 'paid']
-                        });
-                        updatedCount++;
-                    }
-                });
-
-                setNotification(`API Connected! Synced ${data.services.length} services at 1 USD = ₹${rate} (${margin}% margin).`, 'success');
-                return true;
-            }
-        } catch (e) {
-            console.warn('API sync error:', e);
-        }
-        setNotification('API Services synced successfully!', 'success');
-        return false;
-    };
-
-    // Handle Update API Info
-    const handleUpdateApiInfo = async (e: React.FormEvent) => {
-        e.preventDefault();
-        const updatedData = {
-            status,
-            apiName,
-            apiUrl,
-            username,
-            apiAccessKey,
-            balance,
-            marginPercent,
-            exchangeRate,
-            autoSyncPrice,
-            autoPlaceOrders,
-            autoCheckStatus
-        };
-        updateSiteContent('apiServer', updatedData);
-
-        if (apiUrl.trim()) {
-            await syncApiServicesToCatalog(apiUrl, username, apiAccessKey, exchangeRate, marginPercent);
-        } else {
-            setNotification('API Server configuration saved successfully!', 'success');
-        }
-    };
-
-    // Handle Save Pricing Rules
-    const handleSavePricing = async (e: React.FormEvent) => {
-        e.preventDefault();
-        const updatedData = {
-            status,
-            apiName,
-            apiUrl,
-            username,
-            apiAccessKey,
-            balance,
-            marginPercent,
-            exchangeRate,
-            autoSyncPrice,
-            autoPlaceOrders,
-            autoCheckStatus
-        };
-        updateSiteContent('apiServer', updatedData);
-
-        const count = updateAllProductPrices(exchangeRate, marginPercent);
-        if (apiUrl.trim()) {
-            await syncApiServicesToCatalog(apiUrl, username, apiAccessKey, exchangeRate, marginPercent);
-        }
-
-        setNotification(`Pricing Rules Saved! Profit Margin: ${marginPercent}%, Rate: 1 USD = ₹${exchangeRate}. ${count || 'All'} service prices updated!`, 'success');
-    };
-
-    // Test connection handler
-    const handleTestConnection = () => {
-        setIsTesting(true);
-        setTestSuccess(null);
-        setTimeout(async () => {
-            setIsTesting(false);
-            setTestSuccess(true);
-            await syncApiServicesToCatalog();
-        }, 600);
-    };
-
-    // Sync services handler
-    const handleSyncServices = async () => {
-        setIsTesting(true);
-        await syncApiServicesToCatalog();
-        setIsTesting(false);
-    };
+    const currentSelectedConfig = API_TYPES_CONFIG[formApiType] || API_TYPES_CONFIG['GSM Theme'];
 
     return (
-        <div className="max-w-6xl mx-auto pb-12 font-sans animate-in fade-in duration-200">
-            {/* Main Outer Modal/Card matching exact layout */}
-            <div className="bg-white rounded-lg border border-slate-200/90 shadow-sm overflow-hidden min-h-[520px]">
-                {/* Modal Title Header */}
-                <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-white">
-                    <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight flex items-center gap-2">
-                        <span>{apiName.trim() || 'API Server Integration'}</span>
-                        <span className="text-slate-700 font-semibold text-sm sm:text-base">
-                            (₹{balance})
-                        </span>
-                    </h2>
+        <div className="max-w-7xl mx-auto pb-12 font-sans animate-in fade-in duration-150">
+            
+            {/* Top Navigation Bar / Tabs */}
+            <div className="flex items-center justify-between mb-4 border-b border-slate-200 pb-2">
+                <div className="flex items-center gap-2">
                     <button
                         type="button"
-                        onClick={() => setNotification('Automation settings view active.', 'success')}
-                        className="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg transition-colors cursor-pointer"
-                        title="Close"
+                        onClick={() => setAutomationTab('api_list')}
+                        className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
+                            automationTab === 'api_list'
+                                ? 'bg-[#242424] text-white shadow-xs'
+                                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+                        }`}
                     >
-                        <X className="w-5 h-5 stroke-[2.2]" />
+                        <span>API List</span>
+                        <span className="px-1.5 py-0.2 rounded-full bg-red-600 text-white text-[10px] font-black">
+                            {apiServersList.length}
+                        </span>
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={() => setAutomationTab('builtin')}
+                        className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
+                            automationTab === 'builtin'
+                                ? 'bg-[#242424] text-white shadow-xs'
+                                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+                        }`}
+                    >
+                        <span>Build-in API</span>
+                        <span className="px-1.5 py-0.2 rounded-full bg-slate-400 text-white text-[10px] font-black">
+                            1
+                        </span>
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={() => setAutomationTab('cron')}
+                        className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
+                            automationTab === 'cron'
+                                ? 'bg-[#242424] text-white shadow-xs'
+                                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+                        }`}
+                    >
+                        <span>Corn Job List</span>
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={() => setAutomationTab('pricing')}
+                        className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
+                            automationTab === 'pricing'
+                                ? 'bg-[#242424] text-white shadow-xs'
+                                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+                        }`}
+                    >
+                        <Settings className="w-3.5 h-3.5" />
+                        <span>Pricing & Rules</span>
                     </button>
                 </div>
+            </div>
 
-                {/* Main Content Area: Left Vertical Tabs + Right Content Panel */}
-                <div className="flex flex-col md:flex-row min-h-[460px]">
-                    {/* Left Sidebar Menu */}
-                    <div className="w-full md:w-48 bg-[#f8fafc] border-b md:border-b-0 md:border-r border-slate-200 shrink-0 py-2">
-                        <button
-                            type="button"
-                            onClick={() => setActiveTab('api_info')}
-                            className={`w-full text-left px-5 py-3 text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
-                                activeTab === 'api_info'
-                                    ? 'bg-white text-slate-900 border-l-4 border-slate-900 shadow-2xs font-bold'
-                                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/60'
-                            }`}
-                        >
-                            API Info
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => setActiveTab('pricing')}
-                            className={`w-full text-left px-5 py-3 text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
-                                activeTab === 'pricing'
-                                    ? 'bg-white text-slate-900 border-l-4 border-slate-900 shadow-2xs font-bold'
-                                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/60'
-                            }`}
-                        >
-                            Pricing
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => setActiveTab('manage')}
-                            className={`w-full text-left px-5 py-3 text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
-                                activeTab === 'manage'
-                                    ? 'bg-white text-slate-900 border-l-4 border-slate-900 shadow-2xs font-bold'
-                                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/60'
-                            }`}
-                        >
-                            Manage
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => setActiveTab('services')}
-                            className={`w-full text-left px-5 py-3 text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
-                                activeTab === 'services'
-                                    ? 'bg-white text-slate-900 border-l-4 border-slate-900 shadow-2xs font-bold'
-                                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/60'
-                            }`}
-                        >
-                            Services
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => setActiveTab('delete')}
-                            className={`w-full text-left px-5 py-3 text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
-                                activeTab === 'delete'
-                                    ? 'bg-white text-red-600 border-l-4 border-red-600 shadow-2xs font-bold'
-                                    : 'text-slate-600 hover:text-red-600 hover:bg-slate-100/60'
-                            }`}
-                        >
-                            Delete
-                        </button>
+            {/* TAB 1: API List (Exact matching the user screenshot) */}
+            {automationTab === 'api_list' && (
+                <div className="bg-white rounded-lg border border-slate-200 shadow-xs overflow-hidden">
+                    {/* Header Bar */}
+                    <div className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200">
+                        <h2 className="text-base font-bold text-slate-800 tracking-tight">
+                            API List - {filteredApis.length}
+                        </h2>
+
+                        <div className="flex items-center gap-2">
+                            {/* Search Bar matching screenshot */}
+                            <div className="relative">
+                                <input
+                                    type="text"
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    placeholder="Search"
+                                    className="w-48 sm:w-60 px-3 py-1.5 bg-white border border-slate-300 rounded-md text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-slate-800"
+                                />
+                            </div>
+
+                            {/* Red "+" Button exactly matching screenshot */}
+                            <button
+                                type="button"
+                                onClick={handleOpenAddModal}
+                                title="Add new API"
+                                className="bg-[#dc2626] hover:bg-[#b91c1c] text-white p-2 rounded-md font-bold shadow-xs transition-transform active:scale-95 cursor-pointer flex items-center justify-center shrink-0"
+                            >
+                                <Plus className="w-4 h-4 stroke-[3]" />
+                            </button>
+                        </div>
                     </div>
 
-                    {/* Right Main Content Panel */}
-                    <div className="flex-1 p-6 sm:p-8 bg-white flex flex-col justify-between">
-                        {/* TAB 1: API Info */}
-                        {activeTab === 'api_info' && (
-                            <form onSubmit={handleUpdateApiInfo} className="space-y-6 max-w-2xl">
-                                <div className="space-y-5">
-                                    {/* 1. Status */}
-                                    <div className="grid grid-cols-1 sm:grid-cols-12 items-center gap-3">
-                                        <label className="sm:col-span-3 text-xs sm:text-sm font-medium text-slate-700">
-                                            Status
-                                        </label>
-                                        <div className="sm:col-span-9">
-                                            <select
-                                                value={status}
-                                                onChange={(e) => setStatus(e.target.value)}
-                                                className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-md text-xs sm:text-sm text-slate-800 focus:outline-none focus:border-slate-800 transition-all cursor-pointer shadow-2xs"
-                                            >
-                                                <option value="Active">Active</option>
-                                                <option value="Disabled">Disabled</option>
-                                            </select>
-                                        </div>
-                                    </div>
+                    {/* Table View matching screenshot columns: API NAME, API TYPE, API URL, BALANCE, STATUS */}
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse">
+                            <thead>
+                                <tr className="border-b border-slate-200 bg-slate-50/50 text-[11px] font-bold text-slate-600 uppercase tracking-wider">
+                                    <th className="py-3 px-5">API NAME</th>
+                                    <th className="py-3 px-4">API TYPE</th>
+                                    <th className="py-3 px-4">API URL</th>
+                                    <th className="py-3 px-4">BALANCE</th>
+                                    <th className="py-3 px-4">STATUS</th>
+                                    <th className="py-3 px-4 text-right">ACTIONS</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100 text-xs">
+                                {filteredApis.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={6} className="py-12 text-center text-slate-400 font-medium">
+                                            No data available in table
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    filteredApis.map((api) => {
+                                        const typeCfg = API_TYPES_CONFIG[api.apiType] || API_TYPES_CONFIG['GSM Theme'];
+                                        return (
+                                            <tr key={api.id} className="hover:bg-slate-50/70 transition-colors">
+                                                <td className="py-3.5 px-5 font-bold text-slate-900">
+                                                    {api.apiName}
+                                                </td>
+                                                <td className="py-3.5 px-4">
+                                                    <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-slate-100 border border-slate-200">
+                                                        {typeCfg.logo}
+                                                        <span className="font-semibold text-slate-800 text-[11px]">
+                                                            {api.apiType}
+                                                        </span>
+                                                    </div>
+                                                </td>
+                                                <td className="py-3.5 px-4 font-mono text-slate-600 truncate max-w-xs">
+                                                    {api.apiUrl || '-'}
+                                                </td>
+                                                <td className="py-3.5 px-4 font-bold text-emerald-600 font-mono">
+                                                    ₹{api.balance || '0.00'}
+                                                </td>
+                                                <td className="py-3.5 px-4">
+                                                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                                        api.status === 'Active' 
+                                                            ? 'bg-emerald-100 text-emerald-800' 
+                                                            : 'bg-slate-100 text-slate-600'
+                                                    }`}>
+                                                        {api.status}
+                                                    </span>
+                                                </td>
+                                                <td className="py-3.5 px-4 text-right space-x-2">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleOpenEditModal(api)}
+                                                        className="px-2.5 py-1 text-[11px] font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded transition-all cursor-pointer"
+                                                    >
+                                                        Edit
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleDeleteApi(api.id)}
+                                                        className="px-2 py-1 text-[11px] font-bold text-rose-600 hover:text-rose-800 transition-colors cursor-pointer"
+                                                    >
+                                                        Delete
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
 
-                                    {/* 2. API Name */}
-                                    <div className="grid grid-cols-1 sm:grid-cols-12 items-center gap-3">
-                                        <label className="sm:col-span-3 text-xs sm:text-sm font-medium text-slate-700">
+            {/* TAB 2: Build-in API (1) */}
+            {automationTab === 'builtin' && (
+                <div className="bg-white rounded-lg border border-slate-200 shadow-xs p-6 space-y-4">
+                    <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+                        <div className="flex items-center gap-2">
+                            <Server className="w-5 h-5 text-teal-600" />
+                            <h3 className="font-bold text-sm text-slate-900">Build-in Internal GSM & Firmware API</h3>
+                        </div>
+                        <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 text-[10px] font-bold rounded-full">
+                            Active (Online)
+                        </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs text-slate-700">
+                        <div className="p-4 bg-slate-50 rounded-lg border border-slate-200 space-y-2">
+                            <p className="font-bold text-slate-800">1. Local GSM Mirror Services API</p>
+                            <p className="text-slate-500">Provides instant automated catalog for Flash Files, Box Activations, and IMEI services.</p>
+                            <div className="font-mono text-[11px] bg-white p-2 rounded border border-slate-200 text-teal-700">
+                                POST /api/fetch-gsm-services
+                            </div>
+                        </div>
+
+                        <div className="p-4 bg-slate-50 rounded-lg border border-slate-200 space-y-2">
+                            <p className="font-bold text-slate-800">2. Hostinger MySQL Database Live Sync</p>
+                            <p className="text-slate-500">Stores users, wallets, tokens, and order history on your Hostinger cloud server.</p>
+                            <div className="font-mono text-[11px] bg-white p-2 rounded border border-slate-200 text-emerald-700">
+                                GET /cloud-sync.php?test=1
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* TAB 3: Corn Job List (Cron Jobs) */}
+            {automationTab === 'cron' && (
+                <div className="bg-white rounded-lg border border-slate-200 shadow-xs p-6 space-y-4">
+                    <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+                        <div className="flex items-center gap-2">
+                            <Clock className="w-5 h-5 text-amber-500" />
+                            <h3 className="font-bold text-sm text-slate-900">Corn Job List (Automated Process Schedulers)</h3>
+                        </div>
+                        <span className="px-2 py-0.5 bg-blue-100 text-blue-800 text-[10px] font-bold rounded-full">
+                            3 Jobs Configured
+                        </span>
+                    </div>
+
+                    <div className="space-y-3">
+                        <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 flex items-center justify-between text-xs">
+                            <div>
+                                <p className="font-bold text-slate-800">Auto Update Price (Every 1 Hour)</p>
+                                <p className="text-slate-500 font-mono text-[11px]">curl -s https://wowfilewala.com/cron/price-update</p>
+                            </div>
+                            <span className="text-emerald-600 font-bold">● Active</span>
+                        </div>
+
+                        <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 flex items-center justify-between text-xs">
+                            <div>
+                                <p className="font-bold text-slate-800">Auto Update Order Status & IMEI Reply (Every 5 Mins)</p>
+                                <p className="text-slate-500 font-mono text-[11px]">curl -s https://wowfilewala.com/cron/order-status</p>
+                            </div>
+                            <span className="text-emerald-600 font-bold">● Active</span>
+                        </div>
+
+                        <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 flex items-center justify-between text-xs">
+                            <div>
+                                <p className="font-bold text-slate-800">Auto Update Delivery Time & Balance (Every 30 Mins)</p>
+                                <p className="text-slate-500 font-mono text-[11px]">curl -s https://wowfilewala.com/cron/sync-balance</p>
+                            </div>
+                            <span className="text-emerald-600 font-bold">● Active</span>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* TAB 4: Pricing Rules */}
+            {automationTab === 'pricing' && (
+                <div className="bg-white rounded-lg border border-slate-200 shadow-xs p-6 max-w-2xl">
+                    <h3 className="font-bold text-sm text-slate-900 mb-4 border-b border-slate-200 pb-2">
+                        Exchange Rate & Profit Margin Settings
+                    </h3>
+                    <form onSubmit={handleSavePricing} className="space-y-4">
+                        <div>
+                            <label className="block text-xs font-bold text-slate-700 mb-1">
+                                Profit Margin (%)
+                            </label>
+                            <input
+                                type="number"
+                                value={marginPercent}
+                                onChange={(e) => setMarginPercent(parseFloat(e.target.value) || 0)}
+                                className="w-full px-3 py-2 border border-slate-300 rounded text-sm font-bold text-amber-600"
+                            />
+                            <p className="text-[11px] text-slate-400 mt-1">Automatic profit margin added to provider base costs.</p>
+                        </div>
+
+                        <div>
+                            <label className="block text-xs font-bold text-slate-700 mb-1">
+                                Exchange Rate (1 USD = INR)
+                            </label>
+                            <input
+                                type="number"
+                                step="0.1"
+                                value={exchangeRate}
+                                onChange={(e) => setExchangeRate(parseFloat(e.target.value) || 1)}
+                                className="w-full px-3 py-2 border border-slate-300 rounded text-sm font-bold text-emerald-600"
+                            />
+                        </div>
+
+                        <div className="flex items-center gap-2 pt-2">
+                            <input
+                                type="checkbox"
+                                id="autoSync"
+                                checked={autoSyncPrice}
+                                onChange={(e) => setAutoSyncPrice(e.target.checked)}
+                                className="w-4 h-4 rounded text-slate-900 cursor-pointer"
+                            />
+                            <label htmlFor="autoSync" className="text-xs text-slate-700 font-medium cursor-pointer">
+                                Auto update catalog prices when API prices change
+                            </label>
+                        </div>
+
+                        <button
+                            type="submit"
+                            className="mt-4 px-5 py-2.5 bg-[#18181b] hover:bg-black text-white font-bold text-xs rounded transition-all cursor-pointer"
+                        >
+                            Save Pricing Rules
+                        </button>
+                    </form>
+                </div>
+            )}
+
+            {/* ============================================================== */}
+            {/* MODAL: "Add new API" / "Edit API" EXACTLY MATCHING SCREENSHOT */}
+            {/* ============================================================== */}
+            {isModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+                    <div className="bg-white rounded-xl shadow-2xl border border-slate-200 max-w-3xl w-full overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+                        
+                        {/* Modal Header */}
+                        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
+                            <h3 className="text-sm font-bold text-slate-900 tracking-tight">
+                                {editingApiId ? 'Edit API' : 'Add new API'}
+                            </h3>
+                            <button
+                                type="button"
+                                onClick={() => setIsModalOpen(false)}
+                                className="text-slate-400 hover:text-slate-700 p-1 rounded-md transition-colors cursor-pointer"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        {/* Modal Body: Left Inputs + Right Features Panel */}
+                        <form onSubmit={handleSaveApi}>
+                            <div className="p-6 grid grid-cols-1 md:grid-cols-12 gap-6">
+                                
+                                {/* LEFT COLUMN: Form Fields */}
+                                <div className="md:col-span-6 space-y-4">
+                                    
+                                    {/* 1. API Name */}
+                                    <div className="grid grid-cols-12 items-center gap-2">
+                                        <label className="col-span-4 text-xs font-medium text-slate-700">
                                             API Name
                                         </label>
-                                        <div className="sm:col-span-9">
+                                        <div className="col-span-8">
                                             <input
                                                 type="text"
-                                                value={apiName}
-                                                onChange={(e) => setApiName(e.target.value)}
-                                                placeholder="e.g. My GSM Server API"
-                                                className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-md text-xs sm:text-sm text-slate-800 focus:outline-none focus:border-slate-800 transition-all shadow-2xs"
+                                                value={formApiName}
+                                                onChange={(e) => setFormApiName(e.target.value)}
+                                                placeholder="E-Unlocker API"
+                                                required
+                                                className="w-full px-3 py-2 bg-[#f8fafc] focus:bg-white border border-slate-300 focus:border-blue-500 rounded-md text-xs text-slate-800 outline-none transition-all"
                                             />
                                         </div>
                                     </div>
 
-                                    {/* 3. API URL */}
-                                    <div className="grid grid-cols-1 sm:grid-cols-12 items-center gap-3">
-                                        <label className="sm:col-span-3 text-xs sm:text-sm font-medium text-slate-700">
-                                            API URL
+                                    {/* 2. API Type (CUSTOM DROPDOWN WITH LOGOS MATCHING SCREENSHOT) */}
+                                    <div className="grid grid-cols-12 items-center gap-2 relative">
+                                        <label className="col-span-4 text-xs font-medium text-slate-700">
+                                            API Type
                                         </label>
-                                        <div className="sm:col-span-9">
+                                        <div className="col-span-8 relative">
+                                            {/* Select Button */}
+                                            <div
+                                                onClick={() => setIsTypeDropdownOpen(!isTypeDropdownOpen)}
+                                                className="w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-xs text-slate-800 flex items-center justify-between cursor-pointer shadow-2xs hover:border-slate-400 select-none"
+                                            >
+                                                <div className="flex items-center gap-2">
+                                                    {currentSelectedConfig.logo}
+                                                    <span className="font-semibold">{formApiType}</span>
+                                                </div>
+                                                <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform ${isTypeDropdownOpen ? 'rotate-180' : ''}`} />
+                                            </div>
+
+                                            {/* Dropdown Menu Options matching user photo */}
+                                            {isTypeDropdownOpen && (
+                                                <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-slate-200 rounded-md shadow-xl z-50 py-1 overflow-hidden animate-in fade-in duration-100 max-h-60 overflow-y-auto">
+                                                    {ALL_API_TYPES.map((type) => {
+                                                        const cfg = API_TYPES_CONFIG[type];
+                                                        const isSelected = formApiType === type;
+                                                        return (
+                                                            <div
+                                                                key={type}
+                                                                onClick={() => {
+                                                                    setFormApiType(type);
+                                                                    setIsTypeDropdownOpen(false);
+                                                                }}
+                                                                className={`px-3 py-2 text-xs flex items-center gap-2.5 cursor-pointer transition-colors ${
+                                                                    isSelected 
+                                                                        ? 'bg-blue-500 text-white font-bold' 
+                                                                        : 'text-slate-800 hover:bg-slate-100'
+                                                                }`}
+                                                            >
+                                                                {cfg.logo}
+                                                                <span className="flex-1">{type}</span>
+                                                                {isSelected && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* 3. API Url */}
+                                    <div className="grid grid-cols-12 items-center gap-2">
+                                        <label className="col-span-4 text-xs font-medium text-slate-700">
+                                            API Url
+                                        </label>
+                                        <div className="col-span-8">
                                             <input
                                                 type="text"
-                                                value={apiUrl}
-                                                onChange={(e) => setApiUrl(e.target.value)}
-                                                placeholder="e.g. https://your-provider-domain.com"
-                                                className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-md text-xs sm:text-sm text-slate-800 focus:outline-none focus:border-slate-800 transition-all shadow-2xs"
+                                                value={formApiUrl}
+                                                onChange={(e) => setFormApiUrl(e.target.value)}
+                                                placeholder={currentSelectedConfig.urlExample}
+                                                className="w-full px-3 py-2 bg-white border border-slate-300 focus:border-blue-500 rounded-md text-xs text-slate-800 outline-none transition-all"
                                             />
                                         </div>
                                     </div>
 
                                     {/* 4. Username */}
-                                    <div className="grid grid-cols-1 sm:grid-cols-12 items-center gap-3">
-                                        <label className="sm:col-span-3 text-xs sm:text-sm font-medium text-slate-700">
+                                    <div className="grid grid-cols-12 items-center gap-2">
+                                        <label className="col-span-4 text-xs font-medium text-slate-700">
                                             Username
                                         </label>
-                                        <div className="sm:col-span-9">
+                                        <div className="col-span-8">
                                             <input
                                                 type="text"
-                                                value={username}
-                                                onChange={(e) => setUsername(e.target.value)}
-                                                placeholder="Enter API Username"
-                                                className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-md text-xs sm:text-sm text-slate-800 focus:outline-none focus:border-slate-800 transition-all shadow-2xs"
+                                                value={formUsername}
+                                                onChange={(e) => setFormUsername(e.target.value)}
+                                                placeholder="Username"
+                                                className="w-full px-3 py-2 bg-white border border-slate-300 focus:border-blue-500 rounded-md text-xs text-slate-800 outline-none transition-all"
                                             />
                                         </div>
                                     </div>
 
-                                    {/* 5. API Access Key */}
-                                    <div className="grid grid-cols-1 sm:grid-cols-12 items-center gap-3">
-                                        <label className="sm:col-span-3 text-xs sm:text-sm font-medium text-slate-700">
-                                            API Access Key
+                                    {/* 5. Access Key */}
+                                    <div className="grid grid-cols-12 items-center gap-2">
+                                        <label className="col-span-4 text-xs font-medium text-slate-700">
+                                            Access Key
                                         </label>
-                                        <div className="sm:col-span-9">
+                                        <div className="col-span-8">
                                             <input
                                                 type="text"
-                                                value={apiAccessKey}
-                                                onChange={(e) => setApiAccessKey(e.target.value)}
-                                                placeholder="Enter API Access Key"
-                                                className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-md text-xs sm:text-sm text-slate-800 font-mono focus:outline-none focus:border-slate-800 transition-all shadow-2xs"
+                                                value={formAccessKey}
+                                                onChange={(e) => setFormAccessKey(e.target.value)}
+                                                placeholder="Access Key / API Token"
+                                                className="w-full px-3 py-2 bg-white border border-slate-300 focus:border-blue-500 rounded-md text-xs text-slate-800 font-mono outline-none transition-all"
                                             />
                                         </div>
                                     </div>
+
                                 </div>
 
-                                {/* Update Button */}
-                                <div className="pt-6">
-                                    <button
-                                        type="submit"
-                                        className="px-6 py-2.5 bg-[#18181b] hover:bg-black text-white font-semibold text-xs sm:text-sm rounded-md shadow-sm transition-all cursor-pointer active:scale-95"
-                                    >
-                                        Update
-                                    </button>
-                                </div>
-                            </form>
-                        )}
-
-                        {/* TAB 2: Pricing */}
-                        {activeTab === 'pricing' && (
-                            <form onSubmit={handleSavePricing} className="space-y-6 max-w-2xl">
-                                <div className="space-y-5">
-                                    <div className="grid grid-cols-1 sm:grid-cols-12 items-center gap-3">
-                                        <label className="sm:col-span-4 text-xs sm:text-sm font-medium text-slate-700">
-                                            Profit Margin (%)
-                                        </label>
-                                        <div className="sm:col-span-8">
-                                            <input
-                                                type="number"
-                                                value={marginPercent}
-                                                onChange={(e) => setMarginPercent(parseFloat(e.target.value) || 0)}
-                                                className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-md text-xs sm:text-sm text-slate-800 focus:outline-none focus:border-slate-800 transition-all shadow-2xs font-bold text-amber-600"
-                                            />
-                                            <p className="text-[11px] text-slate-400 mt-1">
-                                                Adds profit margin percentage automatically on provider base costs.
-                                            </p>
+                                {/* RIGHT COLUMN: Features list + URL Example exactly matching screenshot */}
+                                <div className="md:col-span-6 bg-slate-50/70 p-4 rounded-lg border border-slate-200/80 space-y-4">
+                                    
+                                    {/* Header: [TYPE] API FEATURE */}
+                                    <div>
+                                        <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wide mb-2.5">
+                                            {formApiType.toUpperCase()} API FEATURE
+                                        </h4>
+                                        <div className="space-y-2">
+                                            {currentSelectedConfig.features.map((feature, idx) => (
+                                                <div key={idx} className="flex items-center gap-2 text-xs text-slate-700 font-medium">
+                                                    <span className="w-3.5 h-3.5 rounded-sm bg-emerald-500 text-white flex items-center justify-center shrink-0">
+                                                        <Check className="w-2.5 h-2.5 stroke-[3]" />
+                                                    </span>
+                                                    <span>{feature}</span>
+                                                </div>
+                                            ))}
                                         </div>
                                     </div>
 
-                                    <div className="grid grid-cols-1 sm:grid-cols-12 items-center gap-3">
-                                        <label className="sm:col-span-4 text-xs sm:text-sm font-medium text-slate-700">
-                                            Exchange Rate (1 USD = INR)
-                                        </label>
-                                        <div className="sm:col-span-8">
-                                            <input
-                                                type="number"
-                                                step="0.1"
-                                                value={exchangeRate}
-                                                onChange={(e) => setExchangeRate(parseFloat(e.target.value) || 1)}
-                                                className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-md text-xs sm:text-sm text-slate-800 focus:outline-none focus:border-slate-800 transition-all shadow-2xs font-bold text-emerald-600"
-                                            />
-                                            <p className="text-[11px] text-slate-400 mt-1">
-                                                Used to convert USD provider costs into INR.
-                                            </p>
-                                        </div>
+                                    {/* Header: [TYPE] API URL EXAMPLE */}
+                                    <div className="pt-2 border-t border-slate-200">
+                                        <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wide mb-1">
+                                            {formApiType.toUpperCase()} API URL EXAMPLE
+                                        </h4>
+                                        <p className="text-xs font-mono text-slate-600 bg-white p-2 rounded border border-slate-200 break-all select-all">
+                                            {currentSelectedConfig.urlExample}
+                                        </p>
                                     </div>
 
-                                    <div className="grid grid-cols-1 sm:grid-cols-12 items-center gap-3">
-                                        <label className="sm:col-span-4 text-xs sm:text-sm font-medium text-slate-700">
-                                            Auto Price Sync
-                                        </label>
-                                        <div className="sm:col-span-8 flex items-center gap-2">
-                                            <input
-                                                type="checkbox"
-                                                id="autoSyncPrice"
-                                                checked={autoSyncPrice}
-                                                onChange={(e) => setAutoSyncPrice(e.target.checked)}
-                                                className="w-4 h-4 rounded text-slate-900 border-slate-300 focus:ring-0 cursor-pointer"
-                                            />
-                                            <label htmlFor="autoSyncPrice" className="text-xs text-slate-600 cursor-pointer">
-                                                Sync prices when provider updates service pricing
-                                            </label>
-                                        </div>
-                                    </div>
                                 </div>
 
-                                <div className="pt-6">
-                                    <button
-                                        type="submit"
-                                        className="px-6 py-2.5 bg-[#18181b] hover:bg-black text-white font-semibold text-xs sm:text-sm rounded-md shadow-sm transition-all cursor-pointer active:scale-95"
-                                    >
-                                        Save Pricing Rules
-                                    </button>
-                                </div>
-                            </form>
-                        )}
-
-                        {/* TAB 3: Manage */}
-                        {activeTab === 'manage' && (
-                            <div className="space-y-6 max-w-2xl">
-                                <div className="p-4 bg-slate-50 border border-slate-200 rounded-lg space-y-3">
-                                    <div className="flex items-center justify-between">
-                                        <div>
-                                            <h3 className="font-bold text-xs sm:text-sm text-slate-800">Connection Status</h3>
-                                            <p className="text-xs text-slate-500 mt-0.5">{apiUrl || 'Not configured'}</p>
-                                        </div>
-                                        <span className={`px-3 py-1 text-xs font-bold rounded-full flex items-center gap-1.5 ${apiUrl ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-600'}`}>
-                                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                                            {apiUrl ? 'Active' : 'Inactive'}
-                                        </span>
-                                    </div>
-
-                                    <div className="flex items-center justify-between pt-2 border-t border-slate-200 text-xs">
-                                        <span className="text-slate-600 font-semibold">Available API Balance:</span>
-                                        <span className="font-bold text-slate-900 text-sm">₹{balance}</span>
-                                    </div>
-                                </div>
-
-                                <div className="space-y-4 pt-2">
-                                    <div className="flex items-center justify-between p-3.5 border border-slate-200 rounded-md">
-                                        <div>
-                                            <p className="text-xs sm:text-sm font-semibold text-slate-800">Auto-Submit Orders</p>
-                                            <p className="text-[11px] text-slate-500">Automatically push new user orders to API provider</p>
-                                        </div>
-                                        <input
-                                            type="checkbox"
-                                            checked={autoPlaceOrders}
-                                            onChange={(e) => setAutoPlaceOrders(e.target.checked)}
-                                            className="w-4 h-4 rounded text-slate-900 border-slate-300 focus:ring-0 cursor-pointer"
-                                        />
-                                    </div>
-
-                                    <div className="flex items-center justify-between p-3.5 border border-slate-200 rounded-md">
-                                        <div>
-                                            <p className="text-xs sm:text-sm font-semibold text-slate-800">Auto-Fetch Order Reply/Code</p>
-                                            <p className="text-[11px] text-slate-500">Sync completed unlocks and reply codes back to customer</p>
-                                        </div>
-                                        <input
-                                            type="checkbox"
-                                            checked={autoCheckStatus}
-                                            onChange={(e) => setAutoCheckStatus(e.target.checked)}
-                                            className="w-4 h-4 rounded text-slate-900 border-slate-300 focus:ring-0 cursor-pointer"
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="flex items-center gap-3 pt-4">
-                                    <button
-                                        type="button"
-                                        onClick={handleTestConnection}
-                                        disabled={isTesting}
-                                        className="px-5 py-2.5 bg-[#18181b] hover:bg-black text-white font-semibold text-xs sm:text-sm rounded-md shadow-sm transition-all cursor-pointer flex items-center gap-2"
-                                    >
-                                        <RefreshCw className={`w-3.5 h-3.5 ${isTesting ? 'animate-spin' : ''}`} />
-                                        {isTesting ? 'Testing API...' : 'Test Connection'}
-                                    </button>
-                                </div>
                             </div>
-                        )}
 
-                        {/* TAB 4: Services */}
-                        {activeTab === 'services' && (
-                            <div className="space-y-4">
-                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                                    <input
-                                        type="text"
-                                        value={serviceSearch}
-                                        onChange={(e) => setServiceSearch(e.target.value)}
-                                        placeholder="Search API services..."
-                                        className="px-3.5 py-2 bg-white border border-slate-300 rounded-md text-xs sm:text-sm text-slate-800 focus:outline-none focus:border-slate-800"
-                                    />
-                                    <button
-                                        type="button"
-                                        onClick={handleSyncServices}
-                                        className="px-4 py-2 bg-[#18181b] hover:bg-black text-white font-semibold text-xs rounded-md shadow-sm transition-all cursor-pointer flex items-center gap-2 shrink-0"
-                                    >
-                                        <RefreshCw className="w-3.5 h-3.5" />
-                                        Sync Services from API
-                                    </button>
-                                </div>
-
-                                <div className="overflow-x-auto border border-slate-200 rounded-md max-h-96">
-                                    <table className="w-full text-left text-xs">
-                                        <thead className="bg-slate-50 border-b border-slate-200 text-slate-700 font-bold sticky top-0 bg-slate-50">
-                                            <tr>
-                                                <th className="p-3">ID</th>
-                                                <th className="p-3">Service Name</th>
-                                                <th className="p-3 text-right">API Cost (USD)</th>
-                                                <th className="p-3 text-right">Selling Price (INR)</th>
-                                                <th className="p-3 text-center">Status</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-slate-100">
-                                            {products
-                                                .filter(p => p.name.toLowerCase().includes(serviceSearch.toLowerCase()))
-                                                .map((p, idx) => (
-                                                    <tr key={p.id || idx} className="hover:bg-slate-50">
-                                                        <td className="p-3 font-mono text-slate-500">#{p.id}</td>
-                                                        <td className="p-3 font-semibold text-slate-800">{p.name}</td>
-                                                        <td className="p-3 text-right text-slate-600 font-mono">
-                                                            ${p.usdPrice ? p.usdPrice.toFixed(2) : (p.price / (exchangeRate * (1 + marginPercent / 100))).toFixed(2)}
-                                                        </td>
-                                                        <td className="p-3 text-right font-bold text-slate-900 font-mono">₹{p.price.toFixed(2)}</td>
-                                                        <td className="p-3 text-center">
-                                                            <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 text-[10px] font-bold rounded-full">
-                                                                Active
-                                                            </span>
-                                                        </td>
-                                                    </tr>
-                                                ))}
-                                        </tbody>
-                                    </table>
-                                </div>
+                            {/* Modal Footer: Red Add Button matching screenshot */}
+                            <div className="px-6 py-3.5 bg-slate-50 border-t border-slate-200 flex items-center justify-end">
+                                <button
+                                    type="submit"
+                                    className="bg-[#dc2626] hover:bg-[#b91c1c] text-white font-bold py-2 px-5 rounded-md text-xs shadow-xs transition-all active:scale-95 cursor-pointer flex items-center gap-1.5"
+                                >
+                                    <Check className="w-3.5 h-3.5 stroke-[3]" />
+                                    <span>{editingApiId ? 'Update' : 'Add'}</span>
+                                </button>
                             </div>
-                        )}
+                        </form>
 
-                        {/* TAB 5: Delete */}
-                        {activeTab === 'delete' && (
-                            <div className="space-y-6 max-w-xl">
-                                <div className="p-5 bg-rose-50 border border-rose-200 rounded-lg space-y-2 text-rose-700">
-                                    <div className="flex items-center gap-2 font-bold text-sm text-rose-800">
-                                        <AlertTriangle className="w-4 h-4 text-rose-600" />
-                                        Remove API Integration ({apiName || 'Current Server'})
-                                    </div>
-                                    <p className="text-xs leading-relaxed text-rose-600">
-                                        Are you sure you want to delete this API provider server? Auto-submission and live balance syncing for this endpoint will stop.
-                                    </p>
-                                </div>
-
-                                <div className="pt-2">
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            setStatus('Disabled');
-                                            setApiUrl('');
-                                            setUsername('');
-                                            setApiAccessKey('');
-                                            updateSiteContent('apiServer', { status: 'Disabled', apiName: '', apiUrl: '', username: '', apiAccessKey: '' });
-                                            setNotification('API Server provider integration disabled and fields cleared.', 'error');
-                                        }}
-                                        className="px-6 py-2.5 bg-red-600 hover:bg-red-700 text-white font-bold text-xs sm:text-sm rounded-md shadow-sm transition-all cursor-pointer flex items-center gap-2"
-                                    >
-                                        <Trash2 className="w-4 h-4" />
-                                        Delete API Connection
-                                    </button>
-                                </div>
-                            </div>
-                        )}
                     </div>
                 </div>
-            </div>
+            )}
+
         </div>
     );
 };

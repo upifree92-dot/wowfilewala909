@@ -66,8 +66,12 @@ const AdminLayout = () => {
     const [servicesMenuOpen, setServicesMenuOpen] = useState(
         location.pathname.startsWith('/admin/services')
     );
+    const [automationMenuOpen, setAutomationMenuOpen] = useState(
+        location.pathname.startsWith('/admin/automation')
+    );
 
     const unreadCount = getAdminNotifications().filter(n => !n.read).length;
+    const apisCount = (siteContent?.apiServers?.length || (siteContent?.apiServer?.apiUrl ? 1 : 0));
 
     // Exact menu items matching the photo from user
     const navItems = [
@@ -92,7 +96,18 @@ const AdminLayout = () => {
         { to: "/admin/media", icon: <Image className="w-4 h-4 shrink-0" />, label: "Media Gallery", hasSubmenu: false },
         { to: "/admin/users", icon: <Users className="w-4 h-4 shrink-0" />, label: "User", hasSubmenu: true },
         { to: "/admin/cms", icon: <PenTool className="w-4 h-4 shrink-0" />, label: "CMS", hasSubmenu: true },
-        { to: "/admin/automation", icon: <RefreshCw className="w-4 h-4 shrink-0" />, label: "Automation", hasSubmenu: true },
+        { 
+            to: "/admin/automation", 
+            icon: <RefreshCw className="w-4 h-4 shrink-0" />, 
+            label: "Automation", 
+            hasSubmenu: true,
+            isAutomation: true,
+            subItems: [
+                { to: "/admin/automation", label: "API", icon: "•", count: apisCount },
+                { to: "/admin/automation?tab=builtin", label: "Build-in API", icon: "•", count: 1 },
+                { to: "/admin/automation?tab=cron", label: "Corn Job List", icon: "•" }
+            ]
+        },
         { to: "/admin/utilities", icon: <Box className="w-4 h-4 shrink-0" />, label: "Utilities", hasSubmenu: true },
         { to: "/admin/logs", icon: <Calendar className="w-4 h-4 shrink-0" />, label: "Activity Log", hasSubmenu: true },
         { to: "/admin/tokens", icon: <KeyRound className="w-4 h-4 shrink-0 text-amber-400" />, label: "Token Keys (File Lock)", hasSubmenu: false, badge: tokenProtection?.enabled ? "LOCK" : undefined },
@@ -126,15 +141,23 @@ const AdminLayout = () => {
                 {/* Sidebar Navigation Items List */}
                 <nav className="flex-1 overflow-y-auto px-2.5 py-3 space-y-1 scrollbar-thin scrollbar-thumb-neutral-800">
                     {navItems.map((item) => {
-                        if (item.isServicesList) {
-                            const isCurrentActive = location.pathname.startsWith('/admin/services');
+                        if (item.subItems) {
+                            const isAutomation = Boolean(item.isAutomation);
+                            const isCurrentActive = location.pathname.startsWith(item.to);
+                            const isOpen = isAutomation ? automationMenuOpen : servicesMenuOpen;
+                            const toggleOpen = () => {
+                                if (isAutomation) setAutomationMenuOpen(!automationMenuOpen);
+                                else setServicesMenuOpen(!servicesMenuOpen);
+                            };
                             return (
                                 <div key={item.to} className="space-y-1">
                                     <div
-                                        onClick={() => setServicesMenuOpen(!servicesMenuOpen)}
+                                        onClick={toggleOpen}
                                         className={`flex items-center justify-between px-3.5 py-2.5 rounded-lg text-xs font-semibold cursor-pointer transition-all duration-150 ${
                                             isCurrentActive
-                                                ? "bg-[#242424] text-white shadow-xs"
+                                                ? isAutomation 
+                                                    ? "bg-[#b91c1c]/25 text-rose-300 font-bold border border-rose-500/30" 
+                                                    : "bg-[#242424] text-white shadow-xs"
                                                 : "text-neutral-400 hover:text-white hover:bg-neutral-900/80"
                                         }`}
                                     >
@@ -148,30 +171,43 @@ const AdminLayout = () => {
                                         </NavLink>
                                         <ChevronRight
                                             className={`w-3.5 h-3.5 text-neutral-500 transition-transform duration-200 ${
-                                                servicesMenuOpen ? 'rotate-90 text-amber-400' : ''
+                                                isOpen ? 'rotate-90 text-amber-400' : ''
                                             }`}
                                         />
                                     </div>
 
-                                    {/* Sub-menu items for Services List */}
-                                    {servicesMenuOpen && (
+                                    {/* Sub-menu items */}
+                                    {isOpen && (
                                         <div className="ml-4 pl-3 border-l border-neutral-800 space-y-1 py-1 animate-in fade-in duration-200">
-                                            {item.subItems.map((sub) => {
+                                            {item.subItems.map((sub: any) => {
                                                 const searchType = new URLSearchParams(location.search).get('type');
-                                                const subType = sub.to.split('type=')[1];
-                                                const isSubActive = isCurrentActive && searchType === subType;
+                                                const searchTab = new URLSearchParams(location.search).get('tab');
+                                                const subType = sub.to.includes('type=') ? sub.to.split('type=')[1] : null;
+                                                const subTab = sub.to.includes('tab=') ? sub.to.split('tab=')[1] : null;
+                                                const isSubActive = isCurrentActive && (
+                                                    (subType && searchType === subType) ||
+                                                    (subTab && searchTab === subTab) ||
+                                                    (!subType && !subTab && !searchType && !searchTab)
+                                                );
                                                 return (
                                                     <Link
                                                         key={sub.to}
                                                         to={sub.to}
-                                                        className={`flex items-center gap-2.5 px-3 py-2 rounded-md text-[11px] font-medium transition-all ${
+                                                        className={`flex items-center justify-between px-3 py-2 rounded-md text-[11px] font-medium transition-all ${
                                                             isSubActive
                                                                 ? "bg-amber-500/20 text-amber-400 font-bold border border-amber-500/30"
                                                                 : "text-neutral-400 hover:text-slate-100 hover:bg-neutral-900"
                                                         }`}
                                                     >
-                                                        <span>{sub.icon}</span>
-                                                        <span>{sub.label}</span>
+                                                        <span className="flex items-center gap-2">
+                                                            <span>{sub.icon}</span>
+                                                            <span>{sub.label}</span>
+                                                        </span>
+                                                        {sub.count !== undefined && (
+                                                            <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-neutral-800 text-neutral-300">
+                                                                {sub.count}
+                                                            </span>
+                                                        )}
                                                     </Link>
                                                 );
                                             })}
@@ -199,7 +235,7 @@ const AdminLayout = () => {
                                     <span>{item.label}</span>
                                 </div>
                                 <div className="flex items-center gap-1.5">
-                                    {item.badge !== undefined && item.badge > 0 && (
+                                    {item.badge !== undefined && Number(item.badge) > 0 && (
                                         <span className="px-1.5 py-0.5 text-[10px] bg-red-600 text-white font-black rounded-full min-w-4 text-center">
                                             {item.badge}
                                         </span>
@@ -237,11 +273,17 @@ const AdminLayout = () => {
                         </div>
                         <nav className="flex-1 overflow-y-auto px-2.5 py-3 space-y-1">
                             {navItems.map((item) => {
-                                if (item.isServicesList) {
+                                if (item.subItems) {
+                                    const isAutomation = Boolean(item.isAutomation);
+                                    const isOpen = isAutomation ? automationMenuOpen : servicesMenuOpen;
+                                    const toggleOpen = () => {
+                                        if (isAutomation) setAutomationMenuOpen(!automationMenuOpen);
+                                        else setServicesMenuOpen(!servicesMenuOpen);
+                                    };
                                     return (
                                         <div key={item.to} className="space-y-1">
                                             <div
-                                                onClick={() => setServicesMenuOpen(!servicesMenuOpen)}
+                                                onClick={toggleOpen}
                                                 className="flex items-center justify-between px-3.5 py-2.5 rounded-lg text-xs font-semibold cursor-pointer text-neutral-400 hover:text-white"
                                             >
                                                 <NavLink
@@ -252,19 +294,26 @@ const AdminLayout = () => {
                                                     <span>{item.icon}</span>
                                                     <span>{item.label}</span>
                                                 </NavLink>
-                                                <ChevronRight className={`w-3.5 h-3.5 ${servicesMenuOpen ? 'rotate-90 text-amber-400' : ''}`} />
+                                                <ChevronRight className={`w-3.5 h-3.5 ${isOpen ? 'rotate-90 text-amber-400' : ''}`} />
                                             </div>
-                                            {servicesMenuOpen && (
+                                            {isOpen && (
                                                 <div className="ml-4 pl-3 border-l border-neutral-800 space-y-1 py-1">
-                                                    {item.subItems.map((sub) => (
+                                                    {item.subItems.map((sub: any) => (
                                                         <Link
                                                             key={sub.to}
                                                             to={sub.to}
                                                             onClick={() => setMobileMenuOpen(false)}
-                                                            className="flex items-center gap-2 px-3 py-2 rounded text-xs text-neutral-400 hover:text-white"
+                                                            className="flex items-center justify-between px-3 py-2 rounded text-xs text-neutral-400 hover:text-white"
                                                         >
-                                                            <span>{sub.icon}</span>
-                                                            <span>{sub.label}</span>
+                                                            <span className="flex items-center gap-2">
+                                                                <span>{sub.icon}</span>
+                                                                <span>{sub.label}</span>
+                                                            </span>
+                                                            {sub.count !== undefined && (
+                                                                <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-neutral-800 text-neutral-300">
+                                                                    {sub.count}
+                                                                </span>
+                                                            )}
                                                         </Link>
                                                     ))}
                                                 </div>

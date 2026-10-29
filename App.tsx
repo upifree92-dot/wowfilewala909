@@ -1,5 +1,4 @@
-
-import React, { useEffect } from 'react';
+import React, { Component, ReactNode, ErrorInfo, useEffect } from 'react';
 import { HashRouter, Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import { AppProvider, useAppContext } from './context/AppContext';
 import { supabase } from './lib/supabase';
@@ -239,12 +238,22 @@ const AppContent = () => {
 };
 
 
-class ErrorBoundary extends React.Component<{ children: ReactNode }, { hasError: boolean; error: any }> {
-  constructor(props: { children: ReactNode }) {
+interface ErrorBoundaryProps {
+  children: ReactNode;
+}
+
+interface ErrorBoundaryState {
+  hasError: boolean;
+  error: any;
+}
+
+class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  state: ErrorBoundaryState = { hasError: false, error: null };
+
+  constructor(props: ErrorBoundaryProps) {
     super(props);
-    this.state = { hasError: false, error: null };
   }
-  static getDerivedStateFromError(error: any) {
+  static getDerivedStateFromError(error: any): ErrorBoundaryState {
     return { hasError: true, error };
   }
   componentDidCatch(error: any, errorInfo: any) {

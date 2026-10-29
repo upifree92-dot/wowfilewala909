@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAppContext } from '../../context/AppContext';
 import { Settings, CreditCard, Plus, Trash2, Edit2, Save, Globe, Smartphone, HelpCircle, KeyRound, Lock, ExternalLink } from 'lucide-react';
+import { BalancePackage } from '../../types';
 
 const AdminSettingsPage = () => {
     const { 
@@ -82,8 +83,8 @@ const AdminSettingsPage = () => {
         setIsPackageModalOpen(true);
     };
 
-    const handleOpenEditPackage = (pkg: { id: string; amount: number; price: number }) => {
-        setEditingPackage({ id: pkg.id, amount: pkg.amount.toString(), price: pkg.price.toString() });
+    const handleOpenEditPackage = (pkg: BalancePackage) => {
+        setEditingPackage({ id: pkg.id, amount: (pkg.amount ?? pkg.price).toString(), price: pkg.price.toString() });
         setIsPackageModalOpen(true);
     };
 
@@ -101,7 +102,9 @@ const AdminSettingsPage = () => {
 
         if (editingPackage.id) {
             // Edit existing
+            const existing = balancePackages.find(p => p.id === editingPackage.id);
             updateBalancePackage({
+                ...(existing || {} as any),
                 id: editingPackage.id,
                 amount: amountNum,
                 price: priceNum

@@ -98,7 +98,7 @@ interface AppContextType {
 
   // Activation Order & Notifications
   placeActivationOrder: (category: Category, orderDetails: any) => void;
-  approveActivationOrder: (notificationId: string, replyMessage: string) => void;
+  approveActivationOrder: (notificationId: string, replyMessage?: string) => void;
   rejectActivationOrder: (notificationId: string, reason: string) => void;
   updateOrderStatusByAdmin: (notificationId: string, newStatus: 'pending' | 'processing' | 'approved' | 'rejected', comment?: string) => void;
   adminReplyToNotification: (notificationId: string, replyMessage: string) => void;
@@ -3437,7 +3437,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         setNotification(siteContent.activationForm.orderSuccessMessage || 'Order placed!', 'success');
     };
     
-    const approveActivationOrder = (notificationId: string, replyMessage: string) => {
+    const approveActivationOrder = (notificationId: string, replyMessage: string = 'Order approved') => {
         if (!isAdmin) return;
         
         const cleanId = notificationId.replace(/^(notif-|seed-order-|synth-order-|#)/, '');

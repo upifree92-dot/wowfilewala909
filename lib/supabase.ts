@@ -62,7 +62,6 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 });
 
 // Proxy functions to lib/db
-export const saveAppointment = db.saveAppointment;
 export const saveDownloadRecord = db.saveDownloadRecord;
 export const saveRegisteredUser = db.saveRegisteredUser;
 export const getRegisteredUser = db.getRegisteredUser;

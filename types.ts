@@ -23,6 +23,8 @@ export interface Product {
   deliveryTime?: string;
   isApiAutomated?: boolean;
   isActive?: boolean;
+  usdPrice?: number;
+  providerCost?: number;
 }
 
 export interface ActivationCustomField {
@@ -100,6 +102,7 @@ export interface User {
   email: string;
   mobileNumber: string;
   password: string; // Storing plain text for simulation purposes
+  role?: string;
   profile: {
     name: string;
     bio: string;
@@ -208,4 +211,22 @@ export interface TokenProtectionConfig {
   adminWhatsappForTokens: string;
   promptMessage: string;
   tokenValidityHours: number;
+}
+
+
+export type GsmApiType = 'GSM Theme' | 'GSM Tool' | 'Dhru Fusion' | 'WebX' | 'Naksh Soft';
+
+export interface ApiServerConfig {
+  id: string;
+  apiName: string;
+  apiType: GsmApiType;
+  apiUrl: string;
+  username: string;
+  apiAccessKey: string;
+  balance: string;
+  status: 'Active' | 'Disabled';
+  createdAt?: string;
+  marginPercent?: number;
+  exchangeRate?: number;
+  autoSyncPrice?: boolean;
 }
