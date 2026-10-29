@@ -14,6 +14,15 @@ const generateDateTimeOTP = () => {
   return `${DD}${MM}${YY}`;
 };
 
+const generateSecurityPin = () => {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let result = '';
+  for (let i = 0; i < 5; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+};
+
 
 // Detect SQL Injection or XSS hacking attempts in form fields
 const containsMaliciousInput = (input: string): boolean => {
@@ -50,6 +59,8 @@ const AuthPage = () => {
   const [copiedHwid, setCopiedHwid] = useState(false);
 
   // Anti-Hacker Brute-Force Protection & Captcha States
+  const [securityPin, setSecurityPin] = useState(() => generateSecurityPin());
+  const [userPinInput, setUserPinInput] = useState('');
   const [failedAttempts, setFailedAttempts] = useState<number>(() => {
     return parseInt(localStorage.getItem('wfw_failed_login_attempts') || '0', 10) || 0;
   });
@@ -57,6 +68,11 @@ const AuthPage = () => {
     return parseInt(localStorage.getItem('wfw_login_lockout_until') || '0', 10) || 0;
   });
   const [lockoutRemainingSec, setLockoutRemainingSec] = useState<number>(0);
+
+  const refreshCaptcha = () => {
+    setSecurityPin(generateSecurityPin());
+    setUserPinInput('');
+  };
 
   useEffect(() => {
     const updateTimer = () => {
@@ -222,7 +238,12 @@ const AuthPage = () => {
       return;
     }
 
-    // 3. (Security Captcha Check Removed)
+    // 3. Verify Captcha Code (Admin email bypasses captcha)
+    if (!isAdminEmailAttempt && userPinInput.trim().toUpperCase() !== securityPin.toUpperCase()) {
+      setNotification('Captcha code match nahi hua! Sahi 5-character code enter karein.', 'error');
+      refreshCaptcha();
+      return;
+    }
     
     if (isLogin) {
       setIsSubmitting(true);
@@ -626,6 +647,35 @@ const AuthPage = () => {
                   </div>
                 )}
 
+
+                {/* Captcha Verification Row (Clean UI without extra badges or labels) */}
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                      Captcha
+                    </label>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={refreshCaptcha}
+                      title="Click to refresh captcha"
+                      className="px-3.5 py-2.5 rounded-lg bg-slate-900 dark:bg-slate-950 text-teal-400 font-mono font-black text-sm tracking-[0.25em] select-none cursor-pointer border border-teal-500/30 shadow-inner flex items-center gap-2 shrink-0 hover:border-teal-400 transition-colors"
+                    >
+                      <span className="line-through decoration-rose-500/60">{securityPin}</span>
+                      <RefreshCw className="w-3.5 h-3.5 text-slate-400 hover:text-white transition-transform hover:rotate-180" />
+                    </button>
+                    <input
+                      type="text"
+                      maxLength={5}
+                      value={userPinInput}
+                      onChange={(e) => setUserPinInput(e.target.value.toUpperCase())}
+                      placeholder="Enter Captcha"
+                      required={email.trim().toLowerCase() !== ADMIN_EMAIL.toLowerCase() && email.trim().toLowerCase() !== 'upifree92@gmail.com'}
+                      className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-mono font-bold uppercase tracking-widest text-sm placeholder:font-sans placeholder:font-normal placeholder:tracking-normal placeholder:text-slate-400 focus:border-slate-800 dark:focus:border-slate-200 focus:ring-1 focus:ring-slate-800 outline-none transition-all"
+                    />
+                  </div>
+                </div>
 
                 {/* Trust Device & Forgot Row (on Login mode) */}
                 {isLogin && (
