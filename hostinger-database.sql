@@ -8,6 +8,9 @@ SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
 SET time_zone = "+00:00";
 
+-- Remove legacy appointments table if it exists
+DROP TABLE IF EXISTS `appointments`;
+
 -- 1. Table for App Data Snapshot & Syncing
 CREATE TABLE IF NOT EXISTS `app_data` (
   `id` VARCHAR(64) NOT NULL,

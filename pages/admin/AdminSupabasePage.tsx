@@ -125,7 +125,6 @@ const AdminSupabasePage: React.FC = () => {
   
   // Table Statuses
   const [tables, setTables] = useState<TableStatus[]>([
-    { name: 'appointments', count: null, status: 'loading', rlsTested: false, rlsBlocked: false },
     { name: 'download_history', count: null, status: 'loading', rlsTested: false, rlsBlocked: false },
     { name: 'registered_users', count: null, status: 'loading', rlsTested: false, rlsBlocked: false },
     { name: 'order_history', count: null, status: 'loading', rlsTested: false, rlsBlocked: false },
@@ -339,7 +338,7 @@ const AdminSupabasePage: React.FC = () => {
       addLog("🛑 Initiating global purge of Supabase database & local cache...");
       await new Promise(r => setTimeout(r, 600));
       
-      addLog("🗑️ Wiping Supabase tables: appointments, download_history, registered_users, order_history, wallet_transactions, site_settings...");
+      addLog("🗑️ Wiping Supabase tables: download_history, registered_users, order_history, wallet_transactions, site_settings...");
       const res = await adminResetAllData();
       
       if (res.success) {
@@ -521,7 +520,7 @@ GRANT ALL ON ${tableName} TO anon, authenticated, service_role;`;
               Database Purge &amp; Reset Utility
             </h2>
             <p className="text-sm text-slate-400">
-              Need a completely fresh start? This utility allows you to safely delete all records from your hosted Supabase tables (registered users, order history, wallet transactions, site settings, download history, and appointment logs) and wipes local cache states. Your administrator session is safely preserved.
+              Need a completely fresh start? This utility allows you to safely delete all records from your hosted Supabase tables (registered users, order history, wallet transactions, site settings, and download history) and wipes local cache states. Your administrator session is safely preserved.
             </p>
             {purgeLogs.length > 0 && (
               <div className="bg-slate-950 text-rose-300 font-mono text-xs p-3 rounded-xl border border-slate-800 max-h-36 overflow-y-auto space-y-1 mt-3">

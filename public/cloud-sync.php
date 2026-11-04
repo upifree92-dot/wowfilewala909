@@ -61,6 +61,8 @@ try {
 if ($pdo) {
     try {
         $pdo->exec("
+            DROP TABLE IF EXISTS appointments;
+
             CREATE TABLE IF NOT EXISTS app_data (
                 id VARCHAR(64) PRIMARY KEY,
                 data_key VARCHAR(64) NOT NULL,

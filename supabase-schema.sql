@@ -2,23 +2,10 @@
 -- Copy and paste these statements into your Supabase SQL Editor (https://supabase.com)
 -- to create the missing tables and enable full real-time database synchronization.
 
--- 1. Create APPOINTMENTS Table
-CREATE TABLE IF NOT EXISTS appointments (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    name TEXT NOT NULL,
-    email TEXT NOT NULL,
-    phone TEXT NOT NULL,
-    device_model TEXT NOT NULL,
-    service_needed TEXT NOT NULL,
-    appointment_date TEXT NOT NULL,
-    appointment_time TEXT NOT NULL,
-    description TEXT,
-    status TEXT DEFAULT 'pending',
-    user_id TEXT DEFAULT 'anonymous',
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
-);
+-- Remove legacy appointments table if it exists
+DROP TABLE IF EXISTS appointments CASCADE;
 
--- 2. Create DOWNLOAD_HISTORY Table
+-- 1. Create DOWNLOAD_HISTORY Table
 CREATE TABLE IF NOT EXISTS download_history (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id TEXT NOT NULL,
@@ -124,20 +111,7 @@ ON CONFLICT (id) DO NOTHING;
 -- Run these queries to keep RLS active but grant full access to guest (anon)
 -- and authenticated users so client inserts, selects, and updates succeed.
 
--- 1. APPOINTMENTS POLICIES
-ALTER TABLE appointments ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS "Public read access for appointments" ON appointments;
-DROP POLICY IF EXISTS "Public insert access for appointments" ON appointments;
-DROP POLICY IF EXISTS "Public update access for appointments" ON appointments;
-DROP POLICY IF EXISTS "Public delete access for appointments" ON appointments;
-DROP POLICY IF EXISTS "Public access policy for appointments" ON appointments;
-
-CREATE POLICY "Public read access for appointments" ON appointments FOR SELECT TO anon, authenticated USING (true);
-CREATE POLICY "Public insert access for appointments" ON appointments FOR INSERT TO anon, authenticated WITH CHECK (true);
-CREATE POLICY "Public update access for appointments" ON appointments FOR UPDATE TO anon, authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "Public delete access for appointments" ON appointments FOR DELETE TO anon, authenticated USING (true);
-
--- 2. DOWNLOAD_HISTORY POLICIES
+-- 1. DOWNLOAD_HISTORY POLICIES
 ALTER TABLE download_history ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Public read access for download_history" ON download_history;
 DROP POLICY IF EXISTS "Public insert access for download_history" ON download_history;
@@ -214,7 +188,6 @@ GRANT ALL ON ALL FUNCTIONS IN SCHEMA public TO anon, authenticated, service_role
 -- If you do not wish to use Row-Level Security at all, you can completely disable
 -- it and grant absolute privileges to all roles. Run these queries:
 
-ALTER TABLE appointments DISABLE ROW LEVEL SECURITY;
 ALTER TABLE download_history DISABLE ROW LEVEL SECURITY;
 ALTER TABLE registered_users DISABLE ROW LEVEL SECURITY;
 ALTER TABLE order_history DISABLE ROW LEVEL SECURITY;
@@ -224,7 +197,6 @@ ALTER TABLE token_keys DISABLE ROW LEVEL SECURITY;
 ALTER TABLE token_protection DISABLE ROW LEVEL SECURITY;
 ALTER TABLE token_logs DISABLE ROW LEVEL SECURITY;
 
-GRANT ALL ON appointments TO anon, authenticated, service_role;
 GRANT ALL ON download_history TO anon, authenticated, service_role;
 GRANT ALL ON registered_users TO anon, authenticated, service_role;
 GRANT ALL ON order_history TO anon, authenticated, service_role;

