@@ -5,6 +5,9 @@
  * and keeps cloud-data.json as a high-speed fallback cache.
  */
 
+@ini_set('display_errors', '0');
+@error_reporting(0);
+
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
 header('Access-Control-Allow-Origin: *');
@@ -356,6 +359,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             $data['users'] = mergeUsersListPhp($data['users'] ?? [], $decodedFile['users'], false);
             $data['updatedAt'] = max(intval($data['updatedAt'] ?? 0), intval($decodedFile['updatedAt'] ?? 0));
         }
+    }
+
+    $since = isset($_GET['since']) ? intval($_GET['since']) : 0;
+    if ($since > 0 && is_array($data) && intval($data['updatedAt'] ?? 0) <= $since) {
+        echo json_encode([
+            'success' => true,
+            'delta' => true,
+            'database_connected' => ($pdo !== null),
+            'data' => [
+                'updatedAt' => intval($data['updatedAt'] ?? 0),
+                'users' => $data['users'] ?? [],
+                'adminNotifications' => $data['adminNotifications'] ?? []
+            ]
+        ]);
+        exit;
     }
 
     echo json_encode([

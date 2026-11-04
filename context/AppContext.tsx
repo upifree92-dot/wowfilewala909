@@ -1,6 +1,6 @@
 
 
-import React, { createContext, useState, useEffect, useContext, useCallback, ReactNode } from 'react';
+import React, { createContext, useState, useEffect, useContext, useCallback, useRef, ReactNode } from 'react';
 import type { User, Product, CartItem, Category, BalancePackage, DownloadRecord, AdminNotification, UserNotification, Transaction, TransactionType, InputField, TokenKey, TokenDownloadLog, TokenProtectionConfig } from '../types';
 import { INITIAL_PRODUCTS, INITIAL_CATEGORIES, ADMIN_EMAIL, INITIAL_BALANCE_PACKAGES } from '../constants';
 import { INITIAL_SITE_CONTENT } from '../siteContent';
@@ -813,35 +813,61 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     return shouldApplyGlobalSettings;
   }, []);
 
-  const pullServerSync = useCallback(async (forceApply = false) => {
-    const apiEndpoints = [`/api/cloud-sync?t=${Date.now()}`, `/cloud-sync.php?t=${Date.now()}`];
-    for (const url of apiEndpoints) {
-      try {
-        const res = await fetch(url, { cache: 'no-store' });
-        const contentType = res.headers.get('content-type') || '';
-        if (res.ok && contentType.includes('application/json')) {
-          const json = await res.json();
-          if (json?.success && json?.data) {
-            return applyCloudSnapshot(json.data, forceApply);
-          }
-        }
-      } catch (_err) {
-        // try next
-      }
-    }
+  const isPullingSyncRef = useRef(false);
+  const preferredSyncEndpointRef = useRef<string | null>(null);
+  const syncBackoffUntilRef = useRef<number>(0);
 
-    // Fallback to direct static cloud-data.json
+  const pullServerSync = useCallback(async (forceApply = false) => {
+    if (isPullingSyncRef.current) return false;
+    if (!forceApply && Date.now() < syncBackoffUntilRef.current) return false;
+
+    isPullingSyncRef.current = true;
     try {
-      const staticRes = await fetch(`/cloud-data.json?t=${Date.now()}`, { cache: 'no-store' });
-      const contentType = staticRes.headers.get('content-type') || '';
-      if (staticRes.ok && contentType.includes('application/json')) {
-        const staticData = await staticRes.json();
-        return applyCloudSnapshot(staticData, forceApply);
+      const localUpdatedAt = forceApply ? 0 : Number(localStorage.getItem('cloud_sync_timestamp') || '0');
+      const sinceParam = !forceApply && localUpdatedAt > 0 ? `&since=${localUpdatedAt}` : '';
+      const baseEndpoints = ['/api/cloud-sync', '/cloud-sync.php'];
+      const orderedEndpoints = preferredSyncEndpointRef.current
+        ? [preferredSyncEndpointRef.current, ...baseEndpoints.filter(e => e !== preferredSyncEndpointRef.current)]
+        : baseEndpoints;
+
+      for (const baseEp of orderedEndpoints) {
+        try {
+          const res = await fetch(`${baseEp}?t=${Date.now()}${sinceParam}`, { cache: 'no-store' });
+          if (res.status === 403 || res.status === 429 || res.status === 503) {
+            // Hostinger CDN / rate-limit cooldown to prevent ERR_HTTP2_PROTOCOL_ERROR
+            syncBackoffUntilRef.current = Date.now() + 30000;
+            return false;
+          }
+          const contentType = res.headers.get('content-type') || '';
+          if (res.ok && contentType.includes('application/json')) {
+            const json = await res.json();
+            if (json?.success && json?.data) {
+              preferredSyncEndpointRef.current = baseEp;
+              return applyCloudSnapshot(json.data, forceApply);
+            }
+          }
+        } catch (_err) {
+          // try next
+        }
       }
-    } catch (_e) {
-      // ignore
+
+      // Fallback to direct static cloud-data.json only on initial/forced sync
+      if (forceApply || !preferredSyncEndpointRef.current) {
+        try {
+          const staticRes = await fetch(`/cloud-data.json?t=${Date.now()}`, { cache: 'no-store' });
+          const contentType = staticRes.headers.get('content-type') || '';
+          if (staticRes.ok && contentType.includes('application/json')) {
+            const staticData = await staticRes.json();
+            return applyCloudSnapshot(staticData, forceApply);
+          }
+        } catch (_e) {
+          // ignore
+        }
+      }
+      return false;
+    } finally {
+      isPullingSyncRef.current = false;
     }
-    return false;
   }, [applyCloudSnapshot]);
 
   const forceGitAndCloudSync = async () => {
@@ -1283,12 +1309,13 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     .catch(err => console.warn('Non-blocking GSM catalog sync error:', err));
   }, [categories]);
 
-  // Poll /api/cloud-sync every 2 seconds when realtimeSyncEnabled is ON so other devices update live instantly
+  // Poll /api/cloud-sync every 10 seconds with lightweight delta sync when realtimeSyncEnabled is ON
   useEffect(() => {
     if (!realtimeSyncEnabled) return;
     const interval = setInterval(() => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
       pullServerSync(false);
-    }, 2000);
+    }, 10000);
     return () => clearInterval(interval);
   }, [realtimeSyncEnabled, pullServerSync]);
 
@@ -3761,17 +3788,27 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         }
     }, [adminNotifications, allUsers, pushServerSync, user]);
 
-    // Live Background Polling: Check Connected Dealer API every 8 seconds for status changes (Processing / Success / Reject / Waiting)
+    // Live Background Polling: Check Connected Dealer API every 15 seconds for status changes (Processing / Success / Reject / Waiting)
     useEffect(() => {
         const dealerApi = getActiveDealerApi();
         if (!dealerApi.apiUrl || !/^https?:\/\//i.test(dealerApi.apiUrl)) return;
 
         let isCancelled = false;
+        let isPolling = false;
+        let preferredDealerEp: string | null = null;
 
         const pollDealerOrderStatuses = async () => {
+            if (isPolling) return;
+            if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
+
             const activeOrders = adminNotifications
-                .filter(n => (n.type === 'order' || Boolean(n.orderId)) && (n.status === 'pending' || n.status === 'processing'))
-                .slice(0, 12)
+                .filter(n =>
+                    !String(n.id || '').startsWith('seed-') &&
+                    !String(n.id || '').startsWith('synth-') &&
+                    (n.type === 'order' || Boolean(n.orderId)) &&
+                    (n.status === 'pending' || n.status === 'processing')
+                )
+                .slice(0, 10)
                 .map(n => ({
                     orderId: n.orderId,
                     dealerRefId: n.orderDetails?.dealerRefId || n.orderId,
@@ -3780,43 +3817,56 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
             if (activeOrders.length === 0) return;
 
-            const endpoints = ['/api/check-dealer-orders', '/cloud-sync.php?action=check_dealer_orders'];
-            for (const ep of endpoints) {
-                try {
-                    const res = await fetch(ep, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            action: 'check_dealer_orders',
-                            orders: activeOrders,
-                            dealerApi
-                        })
-                    });
-                    const ct = res.headers.get('content-type') || '';
-                    if (res.ok && ct.includes('application/json')) {
-                        const data = await res.json();
-                        if (!isCancelled && data?.success && Array.isArray(data.updates)) {
-                            data.updates.forEach((upd: any) => {
-                                if (upd && upd.orderId && upd.status) {
-                                    applyDealerOrderStatusUpdate(
-                                        String(upd.orderId),
-                                        upd.status,
-                                        upd.reply,
-                                        upd.dealerRefId,
-                                        upd.repliedAt
-                                    );
-                                }
-                            });
+            isPolling = true;
+            try {
+                const baseEndpoints = ['/api/check-dealer-orders', '/cloud-sync.php?action=check_dealer_orders'];
+                const endpoints = preferredDealerEp
+                    ? [preferredDealerEp, ...baseEndpoints.filter(e => e !== preferredDealerEp)]
+                    : baseEndpoints;
+
+                for (const ep of endpoints) {
+                    try {
+                        const res = await fetch(ep, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                action: 'check_dealer_orders',
+                                orders: activeOrders,
+                                dealerApi
+                            })
+                        });
+                        if (res.status === 403 || res.status === 429 || res.status === 503) {
+                            break;
                         }
-                        break;
+                        const ct = res.headers.get('content-type') || '';
+                        if (res.ok && ct.includes('application/json')) {
+                            preferredDealerEp = ep;
+                            const data = await res.json();
+                            if (!isCancelled && data?.success && Array.isArray(data.updates)) {
+                                data.updates.forEach((upd: any) => {
+                                    if (upd && upd.orderId && upd.status) {
+                                        applyDealerOrderStatusUpdate(
+                                            String(upd.orderId),
+                                            upd.status,
+                                            upd.reply,
+                                            upd.dealerRefId,
+                                            upd.repliedAt
+                                        );
+                                    }
+                                });
+                            }
+                            break;
+                        }
+                    } catch {
+                        // try fallback endpoint
                     }
-                } catch {
-                    // try fallback endpoint
                 }
+            } finally {
+                isPolling = false;
             }
         };
 
-        const intervalId = setInterval(pollDealerOrderStatuses, 8000);
+        const intervalId = setInterval(pollDealerOrderStatuses, 15000);
         return () => {
             isCancelled = true;
             clearInterval(intervalId);

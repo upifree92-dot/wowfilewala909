@@ -263,9 +263,21 @@ async function startServer() {
   });
 
   // API Route: Get latest synced state across all devices
-  app.get('/api/cloud-sync', (_req, res) => {
+  app.get('/api/cloud-sync', (req, res) => {
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
     const data = readCloudData();
+    const since = Number(req.query.since || 0);
+    if (since > 0 && data && Number(data.updatedAt || 0) <= since) {
+      return res.json({
+        success: true,
+        delta: true,
+        data: {
+          updatedAt: Number(data.updatedAt || 0),
+          users: Array.isArray(data.users) ? data.users : [],
+          adminNotifications: Array.isArray(data.adminNotifications) ? data.adminNotifications : [],
+        },
+      });
+    }
     res.json({
       success: true,
       data,

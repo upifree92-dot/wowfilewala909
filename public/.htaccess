@@ -1,8 +1,13 @@
+DirectoryIndex index.html index.php
+
 <IfModule mod_rewrite.c>
   RewriteEngine On
   RewriteBase /
 
-  # Route API endpoints directly to cloud-sync.php on Hostinger Apache
+  # Never rewrite Hostinger CDN (hcdn-cgi), Cloudflare (cdn-cgi), or SSL verification (.well-known)
+  RewriteRule ^(hcdn-cgi|cdn-cgi|\.well-known)(/|$) - [L]
+
+  # Route API endpoints directly to cloud-sync.php on Hostinger Apache/LiteSpeed
   RewriteRule ^api/place-dealer-order/?$ /cloud-sync.php?action=place_dealer_order [QSA,L]
   RewriteRule ^api/check-dealer-orders/?$ /cloud-sync.php?action=check_dealer_orders [QSA,L]
   RewriteRule ^api/dealer-webhook/?$ /cloud-sync.php?action=dealer_webhook [QSA,L]
@@ -24,6 +29,5 @@
 <IfModule mod_headers.c>
   <FilesMatch "cloud-data\.json$">
     Header set Cache-Control "no-store, no-cache, must-revalidate, max-age=0"
-    Header set Pragma "no-cache"
   </FilesMatch>
 </IfModule>
