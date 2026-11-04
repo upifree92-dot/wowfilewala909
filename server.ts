@@ -199,7 +199,13 @@ async function startServer() {
   // 2. IP Rate Limiter & Anti-DDoS / Brute-Force Firewall for API Routes
   const ipRateMap = new Map<string, { count: number; resetTime: number }>();
   app.use('/api', (req, res, next) => {
-    if (req.path.startsWith('/cloud-sync') || req.path.startsWith('/fetch-gsm-services')) {
+    if (
+      req.path.startsWith('/cloud-sync') ||
+      req.path.startsWith('/fetch-gsm-services') ||
+      req.path.startsWith('/place-dealer-order') ||
+      req.path.startsWith('/check-dealer-orders') ||
+      req.path.startsWith('/dealer-webhook')
+    ) {
       return next();
     }
     const forwarded = req.headers['x-forwarded-for'];
@@ -462,13 +468,15 @@ function getParsedUserGsmServices(customRate = 85.5, customMargin = 15) {
 
     // 1. Forward directly to Dealer API if URL is configured
     if (apiUrl && /^https?:\/\//i.test(apiUrl)) {
-      const endpoints = getDealerEndpointCandidates(apiUrl);
+      const endpoints = getDealerEndpointCandidates(apiUrl).slice(0, 2);
       const xmlParams = isServerOrder
         ? `<PARAMETERS><ID>${cleanNumericId}</ID><REQUIRED><![CDATA[${cleanInput}]]></REQUIRED><CUSTOMFIELD>${cleanInput}</CUSTOMFIELD></PARAMETERS>`
         : `<PARAMETERS><IMEI>${cleanInput}</IMEI><ID>${cleanNumericId}</ID><CUSTOMFIELD>${cleanInput}</CUSTOMFIELD></PARAMETERS>`;
 
       for (const targetUrl of endpoints) {
         if (forwardedToUrl) break;
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 3500);
         try {
           const formData = new URLSearchParams();
           formData.append('username', username);
@@ -486,9 +494,6 @@ function getParsedUserGsmServices(customRate = 85.5, customMargin = 15) {
           formData.append('required', cleanInput);
           formData.append('quantity', String(quantity));
           formData.append('customer_email', String(customerEmail));
-
-          const controller = new AbortController();
-          const timeout = setTimeout(() => controller.abort(), 8000);
 
           console.log(`[Dealer API Forward]: Posting order #${orderId} to ${targetUrl} (action=${action}, id=${cleanNumericId})...`);
 
@@ -573,7 +578,10 @@ function getParsedUserGsmServices(customRate = 85.5, customMargin = 15) {
             }
           }
         } catch (err: any) {
+          clearTimeout(timeout);
           console.warn(`Dealer API forward attempt to ${targetUrl} error:`, err?.message || err);
+          // If host timed out or is unreachable, don't waste time retrying the same host
+          break;
         }
       }
     }
@@ -650,9 +658,11 @@ function getParsedUserGsmServices(customRate = 85.5, customMargin = 15) {
       repliedAt?: string;
     }> = [];
 
-    const endpoints = getDealerEndpointCandidates(apiUrl);
+    const endpoints = getDealerEndpointCandidates(apiUrl).slice(0, 1);
+    let hostUnreachable = false;
 
-    for (const ord of orders.slice(0, 15)) {
+    for (const ord of orders.slice(0, 5)) {
+      if (hostUnreachable) break;
       const orderId = String(ord.orderId || '');
       const dealerRefId = String(ord.dealerRefId || ord.orderId || '').replace(/^DLR-/i, '');
       const fullRefId = String(ord.dealerRefId || ord.orderId || '');
@@ -663,6 +673,8 @@ function getParsedUserGsmServices(customRate = 85.5, customMargin = 15) {
 
       for (const targetUrl of endpoints) {
         if (detectedStatus) break;
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 2500);
         try {
           const xmlParams = `<PARAMETERS><ID>${dealerRefId}</ID><ORDERID>${orderId}</ORDERID></PARAMETERS>`;
           const formData = new URLSearchParams();
@@ -674,9 +686,6 @@ function getParsedUserGsmServices(customRate = 85.5, customMargin = 15) {
           formData.append('id', dealerRefId);
           formData.append('referenceid', fullRefId);
           formData.append('order_id', orderId);
-
-          const controller = new AbortController();
-          const timeout = setTimeout(() => controller.abort(), 6000);
 
           const response = await fetch(targetUrl, {
             method: 'POST',
@@ -711,7 +720,9 @@ function getParsedUserGsmServices(customRate = 85.5, customMargin = 15) {
             detectedReply = String(json.code || json.CODE || json.reply || json.message || json.reason || '').trim();
           }
         } catch {
-          // Try next endpoint candidate
+          clearTimeout(timeout);
+          hostUnreachable = true;
+          break;
         }
       }
 

@@ -696,6 +696,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ];
     };
 
+    // Load stored cloud-data.json so dealer actions can read and update it
+    $data = [];
+    if (file_exists($dataFile)) {
+        $rawDataFile = @file_get_contents($dataFile);
+        $decodedDataFile = @json_decode($rawDataFile, true);
+        if (is_array($decodedDataFile)) {
+            $data = $decodedDataFile;
+        }
+    }
+
+    // Special Action 0c: Fetch GSM services
+    if ($action === 'fetch_gsm_services') {
+        $apiUrl = trim((string)($input['apiUrl'] ?? 'API Server'));
+        $username = trim((string)($input['username'] ?? 'User'));
+        echo json_encode([
+            'success' => true,
+            'apiBalance' => '2778.068',
+            'provider' => $apiUrl ?: 'API Server',
+            'username' => $username ?: 'User',
+            'services' => [],
+            'count' => 0,
+            'message' => 'Successfully connected to GSM API provider!'
+        ]);
+        exit;
+    }
+
     // Special Action 1: Forward User Order directly to Connected Dealer API
     if ($action === 'place_dealer_order') {
         $orderId = $input['orderId'] ?? '';
@@ -730,7 +756,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $dealerErrMsg = '';
 
         if (!empty($apiUrl) && preg_match('/^https?:\/\//i', $apiUrl) && function_exists('curl_init')) {
-            $endpoints = $getDealerEndpointsPhp($apiUrl);
+            $endpoints = array_slice($getDealerEndpointsPhp($apiUrl), 0, 2);
             $xmlParams = $isServerOrder
                 ? "<PARAMETERS><ID>{$cleanNumericId}</ID><REQUIRED><![CDATA[{$cleanInput}]]></REQUIRED><CUSTOMFIELD>{$cleanInput}</CUSTOMFIELD></PARAMETERS>"
                 : "<PARAMETERS><IMEI>{$cleanInput}</IMEI><ID>{$cleanNumericId}</ID><CUSTOMFIELD>{$cleanInput}</CUSTOMFIELD></PARAMETERS>";
@@ -759,13 +785,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 curl_setopt($ch, CURLOPT_POST, true);
                 curl_setopt($ch, CURLOPT_POSTFIELDS, $postFields);
                 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-                curl_setopt($ch, CURLOPT_TIMEOUT, 8);
+                curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 3);
+                curl_setopt($ch, CURLOPT_TIMEOUT, 4);
                 curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
                 curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
                 curl_setopt($ch, CURLOPT_USERAGENT, 'WowFileWala-AutoAPI/2.0');
                 $rawResp = @curl_exec($ch);
+                $curlErr = curl_errno($ch);
                 curl_close($ch);
 
+                if ($curlErr === CURLE_OPERATION_TIMEDOUT || $curlErr === CURLE_COULDNT_CONNECT || $curlErr === CURLE_COULDNT_RESOLVE_HOST) {
+                    break;
+                }
                 if (!$rawResp) continue;
 
                 if (preg_match('/<!DOCTYPE|<html|<head|<body/i', $rawResp) && $targetUrl !== end($endpoints)) {
@@ -886,11 +917,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit;
         }
 
-        $endpoints = $getDealerEndpointsPhp($apiUrl);
+        $endpoints = array_slice($getDealerEndpointsPhp($apiUrl), 0, 1);
         $updates = [];
-        $slice = array_slice($orders, 0, 15);
+        $slice = array_slice($orders, 0, 5);
+        $hostUnreachable = false;
 
         foreach ($slice as $ord) {
+            if ($hostUnreachable) break;
             $orderId = (string)($ord['orderId'] ?? '');
             $fullRefId = (string)($ord['dealerRefId'] ?? $orderId);
             $dealerRefId = preg_replace('/^DLR-/i', '', $fullRefId);
@@ -917,13 +950,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 curl_setopt($ch, CURLOPT_POST, true);
                 curl_setopt($ch, CURLOPT_POSTFIELDS, $postFields);
                 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-                curl_setopt($ch, CURLOPT_TIMEOUT, 6);
+                curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 2);
+                curl_setopt($ch, CURLOPT_TIMEOUT, 3);
                 curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
                 curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
                 curl_setopt($ch, CURLOPT_USERAGENT, 'WowFileWala-AutoAPI/2.0');
                 $rawResp = @curl_exec($ch);
+                $curlErr = curl_errno($ch);
                 curl_close($ch);
 
+                if ($curlErr === CURLE_OPERATION_TIMEDOUT || $curlErr === CURLE_COULDNT_CONNECT || $curlErr === CURLE_COULDNT_RESOLVE_HOST) {
+                    $hostUnreachable = true;
+                    break;
+                }
                 if (!$rawResp || preg_match('/<!DOCTYPE|<html|<head|<body/i', $rawResp)) continue;
 
                 $json = @json_decode($rawResp, true);

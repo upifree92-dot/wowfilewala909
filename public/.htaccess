@@ -2,6 +2,17 @@
   RewriteEngine On
   RewriteBase /
 
+  # Route API endpoints directly to cloud-sync.php on Hostinger Apache
+  RewriteRule ^api/place-dealer-order/?$ /cloud-sync.php?action=place_dealer_order [QSA,L]
+  RewriteRule ^api/check-dealer-orders/?$ /cloud-sync.php?action=check_dealer_orders [QSA,L]
+  RewriteRule ^api/dealer-webhook/?$ /cloud-sync.php?action=dealer_webhook [QSA,L]
+  RewriteRule ^api/fetch-gsm-services/?$ /cloud-sync.php?action=fetch_gsm_services [QSA,L]
+  RewriteRule ^api/admin-adjust-balance/?$ /cloud-sync.php?action=admin_adjust_balance [QSA,L]
+  RewriteRule ^api/save-user/?$ /cloud-sync.php?action=save_user [QSA,L]
+  RewriteRule ^api/get-users/?$ /cloud-sync.php?action=get_users [QSA,L]
+  RewriteRule ^api/get-user/?$ /cloud-sync.php?action=get_user [QSA,L]
+  RewriteRule ^api/cloud-sync/?$ /cloud-sync.php [QSA,L]
+
   # Allow direct access to cloud-sync.php and existing static files
   RewriteRule ^index\.html$ - [L]
   RewriteCond %{REQUEST_FILENAME} !-f
