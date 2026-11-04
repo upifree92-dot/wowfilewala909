@@ -320,11 +320,19 @@ const HostingraConnectorPage = () => {
             return;
         }
 
+        let cleanUrl = formApiUrl.trim();
+        if (cleanUrl && !cleanUrl.startsWith('http://') && !cleanUrl.startsWith('https://')) {
+            cleanUrl = 'https://' + cleanUrl;
+        }
+        if (cleanUrl && !cleanUrl.endsWith('.php') && !cleanUrl.endsWith('/api') && (formApiType === 'Dhru Fusion' || cleanUrl.includes('gsmfastunlock') || formApiType === 'GSM Theme')) {
+            cleanUrl = cleanUrl.replace(/\/+$/, '') + '/api/index.php';
+        }
+
         const newOrUpdatedApi: ApiServerConfig = {
             id: editingApiId || `api-${Date.now()}`,
             apiName: formApiName.trim(),
             apiType: formApiType,
-            apiUrl: formApiUrl.trim(),
+            apiUrl: cleanUrl,
             username: formUsername.trim(),
             apiAccessKey: formAccessKey.trim(),
             balance: '2778.068',
@@ -348,22 +356,24 @@ const HostingraConnectorPage = () => {
         const finalMargin = isNaN(parsedMargin) ? 15 : parsedMargin;
         const finalRate = isNaN(parsedRate) ? 85.5 : parsedRate;
 
-        updateSiteContent('apiServers', updatedList);
-        updateSiteContent('apiServer', {
-            ...currentSavedApi,
-            apiName: newOrUpdatedApi.apiName,
-            apiType: newOrUpdatedApi.apiType,
-            apiUrl: newOrUpdatedApi.apiUrl,
-            username: newOrUpdatedApi.username,
-            apiAccessKey: newOrUpdatedApi.apiAccessKey,
-            balance: newOrUpdatedApi.balance,
-            status: newOrUpdatedApi.status,
-            autoPlaceOrder: newOrUpdatedApi.autoPlaceOrder,
-            autoOrderSuccess: newOrUpdatedApi.autoOrderSuccess,
-            dealerOrderMode: newOrUpdatedApi.dealerOrderMode,
-            marginPercent: finalMargin,
-            exchangeRate: finalRate,
-            autoSyncPrice: Boolean(autoSyncPrice)
+        updateSiteContent({
+            apiServers: updatedList,
+            apiServer: {
+                ...currentSavedApi,
+                apiName: newOrUpdatedApi.apiName,
+                apiType: newOrUpdatedApi.apiType,
+                apiUrl: newOrUpdatedApi.apiUrl,
+                username: newOrUpdatedApi.username,
+                apiAccessKey: newOrUpdatedApi.apiAccessKey,
+                balance: newOrUpdatedApi.balance,
+                status: newOrUpdatedApi.status,
+                autoPlaceOrder: newOrUpdatedApi.autoPlaceOrder,
+                autoOrderSuccess: newOrUpdatedApi.autoOrderSuccess,
+                dealerOrderMode: newOrUpdatedApi.dealerOrderMode,
+                marginPercent: finalMargin,
+                exchangeRate: finalRate,
+                autoSyncPrice: Boolean(autoSyncPrice)
+            }
         });
 
         setIsModalOpen(false);

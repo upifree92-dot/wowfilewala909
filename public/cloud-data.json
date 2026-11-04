@@ -10955,7 +10955,38 @@
       "textColorDark": "#cbd5e1",
       "textMutedDark": "#94a3b8",
       "accentColor": "#f97316"
-    }
+    },
+    "apiServer": {
+      "id": "api-primary",
+      "apiName": "GSM FAST UNLOCK",
+      "apiType": "Dhru Fusion",
+      "apiUrl": "https://www.gsmfastunlock.com/api/index.php",
+      "username": "",
+      "apiAccessKey": "",
+      "balance": "2778.068",
+      "status": "Active",
+      "autoPlaceOrder": true,
+      "autoOrderSuccess": true,
+      "dealerOrderMode": "dealer_live_sync",
+      "marginPercent": 15,
+      "exchangeRate": 85.5,
+      "autoSyncPrice": true
+    },
+    "apiServers": [
+      {
+        "id": "api-primary",
+        "apiName": "GSM FAST UNLOCK",
+        "apiType": "Dhru Fusion",
+        "apiUrl": "https://www.gsmfastunlock.com/api/index.php",
+        "username": "",
+        "apiAccessKey": "",
+        "balance": "2778.068",
+        "status": "Active",
+        "autoPlaceOrder": true,
+        "autoOrderSuccess": true,
+        "dealerOrderMode": "dealer_live_sync"
+      }
+    ]
   },
   "autoWalletNewUser": false,
   "users": [

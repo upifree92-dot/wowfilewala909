@@ -3517,12 +3517,12 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         const chosen = activeFromList || fallbackSingle;
 
         const apiName = chosen.apiName || fallbackSingle.apiName || 'GSM FAST UNLOCK';
-        const apiType = chosen.apiType || fallbackSingle.apiType || 'GSM Theme';
-        const apiUrl = chosen.apiUrl || fallbackSingle.apiUrl || '';
+        const apiType = chosen.apiType || fallbackSingle.apiType || 'Dhru Fusion';
+        const apiUrl = chosen.apiUrl || fallbackSingle.apiUrl || 'https://www.gsmfastunlock.com/api/index.php';
         const username = chosen.username || fallbackSingle.username || '';
         const apiAccessKey = chosen.apiAccessKey || fallbackSingle.apiAccessKey || '';
-        const autoPlaceOrder = chosen.autoPlaceOrder !== false && fallbackSingle.autoPlaceOrder !== false;
-        const autoOrderSuccess = chosen.autoOrderSuccess !== false && fallbackSingle.autoOrderSuccess !== false;
+        const autoPlaceOrder = chosen.autoPlaceOrder !== false;
+        const autoOrderSuccess = chosen.autoOrderSuccess !== false;
         const dealerOrderMode: 'dealer_live_sync' | 'instant_success' =
             chosen.dealerOrderMode || fallbackSingle.dealerOrderMode || 'dealer_live_sync';
 

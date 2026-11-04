@@ -15,7 +15,6 @@ const MasterServiceManagerModal: React.FC<MasterServiceManagerModalProps> = ({ i
   const [activeTab, setActiveTab] = useState<'all' | 'imei' | 'remote' | 'server' | 'file'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
-  const [bulkDealerDiscount, setBulkDealerDiscount] = useState<number>(10); // 10% discount default
 
   // New Service Form State inside 1 Button modal
   const [isAddingNew, setIsAddingNew] = useState(false);
@@ -119,21 +118,6 @@ const MasterServiceManagerModal: React.FC<MasterServiceManagerModalProps> = ({ i
     setNewName('');
     setNewDesc('');
     setNotification(`New ${newType.toUpperCase()} Service "${newName}" created successfully!`, 'success');
-  };
-
-  const handleApplyBulkDealerDiscount = () => {
-    if (bulkDealerDiscount < 0 || bulkDealerDiscount > 90) return;
-    let count = 0;
-    filteredProducts.forEach(p => {
-      const discountRatio = (100 - bulkDealerDiscount) / 100;
-      const calculatedDealerPrice = Math.round(p.price * discountRatio);
-      updateProduct({
-        ...p,
-        dealerPrice: calculatedDealerPrice
-      });
-      count++;
-    });
-    setNotification(`Applied ${bulkDealerDiscount}% Dealer Discount to ${count} services!`, 'success');
   };
 
   const handleDelete = (id: string, name: string) => {
@@ -335,7 +319,7 @@ const MasterServiceManagerModal: React.FC<MasterServiceManagerModalProps> = ({ i
             </form>
           )}
 
-          {/* Search & Bulk Dealer Rates Row */}
+          {/* Search Row */}
           <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-1">
             <div className="relative w-full sm:w-80">
               <input
@@ -346,26 +330,6 @@ const MasterServiceManagerModal: React.FC<MasterServiceManagerModalProps> = ({ i
                 className="w-full bg-slate-900 border border-slate-800 text-slate-100 text-xs rounded-xl pl-8 pr-3 py-2 focus:outline-none focus:border-teal-500"
               />
               <Search className="w-3.5 h-3.5 text-slate-500 absolute left-2.5 top-1/2 -translate-y-1/2" />
-            </div>
-
-            {/* Bulk Dealer Rate Setter */}
-            <div className="flex items-center gap-2 bg-slate-900 px-3 py-1.5 rounded-xl border border-slate-800 text-xs">
-              <span className="text-slate-400 font-medium">Dealer Discount %:</span>
-              <input
-                type="number"
-                min={0}
-                max={90}
-                value={bulkDealerDiscount}
-                onChange={e => setBulkDealerDiscount(Number(e.target.value))}
-                className="w-14 bg-slate-950 border border-slate-800 text-amber-400 font-bold font-mono px-2 py-1 rounded text-center"
-              />
-              <button
-                type="button"
-                onClick={handleApplyBulkDealerDiscount}
-                className="bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 px-2.5 py-1 rounded font-bold transition-all cursor-pointer"
-              >
-                Apply To Tab
-              </button>
             </div>
           </div>
         </div>
@@ -528,11 +492,6 @@ const MasterServiceManagerModal: React.FC<MasterServiceManagerModalProps> = ({ i
                     <td className="p-2.5 font-bold text-slate-100">
                       <div className="flex items-center gap-2">
                         <span>{p.name}</span>
-                        {p.dealerPrice !== undefined && p.dealerPrice < p.price && (
-                          <span className="px-1.5 py-0.2 bg-amber-500/10 text-amber-400 border border-amber-500/20 text-[9px] font-bold rounded">
-                            Dealer Discount
-                          </span>
-                        )}
                       </div>
                       <div className="text-[10px] text-slate-500 line-clamp-1">{p.description}</div>
                     </td>

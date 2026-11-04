@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useAppContext } from '../../context/AppContext';
 import type { AdminNotification, User } from '../../types';
-import { X, Search, Check, Hourglass, Clock, Ban } from 'lucide-react';
+import { X, Search, Check, Hourglass, Clock, Ban, Send } from 'lucide-react';
 import OrderDetailModal from '../../components/OrderDetailModal';
 
 // Sample Historical Orders matching exact screenshot image_bf0e3a18.png
@@ -346,7 +346,8 @@ const AdminOrdersPage = () => {
         getAllUsers, 
         user: currentUser, 
         isAdmin,
-        markAllAdminNotificationsAsRead
+        markAllAdminNotificationsAsRead,
+        setNotification
     } = useAppContext();
 
     useEffect(() => {
@@ -381,6 +382,54 @@ const AdminOrdersPage = () => {
     const [previewCustomerModal, setPreviewCustomerModal] = useState<AdminNotification | null>(null);
     const [modalActiveTab, setModalActiveTab] = useState<'overview' | 'success' | 'reject' | 'in_process' | 'waiting' | 'set_back_rejected'>('overview');
     const [modalComments, setModalComments] = useState('');
+    const [isPushingDealer, setIsPushingDealer] = useState(false);
+
+    const handlePushToDealer = async (ord: AdminNotification) => {
+        if (!ord) return;
+        setIsPushingDealer(true);
+        try {
+            const cleanOrderId = String(ord.orderId || ord.id || '').replace(/^#/, '');
+            const rawInput = ord.orderDetails?.input || ord.orderDetails?.imei || ord.orderDetails?.sn || ord.orderDetails?.username || 'Verified';
+            const res = await fetch('/api/place-dealer-order', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    orderId: cleanOrderId,
+                    serviceId: ord.orderDetails?.serviceId || '1',
+                    serviceName: ord.orderDetails?.categoryName || 'GSM Service',
+                    inputData: String(rawInput),
+                    quantity: ord.orderDetails?.quantity || 1,
+                    totalPrice: ord.orderDetails?.totalPrice || 0,
+                    customerEmail: ord.orderDetails?.customerEmail || ''
+                })
+            });
+            const data = await res.json();
+            if (data?.success) {
+                const statusLabel = data.status ? data.status.toUpperCase() : 'SENT';
+                const refMsg = data.dealerRefId ? ` | Ref ID: #${data.dealerRefId}` : '';
+                const replyMsg = data.reply ? ` | ${data.reply}` : '';
+                setNotification(`Dealer API Forwarded! Status: ${statusLabel}${refMsg}${replyMsg}`, data.status === 'rejected' ? 'error' : 'success');
+                if (data.status) {
+                    updateOrderStatusByAdmin(ord.id, data.status, data.reply || ord.adminReply);
+                    setActionModalOrder(prev => prev ? {
+                        ...prev,
+                        status: data.status,
+                        adminReply: data.reply || prev.adminReply,
+                        orderDetails: {
+                            ...(prev.orderDetails || {}),
+                            dealerRefId: data.dealerRefId
+                        }
+                    } : null);
+                }
+            } else {
+                setNotification(data?.error || 'Failed to dispatch order to dealer API', 'error');
+            }
+        } catch (e: any) {
+            setNotification('Dealer API Network Error: ' + (e?.message || e), 'error');
+        } finally {
+            setIsPushingDealer(false);
+        }
+    };
 
     const users = getAllUsers();
     const userMap = users.reduce((acc, user) => {
@@ -978,9 +1027,18 @@ const AdminOrdersPage = () => {
                                                     </p>
                                                 </div>
 
-                                                {/* Customer Modal Preview Action */}
-                                                <div className="py-3 px-6 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
-                                                    <span className="text-xs text-slate-500 font-medium">Customer View:</span>
+                                                {/* Customer Modal Preview Action & Forward to Dealer API */}
+                                                <div className="py-3 px-6 bg-slate-50 border-t border-slate-200 flex flex-wrap items-center justify-between gap-2">
+                                                    <button
+                                                        type="button"
+                                                        disabled={isPushingDealer}
+                                                        onClick={() => handlePushToDealer(actionModalOrder)}
+                                                        className="px-3 py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5 shadow-2xs"
+                                                        title="Forward or re-send this order to Dealer API"
+                                                    >
+                                                        <Send className="w-3.5 h-3.5" />
+                                                        <span>{isPushingDealer ? 'Pushing to Dealer...' : '⚡ Forward to Dealer API'}</span>
+                                                    </button>
                                                     <button
                                                         type="button"
                                                         onClick={() => setPreviewCustomerModal(actionModalOrder)}

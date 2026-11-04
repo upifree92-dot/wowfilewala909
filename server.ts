@@ -378,6 +378,56 @@ function getParsedUserGsmServices(customRate = 85.5, customMargin = 15) {
     return null;
   };
 
+  // Helper: Resolve active Dealer API from incoming payload or stored cloud-data.json
+  const resolveServerDealerApi = (incomingDealerApi?: any) => {
+    const inc = incomingDealerApi || {};
+    const cloud = readCloudData() || {};
+    const siteContent = cloud.siteContent || {};
+    const servers: any[] = Array.isArray(siteContent.apiServers) ? siteContent.apiServers : [];
+    const activeFromList = servers.find((s: any) => s && s.status === 'Active') || servers[0];
+    const fallbackSingle = siteContent.apiServer || {};
+    const chosen = activeFromList || fallbackSingle;
+
+    const apiName = (inc.apiName || chosen.apiName || fallbackSingle.apiName || 'GSM FAST UNLOCK').trim();
+    const apiType = (inc.apiType || chosen.apiType || fallbackSingle.apiType || 'Dhru Fusion').trim();
+    let apiUrl = (inc.apiUrl || chosen.apiUrl || fallbackSingle.apiUrl || 'https://www.gsmfastunlock.com').trim();
+    const username = (inc.username || chosen.username || fallbackSingle.username || '').trim();
+    const apiAccessKey = (inc.apiAccessKey || chosen.apiAccessKey || fallbackSingle.apiAccessKey || '').trim();
+    const dealerOrderMode = inc.dealerOrderMode || chosen.dealerOrderMode || fallbackSingle.dealerOrderMode || 'dealer_live_sync';
+
+    return {
+      apiName,
+      apiType,
+      apiUrl,
+      username,
+      apiAccessKey,
+      dealerOrderMode,
+    };
+  };
+
+  // Helper: Get candidate endpoints for DHRU Fusion / GSM Theme / WebX APIs
+  const getDealerEndpointCandidates = (rawUrl: string): string[] => {
+    let u = (rawUrl || '').trim();
+    if (!u) return [];
+    if (!/^https?:\/\//i.test(u)) {
+      u = 'https://' + u;
+    }
+    u = u.replace(/\/+$/, '');
+    const list: string[] = [];
+    if (u.endsWith('/api/index.php') || u.endsWith('/api.php') || u.endsWith('/index.php')) {
+      list.push(u);
+    } else if (u.endsWith('/api')) {
+      list.push(`${u}/index.php`);
+      list.push(u);
+    } else {
+      // DHRU Fusion standard endpoint is /api/index.php
+      list.push(`${u}/api/index.php`);
+      list.push(`${u}/index.php`);
+      list.push(u);
+    }
+    return Array.from(new Set(list));
+  };
+
   // API Route: Forward User Order directly to Connected Dealer API
   app.post('/api/place-dealer-order', async (req, res) => {
     const {
@@ -388,119 +438,187 @@ function getParsedUserGsmServices(customRate = 85.5, customMargin = 15) {
       quantity = 1,
       totalPrice = 0,
       customerEmail = '',
-      dealerApi = {}
+      dealerApi: incomingDealerApi = {}
     } = req.body || {};
 
-    const apiName = dealerApi.apiName || 'Connected Dealer API';
-    const apiType = dealerApi.apiType || 'GSM Theme';
-    const apiUrl = (dealerApi.apiUrl || '').trim();
-    const username = (dealerApi.username || '').trim();
-    const apiAccessKey = (dealerApi.apiAccessKey || '').trim();
-    const dealerOrderMode = dealerApi.dealerOrderMode || 'dealer_live_sync';
+    const resolvedApi = resolveServerDealerApi(incomingDealerApi);
+    const { apiName, apiType, apiUrl, username, apiAccessKey, dealerOrderMode } = resolvedApi;
 
     const cleanInput = String(inputData || '')
       .replace(/^(IMEI:\s*|Account:\s*|WhatsApp:\s*)/i, '')
       .split('|')[0]
       .trim() || String(inputData || 'N/A');
 
+    const cleanNumericId = String(serviceId || '').replace(/[^0-9]/g, '') || '1';
+    const isServerOrder = /server|tool|remote|credit|activation/i.test(String(serviceName || '')) || /gsm-server|gsm-remote/i.test(String(serviceId || ''));
+    const action = isServerOrder ? 'placeserverorder' : 'placeimeiorder';
+
     let dealerRefId = `DLR-${Math.floor(100000 + Math.random() * 900000)}`;
     let dealerReply = '';
     let dealerStatus: 'pending' | 'processing' | 'approved' | 'rejected' =
       dealerOrderMode === 'instant_success' ? 'approved' : 'processing';
     let forwardedToUrl = false;
+    let dealerErrorMsg = '';
 
-    // 1. If a real Dealer API URL is configured, immediately push/notify the Dealer API
+    // 1. Forward directly to Dealer API if URL is configured
     if (apiUrl && /^https?:\/\//i.test(apiUrl)) {
-      try {
-        const xmlParams = `<PARAMETERS><IMEI>${cleanInput}</IMEI><ID>${serviceId || '1'}</ID><CUSTOMFIELD>${Buffer.from(JSON.stringify({ input: cleanInput, serviceName, orderId, customerEmail })).toString('base64')}</CUSTOMFIELD></PARAMETERS>`;
-        const formData = new URLSearchParams();
-        formData.append('username', username);
-        formData.append('apiaccesskey', apiAccessKey);
-        formData.append('action', 'placeimeiorder');
-        formData.append('requestformat', 'JSON');
-        formData.append('parameters', xmlParams);
-        formData.append('order_id', String(orderId || ''));
-        formData.append('service_id', String(serviceId || ''));
-        formData.append('service_name', String(serviceName || ''));
-        formData.append('imei', cleanInput);
-        formData.append('input', cleanInput);
-        formData.append('quantity', String(quantity));
-        formData.append('customer_email', String(customerEmail));
+      const endpoints = getDealerEndpointCandidates(apiUrl);
+      const xmlParams = isServerOrder
+        ? `<PARAMETERS><ID>${cleanNumericId}</ID><REQUIRED><![CDATA[${cleanInput}]]></REQUIRED><CUSTOMFIELD>${cleanInput}</CUSTOMFIELD></PARAMETERS>`
+        : `<PARAMETERS><IMEI>${cleanInput}</IMEI><ID>${cleanNumericId}</ID><CUSTOMFIELD>${cleanInput}</CUSTOMFIELD></PARAMETERS>`;
 
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 7000);
-
-        const response = await fetch(apiUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-            'Accept': 'application/json, text/plain, */*',
-            'User-Agent': 'WowFileWala-AutoAPI/2.0'
-          },
-          body: formData.toString(),
-          signal: controller.signal
-        });
-        clearTimeout(timeout);
-        forwardedToUrl = true;
-
-        const rawText = await response.text();
+      for (const targetUrl of endpoints) {
+        if (forwardedToUrl) break;
         try {
-          const json = JSON.parse(rawText);
-          // Check if Dealer API returned ERROR / Rejection immediately
-          if (json?.ERROR && Array.isArray(json.ERROR) && json.ERROR[0]) {
-            const errObj = json.ERROR[0];
-            const errMsg = errObj.MESSAGE || errObj.FULL_DESCRIPTION || 'Order rejected by Dealer API';
-            dealerStatus = 'rejected';
-            dealerReply = String(errMsg);
-          } else if (json?.error && typeof json.error === 'string') {
-            dealerStatus = 'rejected';
-            dealerReply = json.error;
-          } else if (json?.SUCCESS && Array.isArray(json.SUCCESS) && json.SUCCESS[0]) {
-            const sObj = json.SUCCESS[0];
-            if (sObj.REFERENCEID) dealerRefId = String(sObj.REFERENCEID);
-            const parsedSt = parseDealerStatus(sObj.STATUS ?? sObj.status);
-            if (parsedSt) {
-              dealerStatus = parsedSt;
-            } else if (sObj.CODE) {
-              dealerStatus = 'approved';
-            } else if (dealerOrderMode === 'dealer_live_sync') {
+          const formData = new URLSearchParams();
+          formData.append('username', username);
+          formData.append('apiaccesskey', apiAccessKey);
+          formData.append('action', action);
+          formData.append('requestformat', 'JSON');
+          formData.append('parameters', xmlParams);
+          formData.append('order_id', String(orderId || ''));
+          formData.append('service_id', cleanNumericId);
+          formData.append('id', cleanNumericId);
+          formData.append('serviceid', cleanNumericId);
+          formData.append('service_name', String(serviceName || ''));
+          formData.append('imei', cleanInput);
+          formData.append('input', cleanInput);
+          formData.append('required', cleanInput);
+          formData.append('quantity', String(quantity));
+          formData.append('customer_email', String(customerEmail));
+
+          const controller = new AbortController();
+          const timeout = setTimeout(() => controller.abort(), 8000);
+
+          console.log(`[Dealer API Forward]: Posting order #${orderId} to ${targetUrl} (action=${action}, id=${cleanNumericId})...`);
+
+          const response = await fetch(targetUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded',
+              'Accept': 'application/json, text/plain, */*',
+              'User-Agent': 'WowFileWala-AutoAPI/2.0'
+            },
+            body: formData.toString(),
+            signal: controller.signal
+          });
+          clearTimeout(timeout);
+
+          const rawText = await response.text();
+          if (!rawText) continue;
+
+          // If the endpoint returned HTML homepage or 404 page, try the next candidate endpoint
+          const isHtml = /<!DOCTYPE|<html|<head|<body/i.test(rawText);
+          if (isHtml && endpoints.indexOf(targetUrl) < endpoints.length - 1) {
+            continue;
+          }
+
+          forwardedToUrl = true;
+
+          try {
+            const json = JSON.parse(rawText);
+            console.log(`[Dealer API Response]:`, JSON.stringify(json).slice(0, 300));
+
+            // Check if Dealer API returned an ERROR
+            if (json?.ERROR && Array.isArray(json.ERROR) && json.ERROR[0]) {
+              const errObj = json.ERROR[0];
+              const errMsg = errObj.MESSAGE || errObj.FULL_DESCRIPTION || 'Order rejected by Dealer API';
+              dealerErrorMsg = String(errMsg);
+              dealerStatus = 'rejected';
+              dealerReply = dealerErrorMsg;
+            } else if (json?.error && typeof json.error === 'string') {
+              dealerErrorMsg = json.error;
+              dealerStatus = 'rejected';
+              dealerReply = dealerErrorMsg;
+            } else if (json?.SUCCESS && Array.isArray(json.SUCCESS) && json.SUCCESS[0]) {
+              const sObj = json.SUCCESS[0];
+              if (sObj.REFERENCEID) dealerRefId = String(sObj.REFERENCEID);
+              const parsedSt = parseDealerStatus(sObj.STATUS ?? sObj.status);
+              if (parsedSt) {
+                dealerStatus = parsedSt;
+              } else if (sObj.CODE) {
+                dealerStatus = 'approved';
+              } else if (dealerOrderMode === 'dealer_live_sync') {
+                dealerStatus = 'processing';
+              }
+              if (sObj.CODE) {
+                dealerReply = String(sObj.CODE);
+              } else if (sObj.MESSAGE) {
+                dealerReply = String(sObj.MESSAGE);
+              }
+            } else {
+              if (json?.referenceid || json?.order_id || json?.id) {
+                dealerRefId = String(json.referenceid || json.order_id || json.id);
+              }
+              const parsedSt = parseDealerStatus(json?.status ?? json?.STATUS ?? json?.order_status);
+              if (parsedSt) {
+                dealerStatus = parsedSt;
+              }
+              if (json?.code || json?.reply || json?.message || json?.reason) {
+                dealerReply = String(json.code || json.reply || json.message || json.reason);
+              }
+            }
+          } catch {
+            // Handle XML response from Dealer API
+            const refMatch = rawText.match(/<REFERENCEID>([^<]+)<\/REFERENCEID>/i);
+            if (refMatch && refMatch[1]) {
+              dealerRefId = refMatch[1].trim();
               dealerStatus = 'processing';
             }
-            if (sObj.CODE) {
-              dealerReply = String(sObj.CODE);
-            } else if (sObj.MESSAGE) {
-              dealerReply = String(sObj.MESSAGE);
-            }
-          } else {
-            if (json?.referenceid || json?.order_id || json?.id) {
-              dealerRefId = String(json.referenceid || json.order_id || json.id);
-            }
-            const parsedSt = parseDealerStatus(json?.status ?? json?.STATUS ?? json?.order_status);
-            if (parsedSt) {
-              dealerStatus = parsedSt;
-            }
-            if (json?.code || json?.reply || json?.message || json?.reason) {
-              dealerReply = String(json.code || json.reply || json.message || json.reason);
+            const errMatch = rawText.match(/<(?:MESSAGE|ERROR)>([^<]+)<\/(?:MESSAGE|ERROR)>/i);
+            if (errMatch && errMatch[1]) {
+              dealerErrorMsg = errMatch[1].trim();
+              dealerStatus = 'rejected';
+              dealerReply = dealerErrorMsg;
             }
           }
-        } catch {
-          if (rawText && rawText.length < 300 && !rawText.includes('<html')) {
-            dealerReply = rawText.trim();
-          }
+        } catch (err: any) {
+          console.warn(`Dealer API forward attempt to ${targetUrl} error:`, err?.message || err);
         }
-      } catch (err: any) {
-        console.warn(`Dealer API forward notice (${apiUrl}):`, err?.message || err);
       }
     }
 
-    // 2. Build clean status message if Dealer API didn't return custom text yet
+    // 2. Build clean status message
     if (!dealerReply) {
       if (dealerStatus === 'approved') {
         dealerReply = `Order Completed ✅ | Input: ${cleanInput}`;
       } else if (dealerStatus === 'rejected') {
-        dealerReply = `Order Rejected`;
+        dealerReply = dealerErrorMsg ? `Order Rejected: ${dealerErrorMsg}` : `Order Rejected`;
       } else {
         dealerReply = '';
+      }
+    }
+
+    // 3. Persist dealerRefId and status directly into cloud-data.json
+    if (orderId) {
+      try {
+        const cloud = readCloudData();
+        if (cloud && Array.isArray(cloud.adminNotifications)) {
+          let hasUpdated = false;
+          const nextNotifs = cloud.adminNotifications.map((n: any) => {
+            if (String(n.orderId || '').replace(/^#/, '') === String(orderId).replace(/^#/, '')) {
+              hasUpdated = true;
+              return {
+                ...n,
+                status: dealerStatus,
+                adminReply: dealerReply || n.adminReply,
+                repliedAt: (dealerStatus === 'approved' || dealerStatus === 'rejected') ? new Date().toISOString() : n.repliedAt,
+                orderDetails: {
+                  ...(n.orderDetails || {}),
+                  dealerRefId,
+                  apiProvider: `${apiName} (${apiType} Auto API 24x7)`,
+                  dealerForwarded: forwardedToUrl
+                }
+              };
+            }
+            return n;
+          });
+          if (hasUpdated) {
+            writeCloudData({ adminNotifications: nextNotifs });
+          }
+        }
+      } catch (err) {
+        console.warn('Could not update order in cloud-data.json:', err);
       }
     }
 
@@ -515,12 +633,10 @@ function getParsedUserGsmServices(customRate = 85.5, customMargin = 15) {
   });
 
   // API Route: Poll / Check Live Order Status from Connected Dealer API (action=getimeiorder)
-  // Whatever the Dealer Team does (Processing / Success / Reject / Waiting), this fetches it live!
   app.post('/api/check-dealer-orders', async (req, res) => {
-    const { orders = [], dealerApi = {} } = req.body || {};
-    const apiUrl = (dealerApi.apiUrl || '').trim();
-    const username = (dealerApi.username || '').trim();
-    const apiAccessKey = (dealerApi.apiAccessKey || '').trim();
+    const { orders = [], dealerApi: incomingDealerApi = {} } = req.body || {};
+    const resolvedApi = resolveServerDealerApi(incomingDealerApi);
+    const { apiUrl, username, apiAccessKey } = resolvedApi;
 
     if (!apiUrl || !/^https?:\/\//i.test(apiUrl) || !Array.isArray(orders) || orders.length === 0) {
       return res.json({ success: true, updates: [] });
@@ -534,72 +650,79 @@ function getParsedUserGsmServices(customRate = 85.5, customMargin = 15) {
       repliedAt?: string;
     }> = [];
 
+    const endpoints = getDealerEndpointCandidates(apiUrl);
+
     for (const ord of orders.slice(0, 15)) {
       const orderId = String(ord.orderId || '');
       const dealerRefId = String(ord.dealerRefId || ord.orderId || '').replace(/^DLR-/i, '');
       const fullRefId = String(ord.dealerRefId || ord.orderId || '');
       if (!orderId) continue;
 
-      try {
-        const xmlParams = `<PARAMETERS><ID>${dealerRefId}</ID><ORDERID>${orderId}</ORDERID></PARAMETERS>`;
-        const formData = new URLSearchParams();
-        formData.append('username', username);
-        formData.append('apiaccesskey', apiAccessKey);
-        formData.append('action', 'getimeiorder');
-        formData.append('requestformat', 'JSON');
-        formData.append('parameters', xmlParams);
-        formData.append('id', dealerRefId);
-        formData.append('referenceid', fullRefId);
-        formData.append('order_id', orderId);
+      let detectedStatus: 'pending' | 'processing' | 'approved' | 'rejected' | null = null;
+      let detectedReply = '';
 
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 5000);
+      for (const targetUrl of endpoints) {
+        if (detectedStatus) break;
+        try {
+          const xmlParams = `<PARAMETERS><ID>${dealerRefId}</ID><ORDERID>${orderId}</ORDERID></PARAMETERS>`;
+          const formData = new URLSearchParams();
+          formData.append('username', username);
+          formData.append('apiaccesskey', apiAccessKey);
+          formData.append('action', 'getimeiorder');
+          formData.append('requestformat', 'JSON');
+          formData.append('parameters', xmlParams);
+          formData.append('id', dealerRefId);
+          formData.append('referenceid', fullRefId);
+          formData.append('order_id', orderId);
 
-        const response = await fetch(apiUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-            'Accept': 'application/json, text/plain, */*',
-            'User-Agent': 'WowFileWala-AutoAPI/2.0'
-          },
-          body: formData.toString(),
-          signal: controller.signal
-        });
-        clearTimeout(timeout);
+          const controller = new AbortController();
+          const timeout = setTimeout(() => controller.abort(), 6000);
 
-        const rawText = await response.text();
-        const json = JSON.parse(rawText);
-
-        let detectedStatus: 'pending' | 'processing' | 'approved' | 'rejected' | null = null;
-        let detectedReply = '';
-
-        if (json?.SUCCESS && Array.isArray(json.SUCCESS) && json.SUCCESS[0]) {
-          const sObj = json.SUCCESS[0];
-          detectedStatus = parseDealerStatus(sObj.STATUS ?? sObj.status);
-          detectedReply = String(sObj.CODE || sObj.MESSAGE || sObj.REPLY || '').trim();
-        } else if (json?.ERROR && Array.isArray(json.ERROR) && json.ERROR[0]) {
-          const eObj = json.ERROR[0];
-          const errMsg = String(eObj.MESSAGE || eObj.FULL_DESCRIPTION || '');
-          if (/reject|cancel|fail|invalid|not found/i.test(errMsg)) {
-            detectedStatus = 'rejected';
-            detectedReply = errMsg;
-          }
-        } else if (json && typeof json === 'object') {
-          detectedStatus = parseDealerStatus(json.status ?? json.STATUS ?? json.order_status);
-          detectedReply = String(json.code || json.CODE || json.reply || json.message || json.reason || '').trim();
-        }
-
-        if (detectedStatus) {
-          updates.push({
-            orderId,
-            dealerRefId: fullRefId,
-            status: detectedStatus,
-            reply: detectedReply,
-            repliedAt: (detectedStatus === 'approved' || detectedStatus === 'rejected') ? new Date().toISOString() : undefined
+          const response = await fetch(targetUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded',
+              'Accept': 'application/json, text/plain, */*',
+              'User-Agent': 'WowFileWala-AutoAPI/2.0'
+            },
+            body: formData.toString(),
+            signal: controller.signal
           });
+          clearTimeout(timeout);
+
+          const rawText = await response.text();
+          if (!rawText || /<!DOCTYPE|<html|<head|<body/i.test(rawText)) continue;
+
+          const json = JSON.parse(rawText);
+
+          if (json?.SUCCESS && Array.isArray(json.SUCCESS) && json.SUCCESS[0]) {
+            const sObj = json.SUCCESS[0];
+            detectedStatus = parseDealerStatus(sObj.STATUS ?? sObj.status);
+            detectedReply = String(sObj.CODE || sObj.MESSAGE || sObj.REPLY || '').trim();
+          } else if (json?.ERROR && Array.isArray(json.ERROR) && json.ERROR[0]) {
+            const eObj = json.ERROR[0];
+            const errMsg = String(eObj.MESSAGE || eObj.FULL_DESCRIPTION || '');
+            if (/reject|cancel|fail|invalid|not found/i.test(errMsg)) {
+              detectedStatus = 'rejected';
+              detectedReply = errMsg;
+            }
+          } else if (json && typeof json === 'object') {
+            detectedStatus = parseDealerStatus(json.status ?? json.STATUS ?? json.order_status);
+            detectedReply = String(json.code || json.CODE || json.reply || json.message || json.reason || '').trim();
+          }
+        } catch {
+          // Try next endpoint candidate
         }
-      } catch {
-        // Ignore individual network timeout and continue checking next order
+      }
+
+      if (detectedStatus) {
+        updates.push({
+          orderId,
+          dealerRefId: fullRefId,
+          status: detectedStatus,
+          reply: detectedReply,
+          repliedAt: (detectedStatus === 'approved' || detectedStatus === 'rejected') ? new Date().toISOString() : undefined
+        });
       }
     }
 
