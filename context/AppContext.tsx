@@ -4219,7 +4219,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
                 read: true,
                 type: 'order',
                 status: 'pending',
-                userId: 'user-shiv-kumar'
+                userId: user?.id || 'user-customer'
             };
         }
 
@@ -4246,7 +4246,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         setAdminNotifications(updatedAdminNotifications);
         setLocalStorage('adminNotifications', updatedAdminNotifications);
         
-        const targetUserId = notification.userId || 'user-shiv-kumar';
+        const targetUserId = notification.userId || user?.id || 'user-customer';
         const userToNotify = allUsers[targetUserId] || (Object.values(allUsers) as User[]).find(u => u.id === targetUserId);
         let newAllUsers = { ...allUsers };
 
@@ -4327,7 +4327,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
                 read: true,
                 type: 'order',
                 status: 'pending',
-                userId: 'user-shiv-kumar'
+                userId: user?.id || 'user-customer'
             };
         }
 
@@ -4361,7 +4361,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         setAdminNotifications(updatedAdminNotifications);
         setLocalStorage('adminNotifications', updatedAdminNotifications);
         
-        const targetUserId = notification.userId || 'user-shiv-kumar';
+        const targetUserId = notification.userId || user?.id || 'user-customer';
         let newAllUsers = { ...allUsers };
 
         if (targetUserId && allUsers[targetUserId]) {
@@ -4518,7 +4518,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
                 read: true,
                 type: 'order',
                 status: 'pending',
-                userId: 'user-shiv-kumar'
+                userId: user?.id || 'user-customer'
             };
         }
 
@@ -4545,7 +4545,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         setAdminNotifications(updatedAdminNotifications);
         setLocalStorage('adminNotifications', updatedAdminNotifications);
 
-        const targetUserId = notification.userId || 'user-shiv-kumar';
+        const targetUserId = notification.userId || user?.id || 'user-customer';
         let newAllUsers = { ...allUsers };
 
         if (targetUserId && allUsers[targetUserId]) {

@@ -10,20 +10,20 @@ const SEED_HISTORY_ORDERS: AdminNotification[] = [
     {
         id: 'seed-order-6',
         orderId: '6',
-        message: 'Order #6 from shiv kumar',
+        message: 'Order #6 from Customer',
         timestamp: '2025-11-17T08:40:00Z',
         read: true,
         type: 'order',
         status: 'approved',
-        userId: 'user-shiv-kumar',
+        userId: 'user-customer',
         orderDetails: {
             categoryName: 'FRPFILE ACTIVATOR A12 + Bypass Hello Screen iPhone XR to 17 Pro Max - iPad ...',
             input: 'VGKX5415CF',
             sn: 'VGKX5415CF',
             quantity: 1,
             totalPrice: 549.69,
-            customerName: 'shiv kumar',
-            customerEmail: 'shivkumar@gmail.com',
+            customerName: 'Customer',
+            customerEmail: 'customer@example.com',
             customerMobile: '9876543210',
         },
         adminReply: 'VGKX5415CF-ACTIVATED-SUCCESS',
@@ -32,20 +32,20 @@ const SEED_HISTORY_ORDERS: AdminNotification[] = [
     {
         id: 'seed-order-11',
         orderId: '11',
-        message: 'Order #11 from shiv kumar',
+        message: 'Order #11 from Customer',
         timestamp: '2025-11-24T07:51:00Z',
         read: true,
         type: 'order',
         status: 'approved',
-        userId: 'user-shiv-kumar',
+        userId: 'user-customer',
         orderDetails: {
             categoryName: 'FRPFILE ACTIVATOR A12 + Bypass Hello Screen iPhone XR to 17 Pro Max - iPad ...',
             input: 'M21LQND2YD',
             sn: 'M21LQND2YD',
             quantity: 1,
             totalPrice: 549.69,
-            customerName: 'shiv kumar',
-            customerEmail: 'shivkumar@gmail.com',
+            customerName: 'Customer',
+            customerEmail: 'customer@example.com',
             customerMobile: '9876543210',
         },
         adminReply: 'M21LQND2YD-BYPASS-SUCCESS',
@@ -317,19 +317,19 @@ const SEED_HISTORY_ORDERS: AdminNotification[] = [
     {
         id: 'seed-order-7',
         orderId: '7',
-        message: 'Order #7 from shiv kumar',
+        message: 'Order #7 from Customer',
         timestamp: '2025-11-18T09:00:00Z',
         read: true,
         type: 'order',
         status: 'approved',
-        userId: 'user-shiv-kumar',
+        userId: 'user-customer',
         orderDetails: {
             categoryName: 'Android Multi Tool Rent [2 Hours]-[Instant-Auto API 24x7] ✅',
             input: '-',
             quantity: 1,
             totalPrice: 37.72,
-            customerName: 'shiv kumar',
-            customerEmail: 'shivkumar@gmail.com',
+            customerName: 'Customer',
+            customerEmail: 'customer@example.com',
             customerMobile: '9876543210',
         },
         adminReply: 'AMT Rent Key: AM7821-KEY-VALID-2HRS',
@@ -694,7 +694,7 @@ const AdminOrdersPage = () => {
                                     const submittedOn = formatSubmittedOn(order.timestamp);
                                     const serviceName = order.orderDetails?.categoryName || 'Service Order';
                                     const inputVal = getOrderInput(order.orderDetails);
-                                    const customerName = order.orderDetails?.customerName || user?.profile?.name || user?.email?.split('@')[0] || 'shiv kumar';
+                                    const customerName = order.orderDetails?.customerName || user?.profile?.name || user?.email?.split('@')[0] || 'Customer';
                                     const amountStr = `${Number(order.orderDetails?.totalPrice || 0).toFixed(2)} INR`;
 
                                     return (
@@ -861,8 +861,8 @@ const AdminOrdersPage = () => {
                                 const totalPrice = Number(actionModalOrder.orderDetails?.totalPrice || 100.87).toFixed(2);
                                 
                                 // Customer Info Resolution matching photo
-                                const custName = modalUser?.profile?.name || actionModalOrder.orderDetails?.customerName || actionModalOrder.orderDetails?.name || 'shiv kumar';
-                                const custEmail = modalUser?.email || actionModalOrder.orderDetails?.customerEmail || actionModalOrder.orderDetails?.email || 'shivkumar@gmail.com';
+                                const custName = modalUser?.profile?.name || actionModalOrder.orderDetails?.customerName || actionModalOrder.orderDetails?.name || 'Customer';
+                                const custEmail = modalUser?.email || actionModalOrder.orderDetails?.customerEmail || actionModalOrder.orderDetails?.email || 'customer@example.com';
                                 const custMobile = modalUser?.mobileNumber || actionModalOrder.orderDetails?.customerMobile || actionModalOrder.orderDetails?.mobile || '9876543210';
                                 
                                 // Formatted submitted date e.g. 15-09-2026 01:19
