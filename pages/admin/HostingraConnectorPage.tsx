@@ -489,7 +489,7 @@ const HostingraConnectorPage = () => {
                     >
                         <span>Build-in API</span>
                         <span className="px-1.5 py-0.2 rounded-full bg-slate-400 text-white text-[10px] font-black">
-                            1
+                            0
                         </span>
                     </button>
 
@@ -662,36 +662,10 @@ const HostingraConnectorPage = () => {
                 </div>
             )}
 
-            {/* TAB 2: Build-in API (1) */}
+            {/* TAB 2: Build-in API */}
             {automationTab === 'builtin' && (
-                <div className="bg-white rounded-lg border border-slate-200 shadow-xs p-6 space-y-4">
-                    <div className="flex items-center justify-between border-b border-slate-200 pb-3">
-                        <div className="flex items-center gap-2">
-                            <Server className="w-5 h-5 text-teal-600" />
-                            <h3 className="font-bold text-sm text-slate-900">Build-in Internal GSM & Firmware API</h3>
-                        </div>
-                        <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 text-[10px] font-bold rounded-full">
-                            Active (Online)
-                        </span>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs text-slate-700">
-                        <div className="p-4 bg-slate-50 rounded-lg border border-slate-200 space-y-2">
-                            <p className="font-bold text-slate-800">1. Direct Dealer Order Forward & Live Status Sync</p>
-                            <p className="text-slate-500">Automatically pushes customer orders to your connected Dealer API (`placeimeiorder`) and polls live status (`getimeiorder`) every 8 seconds for Processing / Success / Reject updates.</p>
-                            <div className="font-mono text-[11px] bg-white p-2 rounded border border-slate-200 text-teal-700">
-                                POST /api/place-dealer-order &amp; /api/check-dealer-orders
-                            </div>
-                        </div>
-
-                        <div className="p-4 bg-slate-50 rounded-lg border border-slate-200 space-y-2">
-                            <p className="font-bold text-slate-800">2. Dealer Team Instant Webhook / Callback URL</p>
-                            <p className="text-slate-500">When Dealer Team marks an order Processing, Success, or Rejected, it automatically updates customer status, refunds wallet on Reject, and sends instant customer notification.</p>
-                            <div className="font-mono text-[11px] bg-white p-2 rounded border border-slate-200 text-emerald-700 select-all">
-                                https://wowfilewala.com/cloud-sync.php?action=dealer_webhook
-                            </div>
-                        </div>
-                    </div>
+                <div className="bg-white rounded-lg border border-slate-200 shadow-xs p-8 text-center text-xs text-slate-400 font-medium">
+                    No data available in table
                 </div>
             )}
 

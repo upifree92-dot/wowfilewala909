@@ -104,7 +104,7 @@ const AdminLayout = () => {
             isAutomation: true,
             subItems: [
                 { to: "/admin/automation", label: "API", icon: "•", count: apisCount },
-                { to: "/admin/automation?tab=builtin", label: "Build-in API", icon: "•", count: 1 },
+                { to: "/admin/automation?tab=builtin", label: "Build-in API", icon: "•", count: 0 },
                 { to: "/admin/automation?tab=cron", label: "Corn Job List", icon: "•" }
             ]
         },
